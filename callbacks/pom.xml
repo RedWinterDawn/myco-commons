@@ -11,4 +11,11 @@
 
   <artifactId>callbacks</artifactId>
 
+  <dependencies>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+    </dependency>
+  </dependencies>
+
 </project>
