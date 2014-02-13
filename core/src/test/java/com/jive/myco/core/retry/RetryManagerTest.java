@@ -1,4 +1,4 @@
-package com.jive.myco.core;
+package com.jive.myco.core.retry;
 
 import static org.mockito.Matchers.anyListOf;
 import static org.mockito.Matchers.anyLong;
@@ -13,6 +13,9 @@ import org.mockito.runners.MockitoJUnitRunner;
 import org.mockito.stubbing.Answer;
 
 import com.google.common.collect.Lists;
+import com.jive.myco.core.retry.RetryManager;
+import com.jive.myco.core.retry.RetryPolicy;
+import com.jive.myco.core.retry.RetryStrategy;
 
 @RunWith(MockitoJUnitRunner.class)
 public class RetryManagerTest

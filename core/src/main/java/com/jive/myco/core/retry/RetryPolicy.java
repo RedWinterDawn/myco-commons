@@ -1,4 +1,4 @@
-package com.jive.myco.core;
+package com.jive.myco.core.retry;
 
 import lombok.Getter;
 import lombok.experimental.Builder;
