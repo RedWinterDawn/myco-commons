@@ -14,9 +14,16 @@ public final class RetryPolicy
 {
   /**
    * The maximum number of times a retry will be attempted after the initial failure.
+   * A value less than one indicates that we will try indefinitely.
    */
   @Getter
   private final int maximumRetries;
+
+  /**
+   * The maximum amount of time in milliseconds between retries.
+   */
+  @Getter
+  private final long maximumRetryDelay;
 
   /**
    * The initial delay, in milliseconds, before the first retry is attempted.
@@ -25,15 +32,8 @@ public final class RetryPolicy
   private final long initialRetryDelay;
 
   /**
-   * If the retry delays should be calculated using a backoff multiplier instead of a constant
-   * delay.
-   */
-  @Getter
-  private final boolean useBackoffMultiplier;
-
-  /**
    * The multiplier to use on top of the previous delay in the event that there are multiple
-   * retries and {@link #useBackoffMultiplier} is {@code true}.
+   * retries. If < 0 then this multiplier will not be used
    */
   @Getter
   private final double backoffMultiplier;
@@ -41,16 +41,14 @@ public final class RetryPolicy
   @Builder
   private RetryPolicy(final int maximumRetries, final long initialRetryDelay,
       final boolean useBackoffMultiplier,
-      final int backoffMultiplier)
+      int maximumRetryDelay, final double backoffMultiplier)
   {
     Preconditions.checkArgument(maximumRetries >= 0, "maximumRetries cannot be negative.");
     Preconditions.checkArgument(initialRetryDelay >= 0, "initialRetryDelay cannot be negative.");
-    Preconditions.checkArgument(backoffMultiplier > 0,
-        "backoffMultiplier must be greater than zero.");
 
     this.maximumRetries = maximumRetries;
+    this.maximumRetryDelay = maximumRetryDelay;
     this.initialRetryDelay = initialRetryDelay;
-    this.useBackoffMultiplier = useBackoffMultiplier;
     this.backoffMultiplier = backoffMultiplier;
   }
 
@@ -65,9 +63,9 @@ public final class RetryPolicy
    */
   public long calculateDelay(final long lastDelay)
   {
-    if (useBackoffMultiplier && lastDelay > 1)
+    if (backoffMultiplier > 0 && lastDelay > 1)
     {
-      return (long) (lastDelay * backoffMultiplier);
+      return Math.min((long) (lastDelay * backoffMultiplier), maximumRetryDelay);
     }
     else
     {
@@ -82,10 +80,12 @@ public final class RetryPolicy
   {
     private int maximumRetries = 3;
 
+    private long maximumRetryDelay = Long.MAX_VALUE;
+
     private long initialRetryDelay = 1000;
 
     private boolean useBackoffMultiplier = false;
 
-    private int backoffMultiplier = 2;
+    private double backoffMultiplier = 2;
   }
 }

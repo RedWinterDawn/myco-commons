@@ -24,11 +24,7 @@ public class RetryManager
   @Getter
   @Setter
   @NonNull
-  private volatile RetryPolicy retryPolicy = RetryPolicy.builder()
-      .initialRetryDelay(50)
-      .useBackoffMultiplier(true)
-      .maximumRetries(3)
-      .build();
+  private volatile RetryPolicy retryPolicy;
 
   @Getter
   @Setter
@@ -82,7 +78,7 @@ public class RetryManager
     
     retryCounter++;
 
-    if (retryCounter > retryPolicy.getMaximumRetries())
+    if (retryCounter > retryPolicy.getMaximumRetries() && retryPolicy.getMaximumRetries() >= 0)
     {
       retryCounter = 0;
       retryStrategy.onRetriesExhausted(causes);
