@@ -14,6 +14,7 @@
   <artifactId>root</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <packaging>pom</packaging>
+  <name>Myco :: Commons :: Root</name>
 
   <modules>
     <module>callbacks</module>
