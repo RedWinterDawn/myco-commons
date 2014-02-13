@@ -5,6 +5,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 
 /**
+ * This Callback will call onSuccess or OnFailure and catch any
+ * exceptions that occur while processing the result. This class
+ * will also guarantee that the callback is invoked only once.
+ *
  * Date: 2/12/14
  *
  * @author zmorin
