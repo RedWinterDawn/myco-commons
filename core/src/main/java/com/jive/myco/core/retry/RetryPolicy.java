@@ -41,9 +41,8 @@ public final class RetryPolicy
   @Builder
   private RetryPolicy(final int maximumRetries, final long initialRetryDelay,
       final boolean useBackoffMultiplier,
-      int maximumRetryDelay, final double backoffMultiplier)
+      long maximumRetryDelay, final double backoffMultiplier)
   {
-    Preconditions.checkArgument(maximumRetries >= 0, "maximumRetries cannot be negative.");
     Preconditions.checkArgument(initialRetryDelay >= 0, "initialRetryDelay cannot be negative.");
 
     this.maximumRetries = maximumRetries;
@@ -86,6 +85,6 @@ public final class RetryPolicy
 
     private boolean useBackoffMultiplier = false;
 
-    private double backoffMultiplier = 2;
+    private double backoffMultiplier = -1;
   }
 }

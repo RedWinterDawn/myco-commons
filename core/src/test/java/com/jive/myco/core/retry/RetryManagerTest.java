@@ -7,15 +7,14 @@ import static org.mockito.Mockito.*;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
+import org.mockito.internal.InOrderImpl;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.mockito.stubbing.Answer;
 
 import com.google.common.collect.Lists;
-import com.jive.myco.core.retry.RetryManager;
-import com.jive.myco.core.retry.RetryPolicy;
-import com.jive.myco.core.retry.RetryStrategy;
 
 @RunWith(MockitoJUnitRunner.class)
 public class RetryManagerTest
@@ -74,7 +73,7 @@ public class RetryManagerTest
   public void testCorrectDelay()
   {
     RetryPolicy policy = RetryPolicy.builder().maximumRetries(2).
-        backoffMultiplier(2).initialRetryDelay(5).useBackoffMultiplier(true).build();
+        backoffMultiplier(2).initialRetryDelay(5).build();
     retryManager = RetryManager.builder().retryPolicy(policy).retryStrategy(strategy).build();
 
     retryManager.onFailure();
@@ -93,5 +92,43 @@ public class RetryManagerTest
     retryManager.onSuccess();
     retryManager.onFailure();
     verify(strategy, never()).onRetriesExhausted(anyListOf(Throwable.class));
+  }
+
+  @Test
+  public void testIndefiniteRetries()
+  {
+    RetryPolicy policy = RetryPolicy.builder().maximumRetries(-1).initialRetryDelay(5).build();
+    retryManager = RetryManager.builder().retryPolicy(policy).retryStrategy(strategy).build();
+
+    for (int i = 0; i < 10000; i++)
+    {
+      retryManager.onFailure();
+    }
+    verify(strategy, times(10000)).scheduleRetry(eq(5L));
+  }
+
+  @Test
+  public void testMaxRetryTime()
+  {
+    InOrder inOrder = inOrder(strategy);
+    RetryPolicy policy = RetryPolicy.builder()
+        .maximumRetries(-1)
+        .initialRetryDelay(5L)
+        .maximumRetryDelay(5L)
+        .maximumRetryDelay(20)
+        .backoffMultiplier(2.0)
+        .build();
+    retryManager = RetryManager.builder().retryPolicy(policy).retryStrategy(strategy).build();
+
+    for (int i = 0; i < 5; i++)
+    {
+      retryManager.onFailure();
+    }
+    inOrder.verify(strategy).scheduleRetry(5L);
+    inOrder.verify(strategy).scheduleRetry(10L);
+    inOrder.verify(strategy).scheduleRetry(20L);
+    inOrder.verify(strategy).scheduleRetry(20L);
+    inOrder.verify(strategy).scheduleRetry(20L);
+    inOrder.verifyNoMoreInteractions();
   }
 }
