@@ -10,7 +10,7 @@ import com.google.common.base.Preconditions;
  * 
  * @author David Valeri
  */
-final class RetryPolicy
+public final class RetryPolicy
 {
   /**
    * The maximum number of times a retry will be attempted after the initial failure.
