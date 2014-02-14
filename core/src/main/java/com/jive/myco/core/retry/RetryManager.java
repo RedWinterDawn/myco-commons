@@ -14,7 +14,7 @@ import lombok.experimental.Builder;
  * <p/>
  * The manager maintains internal state and should not be shared across multiple threads without
  * external synchronization.
- * 
+ *
  * @author David Valeri
  */
 public class RetryManager
@@ -68,26 +68,29 @@ public class RetryManager
   /**
    * Called when the action that this manager is handling retries for fails. {@code cause} is
    * associated with the failure.
-   * 
+   *
    * @param cause
    *          the cause of the failure of the action
    */
   public void onFailure(final Throwable cause)
   {
     causes.add(cause);
-    
-    retryCounter++;
 
-    if (retryCounter > retryPolicy.getMaximumRetries() && retryPolicy.getMaximumRetries() >= 0)
+    if (willRetry())
+    {
+      lastDelay = retryPolicy.calculateDelay(lastDelay);
+      retryStrategy.onFailure(retryCounter++, cause);
+      retryStrategy.scheduleRetry(lastDelay);
+    }
+    else
     {
       retryCounter = 0;
       retryStrategy.onRetriesExhausted(causes);
     }
-    else
-    {
-      lastDelay = retryPolicy.calculateDelay(lastDelay);
-      retryStrategy.onFailure(retryCounter - 1, cause);
-      retryStrategy.scheduleRetry(lastDelay);
-    }
+  }
+
+  public boolean willRetry()
+  {
+    return retryCounter < retryPolicy.getMaximumRetries() || retryPolicy.getMaximumRetries() < 0;
   }
 }
