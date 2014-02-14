@@ -4,7 +4,7 @@ import java.util.List;
 
 /**
  * The user defined strategy for handling events triggered by a {@link RetryManager}.
- * 
+ *
  * @author David Valeri
  */
 public interface RetryStrategy
@@ -12,7 +12,7 @@ public interface RetryStrategy
   /**
    * Called when the retry manager indicates that a retry should be attempted after {@code delay}
    * milliseconds.
-   * 
+   *
    * @param delay
    *          the delay in milliseconds before another retry should be attempted
    */
@@ -21,7 +21,7 @@ public interface RetryStrategy
   /**
    * Called when the retry manager encounters a failure. {@link #scheduleRetry(long)} will be
    * invoked after this call completes.
-   * 
+   *
    * @param retryCount
    *          the number of retries that have been attempted; 0 for the first failure
    * @param cause
@@ -29,10 +29,10 @@ public interface RetryStrategy
    *          not have an associated cause
    */
   void onFailure(final int retryCount, final Throwable cause);
-  
+
   /**
    * Called when the retry manager has exhausted all retry attempts.
-   * 
+   *
    * @param causes
    *          the ordered list of causes leading up to the ultimate failure; may contain
    *          {@code null} for failures without an associated cause
