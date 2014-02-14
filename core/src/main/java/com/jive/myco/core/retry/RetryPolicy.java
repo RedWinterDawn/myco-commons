@@ -7,7 +7,7 @@ import com.google.common.base.Preconditions;
 
 /**
  * Policy settings relating to retry attempts.
- * 
+ *
  * @author David Valeri
  */
 public final class RetryPolicy
@@ -54,10 +54,10 @@ public final class RetryPolicy
   /**
    * Calculates the delay for the next retry based on the last delay used and this policy's
    * configuration.
-   * 
+   *
    * @param lastDelay
    *          the last delay used or 0 if there was no previous retry
-   * 
+   *
    * @return the delay in milliseconds to use for the next retry attempt
    */
   public long calculateDelay(final long lastDelay)
@@ -82,8 +82,6 @@ public final class RetryPolicy
     private long maximumRetryDelay = Long.MAX_VALUE;
 
     private long initialRetryDelay = 1000;
-
-    private boolean useBackoffMultiplier = false;
 
     private double backoffMultiplier = -1;
   }
