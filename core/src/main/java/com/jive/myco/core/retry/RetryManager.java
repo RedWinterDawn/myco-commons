@@ -74,7 +74,10 @@ public class RetryManager
    */
   public void onFailure(final Throwable cause)
   {
-    causes.add(cause);
+    if (retryPolicy.getMaximumRetries() >= 0)
+    {
+      causes.add(cause);
+    }
 
     if (willRetry())
     {
