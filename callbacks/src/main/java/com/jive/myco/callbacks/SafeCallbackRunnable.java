@@ -34,7 +34,7 @@ public abstract class SafeCallbackRunnable<T> implements Runnable
     {
       doRun();
     }
-    catch (final Throwable e)
+    catch (final Exception e)
     {
       onFailure(e);
     }
@@ -91,7 +91,7 @@ public abstract class SafeCallbackRunnable<T> implements Runnable
       {
         callback.onSuccess(result);
       }
-      catch (final Throwable e)
+      catch (final Exception e)
       {
         onCallbackFailure(e);
       }
@@ -148,7 +148,7 @@ public abstract class SafeCallbackRunnable<T> implements Runnable
       {
         callback.onFailure(cause);
       }
-      catch (final Throwable e)
+      catch (final Exception e)
       {
         onCallbackFailure(e);
       }
