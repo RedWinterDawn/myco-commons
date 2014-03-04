@@ -19,6 +19,7 @@
   <modules>
     <module>callbacks</module>
     <module>core</module>
+    <module>versions</module>
   </modules>
 
   <dependencies>
