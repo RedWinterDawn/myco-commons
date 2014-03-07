@@ -20,6 +20,7 @@
     <module>callbacks</module>
     <module>core</module>
     <module>versions</module>
+    <module>listenable</module>
   </modules>
 
   <dependencies>
