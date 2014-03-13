@@ -7,9 +7,17 @@
     <groupId>com.jive.myco.commons</groupId>
     <version>0.0.2-SNAPSHOT</version>
   </parent>
+
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>myco-commons-callbacks</artifactId>
-  <name>Myco :: Commons :: Callbacks</name>
+  <artifactId>myco-commons-retry</artifactId>
+  <name>Myco :: Commons :: Retry</name>
 
+  <dependencies>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>myco-commons-callbacks</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+  </dependencies>
 </project>

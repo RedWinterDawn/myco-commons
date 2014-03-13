@@ -12,15 +12,24 @@
 
   <groupId>com.jive.myco.commons</groupId>
   <artifactId>root</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>0.0.2-SNAPSHOT</version>
+  
   <packaging>pom</packaging>
+  
   <name>Myco :: Commons :: Root</name>
+  
+  <scm>
+    <connection>scm:git:ssh://git@github.com/jive/com.jive.myco.commons.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/jive/com.jive.myco.commons.git</developerConnection>
+  </scm>
 
   <modules>
     <module>callbacks</module>
-    <module>core</module>
-    <module>versions</module>
+    <module>io</module>
+    <module>lifecycle</module>
     <module>listenable</module>
+    <module>retry</module>
+    <module>versions</module>
   </modules>
 
   <dependencies>
