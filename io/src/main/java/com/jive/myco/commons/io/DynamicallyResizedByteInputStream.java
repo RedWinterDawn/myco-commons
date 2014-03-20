@@ -6,18 +6,19 @@ import java.io.OutputStream;
 import java.util.List;
 
 import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.Setter;
 
 /**
  * This {@code InputStream} is built on top of backing byte arrays that were filled by a paired
  * {@link DynamicallyResizedByteOutputStream}. Acquire instances of this class through an instance
  * of {@link DynamicallyResizedByteOutputStream}.
- * 
+ *
  * As with typical stream implementations, this stream and its paired output stream are not thread
  * safe.
- * 
+ *
  * @author zmorin
- * 
+ *
  */
 public class DynamicallyResizedByteInputStream extends InputStream
 {
@@ -29,7 +30,9 @@ public class DynamicallyResizedByteInputStream extends InputStream
   private final DynamicallyResizedByteOutputStream outputStream;
   private int currentArray = 0;
   @Setter(AccessLevel.PACKAGE)
+  @Getter
   private int length;
+  private volatile boolean closed;
 
   DynamicallyResizedByteInputStream(final DynamicallyResizedByteOutputStream outputStream)
   {
@@ -40,6 +43,10 @@ public class DynamicallyResizedByteInputStream extends InputStream
   @Override
   public int read() throws IOException
   {
+    if (closed)
+    {
+      throw new IOException("This stream was closed before read was complete.");
+    }
     if (head == null)
     {
       if (dataQueue.size() > 0 && !endOfStream)
@@ -87,5 +94,16 @@ public class DynamicallyResizedByteInputStream extends InputStream
     length = -1;
     position = 0;
     currentArray = 0;
+  }
+
+  /**
+   * If you need to stop reading ASAP use this. On the next read this InputStream will throw an IOExeption.
+   * SO DON'T USE THIS LIGHTLTY
+   *
+   */
+  @Override
+  public void close()
+  {
+    closed = true;
   }
 }
