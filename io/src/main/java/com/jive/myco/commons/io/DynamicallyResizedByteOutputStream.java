@@ -137,9 +137,11 @@ public class DynamicallyResizedByteOutputStream extends OutputStream
   }
 
   /**
-   * This method resets the internal pointers and readies the stream for writing.
+   * Resets the internal pointers and readies the stream for writing. Call this method if you wish
+   * to reset the output stream to an empty state and start filling it again without calling
+   * {@link #toInputStream()}.
    */
-  void recycle()
+  public void recycle()
   {
     head = dataQueue.get(0);
     position = 0;
