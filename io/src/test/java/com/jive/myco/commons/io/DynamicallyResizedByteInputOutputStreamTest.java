@@ -96,7 +96,7 @@ public class DynamicallyResizedByteInputOutputStreamTest
     assertEquals(writtenToBuffer, val);
 
     outputStream = (DynamicallyResizedByteOutputStream) inputStream.toOutputStream();
-    assertEquals(1, backingStore.size());
+    assertEquals(3, backingStore.size());
     final String rewritten = "This is much shorter than the last one";
     outputStream.write(rewritten.getBytes());
     inputStream = (DynamicallyResizedByteInputStream) outputStream.toInputStream();
@@ -105,13 +105,15 @@ public class DynamicallyResizedByteInputOutputStreamTest
     assertEquals(rewritten, val);
 
     outputStream = (DynamicallyResizedByteOutputStream) inputStream.toOutputStream();
-    assertEquals(1, backingStore.size());
+    assertEquals(3, backingStore.size());
     final String reRewritten = writtenToBuffer + ". This is much larger than the last one";
     outputStream.write(reRewritten.getBytes());
     inputStream = (DynamicallyResizedByteInputStream) outputStream.toInputStream();
 
     val = convertStreamToString(inputStream);
     assertEquals(reRewritten, val);
+
+    assertEquals(7, backingStore.size());
   }
 
   @SuppressWarnings("resource")

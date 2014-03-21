@@ -52,11 +52,35 @@ public class DynamicallyResizedByteOutputStream extends OutputStream
 {
   private final int incrementSize;
   private final DynamicallyResizedByteInputStream inputStream;
+
+  /**
+   * List of buffers to work with.
+   */
   @Getter(AccessLevel.PACKAGE)
   private final List<byte[]> dataQueue;
 
+  /**
+   * The current buffer in use.
+   * 
+   * @See {@link #dataQueueIndex}
+   */
   private byte[] head;
+
+  /**
+   * Index of the buffer in the data queue with which we are currently working.
+   * 
+   * @See {@link #head}
+   */
+  private int dataQueueIndex = 0;
+
+  /**
+   * The position in the current buffer.
+   */
   private int position;
+
+  /**
+   * Total, zero based, index of the entire stream.
+   */
   private int absolutePosition = 0;
 
   public DynamicallyResizedByteOutputStream(final int initialSize, final int incrementSize)
@@ -77,12 +101,22 @@ public class DynamicallyResizedByteOutputStream extends OutputStream
   {
     if (position == head.length)
     {
-      final byte[] newHead = new byte[incrementSize];
-      dataQueue.add(newHead);
-      head = newHead;
+      if (dataQueueIndex == dataQueue.size() - 1)
+      {
+        final byte[] newHead = new byte[incrementSize];
+        dataQueue.add(newHead);
+        head = newHead;
+        dataQueueIndex++;
+      }
+      else
+      {
+        head = dataQueue.get(++dataQueueIndex);
+      }
+
       absolutePosition += position;
       position = 0;
     }
+
     head[position++] = (byte) b;
   }
 
@@ -103,15 +137,13 @@ public class DynamicallyResizedByteOutputStream extends OutputStream
   }
 
   /**
-   * This method resets the data queue to its original sized array and the various pointers. It
-   * holds on to the reference so that we don't have to reallocate a massive array.
+   * This method resets the internal pointers and readies the stream for writing.
    */
-  public void reset()
+  void recycle()
   {
     head = dataQueue.get(0);
-    dataQueue.clear();
-    dataQueue.add(head);
     position = 0;
     absolutePosition = 0;
+    dataQueueIndex = 0;
   }
 }

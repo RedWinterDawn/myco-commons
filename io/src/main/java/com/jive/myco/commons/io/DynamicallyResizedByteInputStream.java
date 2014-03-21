@@ -7,34 +7,35 @@ import java.util.List;
 
 import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.Setter;
 
 /**
  * This {@code InputStream} is built on top of backing byte arrays that were filled by a paired
  * {@link DynamicallyResizedByteOutputStream}. Acquire instances of this class through an instance
  * of {@link DynamicallyResizedByteOutputStream}.
- *
+ * 
  * As with typical stream implementations, this stream and its paired output stream are not thread
  * safe.
- *
+ * 
  * @author zmorin
- *
+ * 
  */
 public class DynamicallyResizedByteInputStream extends InputStream
 {
   private final List<byte[]> dataQueue;
+  private final DynamicallyResizedByteOutputStream outputStream;
 
   private byte[] head;
   private int position;
   private boolean endOfStream;
-  private final DynamicallyResizedByteOutputStream outputStream;
   private int currentArray = 0;
   @Setter(AccessLevel.PACKAGE)
   @Getter
   private int length;
   private volatile boolean closed;
 
-  DynamicallyResizedByteInputStream(final DynamicallyResizedByteOutputStream outputStream)
+  DynamicallyResizedByteInputStream(@NonNull final DynamicallyResizedByteOutputStream outputStream)
   {
     this.outputStream = outputStream;
     dataQueue = outputStream.getDataQueue();
@@ -47,6 +48,7 @@ public class DynamicallyResizedByteInputStream extends InputStream
     {
       throw new IOException("This stream was closed before read was complete.");
     }
+
     if (head == null)
     {
       if (dataQueue.size() > 0 && !endOfStream)
@@ -81,29 +83,28 @@ public class DynamicallyResizedByteInputStream extends InputStream
    */
   public OutputStream toOutputStream()
   {
-    reset();
-    outputStream.reset();
+    recycle();
+    outputStream.recycle();
     return outputStream;
   }
 
+  /**
+   * If you need to stop reading ASAP use this. On the next read this InputStream will throw an
+   * {@link IOExeption}.
+   */
   @Override
-  public void reset()
+  public void close()
+  {
+    closed = true;
+  }
+
+  private void recycle()
   {
     head = null;
     endOfStream = false;
     length = -1;
     position = 0;
     currentArray = 0;
-  }
-
-  /**
-   * If you need to stop reading ASAP use this. On the next read this InputStream will throw an IOExeption.
-   * SO DON'T USE THIS LIGHTLTY
-   *
-   */
-  @Override
-  public void close()
-  {
-    closed = true;
+    closed = false;
   }
 }
