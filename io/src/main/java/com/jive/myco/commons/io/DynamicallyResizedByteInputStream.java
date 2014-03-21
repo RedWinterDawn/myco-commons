@@ -14,12 +14,12 @@ import lombok.Setter;
  * This {@code InputStream} is built on top of backing byte arrays that were filled by a paired
  * {@link DynamicallyResizedByteOutputStream}. Acquire instances of this class through an instance
  * of {@link DynamicallyResizedByteOutputStream}.
- * 
+ *
  * As with typical stream implementations, this stream and its paired output stream are not thread
  * safe.
- * 
+ *
  * @author zmorin
- * 
+ *
  */
 public class DynamicallyResizedByteInputStream extends InputStream
 {
@@ -81,7 +81,7 @@ public class DynamicallyResizedByteInputStream extends InputStream
    * stream as it resets the resources that this is built upon and readies the {@link OutputStream}
    * for reuse.
    */
-  public OutputStream toOutputStream()
+  public DynamicallyResizedByteOutputStream toOutputStream()
   {
     recycle();
     outputStream.recycle();
