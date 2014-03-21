@@ -14,4 +14,9 @@ public interface ListenableContainer<T> extends Listenable<T>
    * @param action
    */
   public void forEach(Function<T, Void> action);
+
+  /**
+   * Clear all listeners
+   */
+  public void clear();
 }

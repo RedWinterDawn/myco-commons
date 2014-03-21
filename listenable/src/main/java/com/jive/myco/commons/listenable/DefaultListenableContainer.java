@@ -59,4 +59,10 @@ public class DefaultListenableContainer<T> implements ListenableContainer<T>
       });
     }
   }
+
+  @Override
+  public void clear()
+  {
+    listeners.clear();
+  }
 }
