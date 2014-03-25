@@ -5,40 +5,90 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
 
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.Setter;
-
 /**
  * This {@code InputStream} is built on top of backing byte arrays that were filled by a paired
  * {@link DynamicallyResizedByteOutputStream}. Acquire instances of this class through an instance
  * of {@link DynamicallyResizedByteOutputStream}.
- *
+ * 
  * As with typical stream implementations, this stream and its paired output stream are not thread
  * safe.
- *
- * @author zmorin
- *
+ * 
+ * @author Zach Morin
+ * @author David Valer
+ * 
+ * @see DynamicallyResizedByteOutputStream
  */
 public class DynamicallyResizedByteInputStream extends InputStream
 {
-  private final List<byte[]> dataQueue;
-  private final DynamicallyResizedByteOutputStream outputStream;
+  /**
+   * The size in bytes of each additional increment allocated in the stream.
+   */
+  private final int incrementSize;
 
-  private byte[] head;
-  private int position;
-  private boolean endOfStream;
-  private int currentArray = 0;
-  @Setter(AccessLevel.PACKAGE)
-  @Getter
-  private int length;
-  private volatile boolean closed;
+  /**
+   * List of buffers to work with.
+   */
+  private final List<byte[]> bufferQueue;
 
-  DynamicallyResizedByteInputStream(@NonNull final DynamicallyResizedByteOutputStream outputStream)
+  /**
+   * The current buffer in use.
+   * 
+   * @See {@link #bufferQueueIndex}
+   * @See {@link #bufferIndex}
+   */
+  private byte[] buffer;
+
+  /**
+   * Index of the buffer in the data queue with which we are currently working.
+   * 
+   * @See {@link #buffer}
+   */
+  private int bufferQueueIndex;
+
+  /**
+   * The zero based index in the current buffer.
+   */
+  private int bufferIndex;
+
+  /**
+   * The number of bytes remaining in the underlying buffers.
+   */
+  private int remaining;
+
+  /**
+   * The index of the buffer in the data queue with which we are currently working when
+   * {@link #mark(int)} was last called.
+   */
+  private int markedBufferQueueIndex;
+
+  /**
+   * The zero based index in the current buffer when {@link #mark(int)} was last called.
+   */
+  private int markedBufferIndex;
+
+  /**
+   * The number of bytes remaining in the underlying buffers when {@link #mark(int)} was last
+   * called.
+   */
+  private int markedRemaining;
+
+  /**
+   * The buffer current buffer in use when {@link #mark(int)} was last called.
+   */
+  private byte[] markedBuffer;
+
+  /**
+   * Flag indicating if the stream is closed.
+   */
+  private boolean closed;
+
+  DynamicallyResizedByteInputStream(final int incrementSize, final List<byte[]> bufferQueue,
+      final int size)
   {
-    this.outputStream = outputStream;
-    dataQueue = outputStream.getDataQueue();
+    this.incrementSize = incrementSize;
+    this.bufferQueue = bufferQueue;
+    this.remaining = size;
+    mark(Integer.MAX_VALUE);
   }
 
   @Override
@@ -46,33 +96,31 @@ public class DynamicallyResizedByteInputStream extends InputStream
   {
     if (closed)
     {
-      throw new IOException("This stream was closed before read was complete.");
+      throw new IOException("Stream closed.");
     }
 
-    if (head == null)
+    int val = -1;
+
+    if (buffer == null)
     {
-      if (dataQueue.size() > 0 && !endOfStream)
+      if (bufferQueue.size() > 0)
       {
-        head = dataQueue.get(currentArray++);
-      }
-      else
-      {
-        // This is the case where someone tries to read from an empty input stream.
-        endOfStream = true;
-        head = new byte[0];
+        buffer = bufferQueue.get(bufferQueueIndex++);
       }
     }
 
-    final int val = (endOfStream) || length-- <= 0 ? -1 : (head[position++] & 0xff);
-    if (position >= head.length)
+    // If we are not in an empty stream
+    if (buffer != null)
     {
-      head = dataQueue.size() < currentArray || length <= 0 ? null : dataQueue.get(currentArray++);
-      position = 0;
-      if (head == null)
+      val = remaining-- <= 0 ? -1 : (buffer[bufferIndex++] & 0xff);
+
+      if (bufferIndex >= buffer.length && remaining > 0)
       {
-        endOfStream = true;
+        buffer = bufferQueue.size() < bufferQueueIndex ? null : bufferQueue.get(bufferQueueIndex++);
+        bufferIndex = 0;
       }
     }
+
     return val;
   }
 
@@ -83,14 +131,12 @@ public class DynamicallyResizedByteInputStream extends InputStream
    */
   public DynamicallyResizedByteOutputStream toOutputStream()
   {
-    recycle();
-    outputStream.recycle();
-    return outputStream;
+    closed = true;
+    return new DynamicallyResizedByteOutputStream(incrementSize, bufferQueue);
   }
 
   /**
-   * If you need to stop reading ASAP use this. On the next read this InputStream will throw an
-   * {@link IOExeption}.
+   * Closes the stream, preventing further read operations.
    */
   @Override
   public void close()
@@ -98,13 +144,36 @@ public class DynamicallyResizedByteInputStream extends InputStream
     closed = true;
   }
 
-  private void recycle()
+  @Override
+  public int available()
   {
-    head = null;
-    endOfStream = false;
-    length = -1;
-    position = 0;
-    currentArray = 0;
-    closed = false;
+    return remaining;
+  }
+
+  @Override
+  public boolean markSupported()
+  {
+    return true;
+  }
+
+  @Override
+  public synchronized void mark(final int readlimit)
+  {
+    if (!closed)
+    {
+      markedBufferQueueIndex = bufferQueueIndex;
+      markedBufferIndex = bufferIndex;
+      markedRemaining = remaining;
+      markedBuffer = buffer;
+    }
+  }
+
+  @Override
+  public synchronized void reset() throws IOException
+  {
+    bufferQueueIndex = markedBufferQueueIndex;
+    bufferIndex = markedBufferIndex;
+    remaining = markedRemaining;
+    buffer = markedBuffer;
   }
 }

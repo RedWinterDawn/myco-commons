@@ -10,6 +10,7 @@ import com.google.common.base.Preconditions;
  *
  * @author David Valeri
  */
+@Builder
 public final class RetryPolicy
 {
   /**
@@ -38,10 +39,8 @@ public final class RetryPolicy
   @Getter
   private final double backoffMultiplier;
 
-  @Builder
-  private RetryPolicy(final int maximumRetries, final long initialRetryDelay,
-      final boolean useBackoffMultiplier,
-      final long maximumRetryDelay, final double backoffMultiplier)
+  private RetryPolicy(final int maximumRetries, final long maximumRetryDelay,
+      final long initialRetryDelay, final double backoffMultiplier)
   {
     Preconditions.checkArgument(initialRetryDelay >= 0, "initialRetryDelay cannot be negative.");
 

@@ -17,135 +17,180 @@ import com.google.common.collect.Lists;
  * These additional byte arrays solve the problem of having to double the size of the initial byte
  * array and memory copying as in {@link ByteArrayOutputStream} when you only need a fraction of the
  * space.
- *
+ * 
  * This class also provides a reference to an {@code InputStream} that is built on top of the same
  * backing arrays so that you don't have to go around copying bytes like some kind of un-optimized
  * barbarian.
- *
+ * 
  * As with typical stream implementations, this stream and its paired output stream are not thread
  * safe.
- *
+ * 
  * Typical usage pattern is as follows:
- *
+ * 
  * <pre>
- *
+ * 
  * DynamicallyResizedByteOutputStream outputStream =
  *     new DynamicallyResizedByteOutputStream(1024 * 4, 1024);
- *
+ * 
  * outputStream.write(...);
- *
+ * 
  * // Recycle for reading
  * InputStream inputStream = outputStream.getInputStream();
- *
+ * 
  * inputStream.read(...);
- *
+ * 
  * // Recycle for writing
  * outputStream = inputStream.getOutputStream();
- *
+ * 
  * ...
  * </pre>
- *
- * @author zmorin
- *
+ * 
+ * @author Zach Morin
+ * @author David Valer
+ * 
  */
 public class DynamicallyResizedByteOutputStream extends OutputStream
 {
+  /**
+   * The size in bytes of each additional increment allocated in the stream.
+   */
   private final int incrementSize;
-  private final DynamicallyResizedByteInputStream inputStream;
 
   /**
    * List of buffers to work with.
    */
   @Getter(AccessLevel.PACKAGE)
-  private final List<byte[]> dataQueue;
+  private final List<byte[]> bufferQueue;
 
   /**
    * The current buffer in use.
-   *
-   * @See {@link #dataQueueIndex}
+   * 
+   * @See {@link #bufferQueueIndex}
+   * @See {@link #bufferIndex}
    */
-  private byte[] head;
+  private byte[] buffer;
 
   /**
    * Index of the buffer in the data queue with which we are currently working.
    *
-   * @See {@link #head}
+   * @See {@link #buffer}
    */
-  private int dataQueueIndex = 0;
+  private int bufferQueueIndex;
 
   /**
-   * The position in the current buffer.
+   * The zero based index in the current buffer.
    */
-  private int position;
+  private int bufferIndex;
 
   /**
    * Total, zero based, index of the entire stream.
    */
-  private int absolutePosition = 0;
+  private int absoluteIndex;
+
+  /**
+   * Flag indicating if the stream is closed.
+   */
+  private boolean closed;
+
 
   public DynamicallyResizedByteOutputStream(final int initialSize, final int incrementSize)
   {
-
-    head = new byte[initialSize];
     this.incrementSize = incrementSize;
-
-    dataQueue = Lists.newArrayList();
-    dataQueue.add(head);
-
-    position = 0;
-    this.inputStream = new DynamicallyResizedByteInputStream(this);
+    bufferQueue = Lists.newArrayList(new byte[initialSize]);
+    reset();
+  }
+  
+  DynamicallyResizedByteOutputStream(final int incrementSize, final List<byte[]> bufferQueue)
+  {
+    this.incrementSize = incrementSize;
+    this.bufferQueue = bufferQueue;
+    reset();
   }
 
   @Override
   public void write(final int b) throws IOException
   {
-    if (position == head.length)
+    checkClosed();
+
+    if (bufferIndex == buffer.length)
     {
-      if (dataQueueIndex == dataQueue.size() - 1)
+      if (bufferQueueIndex == bufferQueue.size() - 1)
       {
-        final byte[] newHead = new byte[incrementSize];
-        dataQueue.add(newHead);
-        head = newHead;
-        dataQueueIndex++;
+        final byte[] newBuffer = new byte[incrementSize];
+        bufferQueue.add(newBuffer);
+        buffer = newBuffer;
+        bufferQueueIndex++;
       }
       else
       {
-        head = dataQueue.get(++dataQueueIndex);
+        buffer = bufferQueue.get(++bufferQueueIndex);
       }
 
-      absolutePosition += position;
-      position = 0;
+      absoluteIndex += bufferIndex;
+      bufferIndex = 0;
     }
 
-    head[position++] = (byte) b;
+    buffer[bufferIndex++] = (byte) b;
+  }
+
+  /**
+   * Closes the stream and prevents further writes.
+   */
+  @Override
+  public void close() throws IOException
+  {
+    closed = true;
   }
 
   public int getSize()
   {
-    return absolutePosition + position;
+    return absoluteIndex + bufferIndex;
   }
 
   /**
    * This method returns the {@link InputStream} associated with the same resources that this
    * {@link OutputStream} is built on top of. When you call this method you are signaling that you
    * are done writing to this stream.
+   * <p/>
+   * This stream is closed once this method returns.
    */
   public DynamicallyResizedByteInputStream toInputStream()
   {
-    inputStream.setLength(getSize());
-    return inputStream;
+    closed = true;
+    return new DynamicallyResizedByteInputStream(incrementSize, bufferQueue, getSize());
   }
 
   /**
    * Resets the internal pointers and readies the stream for writing. Call this method if you wish
    * to reset the output stream to an empty state and start filling it again without calling
    * {@link #toInputStream()}.
+   * 
+   * @throws IllegalStateException
+   *           if the stream is closed or {@link #toInputStream()} has been called.
    */
   public void recycle()
   {
-    head = dataQueue.get(0);
-    position = 0;
-    absolutePosition = 0;
-    dataQueueIndex = 0;
+    if (closed)
+    {
+      throw new IllegalStateException("Stream closed.");
+    }
+
+    reset();
+  }
+
+  private void reset()
+  {
+    buffer = bufferQueue.get(0);
+    bufferIndex = 0;
+    absoluteIndex = 0;
+    bufferQueueIndex = 0;
+  }
+
+  private void checkClosed() throws IOException
+  {
+    if (closed)
+    {
+      throw new IOException("Stream closed.");
+    }
   }
 }
