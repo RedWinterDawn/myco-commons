@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import lombok.Delegate;
 
 import com.google.common.base.Function;
 import com.google.common.util.concurrent.AbstractFuture;
@@ -44,6 +45,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 public class ChainedFuture<V> extends AbstractFuture<V>
 {
+  @Delegate
   private final ListenableFuture<V> delegate;
 
   /**
