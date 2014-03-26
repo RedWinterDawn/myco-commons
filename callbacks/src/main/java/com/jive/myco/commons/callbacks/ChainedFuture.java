@@ -124,7 +124,8 @@ public class ChainedFuture<V> extends AbstractFuture<V>
   }
 
   @Override
-  public V get(long timeout, TimeUnit unit) throws InterruptedException, TimeoutException, ExecutionException
+  public V get(long timeout, TimeUnit unit) throws InterruptedException, TimeoutException,
+      ExecutionException
   {
     if (delegate == this)
     {
@@ -200,6 +201,8 @@ public class ChainedFuture<V> extends AbstractFuture<V>
    * the callback added.
    *
    * @see Futures#addCallback(ListenableFuture, FutureCallback)
+   *
+   * @return ourself so you can keep chaining
    */
   public ChainedFuture<V> addCallback(FutureCallback<? super V> callback)
   {
@@ -208,16 +211,56 @@ public class ChainedFuture<V> extends AbstractFuture<V>
   }
 
   /**
-   * Note that the return of this method is itself. Adding a callback is a terminal operation for
-   * the future, it does not return a new future that can be continually chained AFTER the callback
-   * completes. Any additional calls on the returned ChainedFuture will be invoked in parallel to
-   * the callback added.
+   * Same notifications apply as on
+   * {@link #addCallback(com.google.common.util.concurrent.FutureCallback)}
    *
+   * @see #addCallback(com.google.common.util.concurrent.FutureCallback)
    * @see Futures#addCallback(ListenableFuture, FutureCallback, Executor)
+   *
+   * @return ourself so you can keep chaining
    */
   public ChainedFuture<V> addCallback(FutureCallback<? super V> callback, Executor executor)
   {
     Futures.addCallback(delegate, callback, executor);
+    return this;
+  }
+
+  /**
+   * Add a callback to invoke on success or failure of this particular future. The same
+   * notifications apply as on
+   * {@link #addCallback(com.google.common.util.concurrent.FutureCallback)} This variation allows
+   * you to make use of our {@link Callback} class to act as the callback instead of wrapping it
+   * yourself.
+   *
+   * @param callback
+   *          the callback to invoke on success or failure
+   *
+   * @see #addCallback(com.google.common.util.concurrent.FutureCallback)
+   *
+   * @return ourself so you can keep chaining
+   */
+  public ChainedFuture<V> addCallback(Callback<? super V> callback)
+  {
+    Futures.addCallback(delegate, CallbackWrappers.wrap(callback));
+    return this;
+  }
+
+  /**
+   * Same rules as {@link #addCallback(com.jive.myco.commons.callbacks.Callback)}.
+   *
+   * @param callback
+   *          the callback to invoke on success or failure
+   * @param executor
+   *          the executor to execute the callback on
+   *
+   * @see #addCallback(com.jive.myco.commons.callbacks.Callback, java.util.concurrent.Executor)
+   * @see #addCallback(com.jive.myco.commons.callbacks.Callback)
+   *
+   * @return ourself so you can keep chaining
+   */
+  public ChainedFuture<V> addCallback(Callback<? super V> callback, Executor executor)
+  {
+    Futures.addCallback(delegate, CallbackWrappers.wrap(callback), executor);
     return this;
   }
 
