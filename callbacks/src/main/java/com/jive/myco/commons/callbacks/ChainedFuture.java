@@ -1,13 +1,14 @@
 package com.jive.myco.commons.callbacks;
 
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
-import lombok.Delegate;
 
 import com.google.common.base.Function;
 import com.google.common.util.concurrent.AbstractFuture;
@@ -45,7 +46,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 public class ChainedFuture<V> extends AbstractFuture<V>
 {
-  @Delegate
   private final ListenableFuture<V> delegate;
 
   /**
@@ -56,6 +56,84 @@ public class ChainedFuture<V> extends AbstractFuture<V>
   protected ChainedFuture()
   {
     this.delegate = this;
+  }
+
+  @Override
+  public void addListener(Runnable listener, Executor exec)
+  {
+    if (delegate == this)
+    {
+      super.addListener(listener, exec);
+    }
+    else
+    {
+      delegate.addListener(listener, exec);
+    }
+  }
+
+  @Override
+  public boolean cancel(boolean mayInterruptIfRunning)
+  {
+    if (delegate == this)
+    {
+      return super.cancel(mayInterruptIfRunning);
+    }
+    else
+    {
+      return delegate.cancel(mayInterruptIfRunning);
+    }
+  }
+
+  @Override
+  public boolean isCancelled()
+  {
+    if (delegate == this)
+    {
+      return super.isCancelled();
+    }
+    else
+    {
+      return delegate.isCancelled();
+    }
+  }
+
+  @Override
+  public boolean isDone()
+  {
+    if (delegate == this)
+    {
+      return super.isDone();
+    }
+    else
+    {
+      return delegate.isDone();
+    }
+  }
+
+  @Override
+  public V get() throws InterruptedException, ExecutionException
+  {
+    if (delegate == this)
+    {
+      return super.get();
+    }
+    else
+    {
+      return delegate.get();
+    }
+  }
+
+  @Override
+  public V get(long timeout, TimeUnit unit) throws InterruptedException, TimeoutException, ExecutionException
+  {
+    if (delegate == this)
+    {
+      return super.get(timeout, unit);
+    }
+    else
+    {
+      return delegate.get(timeout, unit);
+    }
   }
 
   /**
