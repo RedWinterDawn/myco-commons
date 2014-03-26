@@ -1,5 +1,6 @@
 package com.jive.myco.commons.callbacks;
 
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -18,6 +19,22 @@ import com.google.common.util.concurrent.ListenableFuture;
 /**
  * A {@link ListenableFuture} with chaining abilities through the use of Guava's {@link Futures}
  * class.
+ * <p>
+ * Once you get a hold of a {@link ListenableFuture} then this class will allow you to do things
+ * like the following:
+ *
+ * <pre>
+ * <code>
+ *  ListenableFuture&lt;Thing&gt; thing;
+ *  ChainedFuture.of(thing)
+ *    // translate Thing to an OtherThing
+ *    .transform(new AsyncFunction&lt;Thing, OtherThing&gt;(){...})
+ *    // Provide alternate output if the above transform fails
+ *    .withFallback(new FutureFallback&lt;OtherThing&gt;(){...})
+ *    // add a callback to handle the overall success or failure of the chain
+ *    .addCallback(new FutureCallback&lt;OtherThing&gt;(){...});
+ * </code>
+ * </pre>
  *
  * @param <V>
  *          the type of result returned from the future
@@ -97,19 +114,31 @@ public class ChainedFuture<V> extends AbstractFuture<V>
   }
 
   /**
+   * Note that the return of this method is itself. Adding a callback is a terminal operation for
+   * the future, it does not return a new future that can be continually chained AFTER the callback
+   * completes. Any additional calls on the returned ChainedFuture will be invoked in parallel to
+   * the callback added.
+   *
    * @see Futures#addCallback(ListenableFuture, FutureCallback)
    */
-  public void addCallback(FutureCallback<? super V> callback)
+  public ChainedFuture<V> addCallback(FutureCallback<? super V> callback)
   {
     Futures.addCallback(delegate, callback);
+    return this;
   }
 
   /**
+   * Note that the return of this method is itself. Adding a callback is a terminal operation for
+   * the future, it does not return a new future that can be continually chained AFTER the callback
+   * completes. Any additional calls on the returned ChainedFuture will be invoked in parallel to
+   * the callback added.
+   *
    * @see Futures#addCallback(ListenableFuture, FutureCallback, Executor)
    */
-  public void addCallback(FutureCallback<? super V> callback, Executor executor)
+  public ChainedFuture<V> addCallback(FutureCallback<? super V> callback, Executor executor)
   {
     Futures.addCallback(delegate, callback, executor);
+    return this;
   }
 
   /**
@@ -139,7 +168,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
   /**
    * @see Futures#allAsList(ListenableFuture[])
    */
-  public static <V> ChainedFuture allAsList(ListenableFuture<? extends V>... futures)
+  public static <V> ChainedFuture<List<V>> allAsList(ListenableFuture<? extends V>... futures)
   {
     return ChainedFuture.of(Futures.allAsList(futures));
   }
@@ -147,7 +176,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
   /**
    * @see Futures#allAsList(Iterable)
    */
-  public static <V> ChainedFuture allAsList(
+  public static <V> ChainedFuture<List<V>> allAsList(
       Iterable<? extends ListenableFuture<? extends V>> futures)
   {
     return ChainedFuture.of(Futures.allAsList(futures));
@@ -156,7 +185,8 @@ public class ChainedFuture<V> extends AbstractFuture<V>
   /**
    * @see Futures#successfulAsList(ListenableFuture[])
    */
-  public static <V> ChainedFuture successfulAsList(ListenableFuture<? extends V>... futures)
+  public static <V> ChainedFuture<List<V>> successfulAsList(
+      ListenableFuture<? extends V>... futures)
   {
     return ChainedFuture.of(Futures.successfulAsList(futures));
   }
@@ -164,7 +194,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
   /**
    * @see Futures#successfulAsList(Iterable)
    */
-  public static <V> ChainedFuture successfulAsList(
+  public static <V> ChainedFuture<List<V>> successfulAsList(
       Iterable<? extends ListenableFuture<? extends V>> futures)
   {
     return ChainedFuture.of(Futures.successfulAsList(futures));
@@ -175,11 +205,11 @@ public class ChainedFuture<V> extends AbstractFuture<V>
    *
    * @param future
    *          the backing listenable future to use
-   * @param <T>
+   * @param <V>
    *          the type of result from the future
    * @return a chainable future
    */
-  public static <T> ChainedFuture<T> of(ListenableFuture<T> future)
+  public static <V> ChainedFuture<V> of(ListenableFuture<V> future)
   {
     return new ChainedFuture<>(future);
   }
