@@ -29,6 +29,7 @@
     <module>listenable</module>
     <module>retry</module>
     <module>versions</module>
+    <module>myco-commons-testing</module>
   </modules>
 
   <dependencies>
