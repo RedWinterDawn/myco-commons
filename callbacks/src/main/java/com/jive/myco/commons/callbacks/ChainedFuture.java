@@ -291,6 +291,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
   /**
    * @see Futures#allAsList(ListenableFuture[])
    */
+  @SafeVarargs
   public static <V> ChainedFuture<List<V>> allAsList(ListenableFuture<? extends V>... futures)
   {
     return ChainedFuture.of(Futures.allAsList(futures));
@@ -308,6 +309,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
   /**
    * @see Futures#successfulAsList(ListenableFuture[])
    */
+  @SafeVarargs
   public static <V> ChainedFuture<List<V>> successfulAsList(
       ListenableFuture<? extends V>... futures)
   {
