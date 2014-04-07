@@ -25,10 +25,11 @@ public final class Util
    */
   @SuppressWarnings("unchecked")
   public static void runCallback(final Callback<?> callback, final Object response,
-      Executor executor)
+      final Executor executor)
   {
-    executor.execute(new SafeCallbackRunnable<Object>((Callback<Object>) callback)
+    new SafeCallbackRunnable<Object>((Callback<Object>) callback, executor)
     {
+
       @Override
       protected void doRun() throws Exception
       {
@@ -41,6 +42,6 @@ public final class Util
           onSuccess(response);
         }
       }
-    });
+    }.run();
   }
 }
