@@ -3,6 +3,7 @@ package com.jive.myco.commons.metrics;
 import java.util.concurrent.Callable;
 
 import com.codahale.metrics.Counter;
+import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.Metric;
@@ -111,10 +112,25 @@ public interface MetricsManagerContext
    *          more optional segments to add to the metric name used to identify the context of the
    *          metric
    * 
-   * @return a new ratio gauge or the previously created ratio gauge if one already exists
-   * 
-   * @throws IllegalArgumentException
-   *           if the metric name is already registered in the registry
+   * @return a new ratio gauge
    */
-  RatioGauge addRatio(final Callable<Ratio> function, final String segment, final String... additionalSegments);
+  RatioGauge addRatio(final Callable<Ratio> function, final String segment,
+      final String... additionalSegments);
+
+  /**
+   * Adds a gauge for the provided name and function, removing the current gauge if one is already
+   * registered.
+   * 
+   * @param function
+   *          the function that calculates the value
+   * @param segment
+   *          the segment to add to the metric name for the metric
+   * @param additionalSegments
+   *          more optional segments to add to the metric name used to identify the context of the
+   *          metric
+   * 
+   * @return a new gauge
+   */
+  <T> Gauge<T> addGauge(final Callable<T> function, final String segment,
+      final String... additionalSegments);
 }

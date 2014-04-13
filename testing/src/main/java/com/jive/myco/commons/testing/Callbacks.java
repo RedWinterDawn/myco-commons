@@ -46,10 +46,11 @@ public final class Callbacks
       @Override
       public Void answer(final InvocationOnMock invocation) throws Throwable
       {
-        int callbackArg = getCallbackIndex(invocation);
+        final int callbackArg = getCallbackIndex(invocation);
 
-        Object response = getResponse();
+        final Object response = getResponse();
 
+        @SuppressWarnings("unchecked")
         final Callback<Object> callback = (Callback<Object>) invocation.getArguments()[callbackArg];
 
         if (response == DO_NOTHING)
@@ -85,12 +86,12 @@ public final class Callbacks
 
       private int getCallbackIndex(final InvocationOnMock invocation) throws IllegalStateException
       {
-        Class<?>[] parameterTypes = invocation.getMethod().getParameterTypes();
+        final Class<?>[] parameterTypes = invocation.getMethod().getParameterTypes();
         int callbackArg = -1;
         // reverse iteration since callback is usually at the end
         for (int i = parameterTypes.length - 1; i >= 0; i--)
         {
-          Class<?> parameterType = parameterTypes[i];
+          final Class<?> parameterType = parameterTypes[i];
           if (Callback.class.isAssignableFrom(parameterType))
           {
             callbackArg = i;

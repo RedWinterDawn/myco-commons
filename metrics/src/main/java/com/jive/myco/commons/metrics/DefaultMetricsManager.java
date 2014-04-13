@@ -21,6 +21,7 @@ import org.fusesource.hawtdispatch.internal.DispatcherConfig;
 import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.Counter;
+import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.Meter;
@@ -47,7 +48,8 @@ import com.jive.myco.commons.lifecycle.Lifecycled;
 @Slf4j
 public final class DefaultMetricsManager implements MetricsManager, Lifecycled
 {
-  private static final String DISPATCH_QUEUE_METRICS_ENTITY_PREFIX = "com.jive.myco.metrics";
+  private static final String DISPATCH_QUEUE_METRICS_ENTITY_PREFIX =
+      "com.jive.myco.commons.metrics";
 
   private static final AtomicInteger INSTANCE_COUNT = new AtomicInteger();
 
@@ -342,6 +344,34 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
     return gauge;
   }
 
+  protected <T> Gauge<T> addGauge(@NonNull final Callable<T> function, final String prefix,
+      final String segment, final String... additionalSegments)
+  {
+    final Gauge<T> gauge = new Gauge<T>()
+    {
+      @Override
+      public T getValue()
+      {
+        try
+        {
+          return function.call();
+        }
+        catch (final Exception e)
+        {
+          throw new RuntimeException(e);
+        }
+      }
+    };
+
+    final String name = getMetricName(prefix, segment, additionalSegments);
+    registry.remove(name);
+    registry.register(name, gauge);
+
+    metricNameMap.put(gauge, name);
+
+    return gauge;
+  }
+
   private String getMetricName(final String prefix, @NonNull final String segment,
       final String... additionalSegments)
   {
@@ -423,6 +453,13 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
         final String... additionalSegments)
     {
       return DefaultMetricsManager.this.addRatio(function, prefix, segment, additionalSegments);
+    }
+
+    @Override
+    public <T> Gauge<T> addGauge(final Callable<T> function, final String segment,
+        final String... additionalSegments)
+    {
+      return DefaultMetricsManager.this.addGauge(function, prefix, segment, additionalSegments);
     }
   };
 }

@@ -10,6 +10,7 @@ import org.fusesource.hawtdispatch.Dispatcher;
 import org.junit.Test;
 
 import com.codahale.metrics.Counter;
+import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.RatioGauge;
@@ -137,8 +138,30 @@ public class DefaultMetricsManagerTest
             return Ratio.of(1d, 1d);
           }
         }, "ratio", "2");
-
+    
     assertNotSame(baseRatio, baseRatio2);
+
+    final Gauge<Integer> baseGauge = baseContext.addGauge(
+        new Callable<Integer>()
+        {
+          @Override
+          public Integer call() throws Exception
+          {
+            return 1;
+          }
+        }, "gauge");
+
+    final Gauge<Integer> baseGauge2 = baseContext.addGauge(
+        new Callable<Integer>()
+        {
+          @Override
+          public Integer call() throws Exception
+          {
+            return 1;
+          }
+        }, "gauge2");
+
+    assertNotSame(baseGauge, baseGauge2);
 
     // Test get or create in one context
     assertSame(baseMeter, baseContext.getMeter("meter"));
@@ -160,6 +183,17 @@ public class DefaultMetricsManagerTest
           }
         },
         "ratio"));
+    
+    assertNotSame(baseGauge, baseContext.addGauge(
+        new Callable<Integer>()
+        {
+          @Override
+          public Integer call() throws Exception
+          {
+            return 1;
+          }
+        },
+        "gauge"));
 
     // Test duplicate name in different contexts
 
@@ -185,8 +219,18 @@ public class DefaultMetricsManagerTest
           }
         },
         "ratio");
-
     assertNotSame(baseRatio, subRatio);
+
+    final Gauge<Integer> subGauge = subContext.addGauge(
+        new Callable<Integer>()
+        {
+          @Override
+          public Integer call() throws Exception
+          {
+            return 1;
+          }
+        }, "gauge");
+    assertNotSame(baseGauge, subGauge);
     
     // Test duplicate name in different contexts with same prefix
     assertEquals(subContext2.getBaseName(), subContext2Alternate.getBaseName());
