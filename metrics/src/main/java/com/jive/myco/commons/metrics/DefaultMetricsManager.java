@@ -1,5 +1,6 @@
 package com.jive.myco.commons.metrics;
 
+import java.io.Closeable;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -30,7 +31,6 @@ import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.RatioGauge.Ratio;
-import com.codahale.metrics.ScheduledReporter;
 import com.codahale.metrics.Slf4jReporter;
 import com.codahale.metrics.Timer;
 import com.google.common.base.Joiner;
@@ -58,7 +58,7 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
   private final AtomicReference<LifecycleStage> lifecycleStage = new AtomicReference<>(
       LifecycleStage.UNINITIALIZED);
 
-  private final List<ScheduledReporter> scheduledReporters = new LinkedList<>();
+  private final List<Closeable> reporters = new LinkedList<>();
 
   /**
    * A map of {@link Metric}s back to the name of the metric in the registry. Used to make removal
@@ -70,8 +70,6 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
   private final Map<Metric, String> metricNameMap = new MapMaker().weakKeys().makeMap();
 
   private DispatchQueue lifecycleQueue;
-
-  private JmxReporter jmxReporter;
 
   private DefaultMetricsManagerContext baseContext;
 
@@ -127,7 +125,7 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
                     .convertDurationsTo(TimeUnit.MILLISECONDS)
                     .build();
 
-                scheduledReporters.add(reporter);
+                reporters.add(reporter);
 
                 reporter.start(metricsManagerConfiguration.getSlf4jReporterPeriod(),
                     TimeUnit.MILLISECONDS);
@@ -135,9 +133,12 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
 
               if (metricsManagerConfiguration.isJmxReporterEnabled())
               {
-                jmxReporter = JmxReporter.forRegistry(registry)
+                final JmxReporter jmxReporter = JmxReporter.forRegistry(registry)
                     .inDomain(metricsManagerConfiguration.getJmxReporterDomain())
                     .build();
+
+                reporters.add(jmxReporter);
+
                 jmxReporter.start();
               }
 
@@ -194,14 +195,16 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
         @Override
         protected void doRun()
         {
-          for (final ScheduledReporter scheduledReporter : scheduledReporters)
+          for (final Closeable reporter : reporters)
           {
-            scheduledReporter.stop();
-          }
-
-          if (jmxReporter != null)
-          {
-            jmxReporter.stop();
+            try
+            {
+              reporter.close();
+            }
+            catch (final Exception e)
+            {
+              log.warn("Error closing reporter of type [{}].", reporter.getClass());
+            }
           }
 
           if (registry != null)
@@ -319,6 +322,8 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
   protected RatioGauge addRatio(@NonNull final Callable<Ratio> function, final String prefix,
       final String segment, final String... additionalSegments)
   {
+    final String name = getMetricName(prefix, segment, additionalSegments);
+
     final RatioGauge gauge = new RatioGauge()
     {
       @Override
@@ -330,12 +335,12 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
         }
         catch (final Exception e)
         {
-          throw new RuntimeException(e);
+          log.error("Error calculating ratio [{}].", name, e);
+          return RatioGauge.Ratio.of(0d, 0d); // Yields NaN
         }
       }
     };
 
-    final String name = getMetricName(prefix, segment, additionalSegments);
     registry.remove(name);
     registry.register(name, gauge);
 
@@ -347,6 +352,8 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
   protected <T> Gauge<T> addGauge(@NonNull final Callable<T> function, final String prefix,
       final String segment, final String... additionalSegments)
   {
+    final String name = getMetricName(prefix, segment, additionalSegments);
+
     final Gauge<T> gauge = new Gauge<T>()
     {
       @Override
@@ -358,12 +365,12 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
         }
         catch (final Exception e)
         {
-          throw new RuntimeException(e);
+          log.error("Error calculating gauge [{}].", name, e);
+          return null;
         }
       }
     };
 
-    final String name = getMetricName(prefix, segment, additionalSegments);
     registry.remove(name);
     registry.register(name, gauge);
 

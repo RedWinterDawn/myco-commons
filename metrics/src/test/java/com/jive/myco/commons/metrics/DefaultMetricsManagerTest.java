@@ -250,6 +250,45 @@ public class DefaultMetricsManagerTest
     assertEquals(LifecycleStage.DESTROYED, manager.getLifecycleStage());
   }
 
+  @Test
+  public void testRatio() throws Exception
+  {
+    final MetricsManager manager =
+        createMetricsManager(null, null, MetricsManagerConfiguration.builder().build());
+
+    final CallbackFuture<Void> callback = new CallbackFuture<>();
+    manager.init(callback);
+    callback.get(50, TimeUnit.MILLISECONDS);
+
+    assertEquals(LifecycleStage.INITIALIZED, manager.getLifecycleStage());
+
+    final MetricsManagerContext baseContext = manager.segment();
+
+    final RatioGauge baseRatio = baseContext.addRatio(
+        new Callable<Ratio>()
+        {
+          @Override
+          public Ratio call() throws Exception
+          {
+            throw new RuntimeException();
+          }
+        }, "ratio");
+
+    final Gauge<Integer> baseGauge = baseContext.addGauge(
+        new Callable<Integer>()
+        {
+          @Override
+          public Integer call() throws Exception
+          {
+            throw new RuntimeException();
+          }
+        }, "gauge");
+
+
+    assertEquals(Double.valueOf(Double.NaN), baseRatio.getValue());
+    assertNull(baseGauge.getValue());
+  }
+
   private MetricsManager createMetricsManager(final String id, final Dispatcher dispatcher,
       final MetricsManagerConfiguration metricsManagerConfiguration)
   {
