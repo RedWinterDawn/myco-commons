@@ -33,7 +33,8 @@ public abstract class SafeCallback<T> implements Callback<T>
     }
     else
     {
-      log.warn("Callback invoked multiple times.");
+      log.warn("Callback invoked multiple times.", new IllegalStateException(
+          "Safe callback invoked multiple times."));
     }
   }
 
@@ -53,7 +54,8 @@ public abstract class SafeCallback<T> implements Callback<T>
     }
     else
     {
-      log.warn("Callback invoked multiple times.");
+      log.warn("Callback invoked multiple times.", new IllegalStateException(
+          "Safe callback invoked multiple times."));
     }
   }
 
