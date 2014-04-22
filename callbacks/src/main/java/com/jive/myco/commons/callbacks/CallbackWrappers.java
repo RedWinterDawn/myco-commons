@@ -1,7 +1,6 @@
 package com.jive.myco.commons.callbacks;
 
 import static lombok.AccessLevel.*;
-
 import lombok.NoArgsConstructor;
 
 import com.google.common.util.concurrent.FutureCallback;
@@ -29,15 +28,14 @@ public final class CallbackWrappers
   {
     return new FutureCallback<T>()
     {
-
       @Override
-      public void onSuccess(T result)
+      public void onSuccess(final T result)
       {
         callback.onSuccess(result);
       }
 
       @Override
-      public void onFailure(Throwable t)
+      public void onFailure(final Throwable t)
       {
         callback.onFailure(t);
       }

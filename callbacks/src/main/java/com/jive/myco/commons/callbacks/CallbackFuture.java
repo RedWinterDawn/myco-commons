@@ -2,6 +2,8 @@ package com.jive.myco.commons.callbacks;
 
 import java.util.concurrent.Future;
 
+import com.google.common.util.concurrent.ListenableFuture;
+
 /**
  * A callback that delivers results to a {@link ListenableFuture}. This class is useful for
  * converting callback based APIs into future based or blocking APIs, particularly for complex
@@ -10,6 +12,7 @@ import java.util.concurrent.Future;
  *
  * @param <T>
  *          the result type returned from the future / provided to the callback
+ *
  * @author David Valeri
  */
 public class CallbackFuture<T> extends ChainedFuture<T> implements Callback<T>

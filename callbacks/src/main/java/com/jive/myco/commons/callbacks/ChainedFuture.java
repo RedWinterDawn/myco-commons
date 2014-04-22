@@ -59,7 +59,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
   }
 
   @Override
-  public void addListener(Runnable listener, Executor exec)
+  public void addListener(final Runnable listener, final Executor exec)
   {
     if (delegate == this)
     {
@@ -72,7 +72,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
   }
 
   @Override
-  public boolean cancel(boolean mayInterruptIfRunning)
+  public boolean cancel(final boolean mayInterruptIfRunning)
   {
     if (delegate == this)
     {
@@ -124,7 +124,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
   }
 
   @Override
-  public V get(long timeout, TimeUnit unit) throws InterruptedException, TimeoutException,
+  public V get(final long timeout, final TimeUnit unit) throws InterruptedException, TimeoutException,
       ExecutionException
   {
     if (delegate == this)
@@ -140,7 +140,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
   /**
    * @see Futures#withFallback(ListenableFuture, FutureFallback)
    */
-  public ChainedFuture<V> withFallback(FutureFallback<? extends V> fallback)
+  public ChainedFuture<V> withFallback(final FutureFallback<? extends V> fallback)
   {
     return ChainedFuture.of(Futures.withFallback(delegate, fallback));
   }
@@ -148,7 +148,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
   /**
    * @see Futures#withFallback(ListenableFuture, FutureFallback, Executor)
    */
-  public ChainedFuture<V> withFallback(FutureFallback<? extends V> fallback, Executor executor)
+  public ChainedFuture<V> withFallback(final FutureFallback<? extends V> fallback, final Executor executor)
   {
     return ChainedFuture.of(Futures.withFallback(delegate, fallback, executor));
   }
@@ -156,7 +156,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
   /**
    * @see Futures#transform(ListenableFuture, AsyncFunction)
    */
-  public <O> ChainedFuture<O> transform(AsyncFunction<? super V, ? extends O> function)
+  public <O> ChainedFuture<O> transform(final AsyncFunction<? super V, ? extends O> function)
   {
     return ChainedFuture.of(Futures.transform(delegate, function));
   }
@@ -164,8 +164,8 @@ public class ChainedFuture<V> extends AbstractFuture<V>
   /**
    * @see Futures#transform(ListenableFuture, AsyncFunction, Executor)
    */
-  public <O> ChainedFuture<O> transform(AsyncFunction<? super V, ? extends O> function,
-      Executor executor)
+  public <O> ChainedFuture<O> transform(final AsyncFunction<? super V, ? extends O> function,
+      final Executor executor)
   {
     return ChainedFuture.of(Futures.transform(delegate, function, executor));
   }
@@ -173,7 +173,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
   /**
    * @see Futures#transform(ListenableFuture, Function)
    */
-  public <O> ChainedFuture<O> transform(Function<? super V, ? extends O> function)
+  public <O> ChainedFuture<O> transform(final Function<? super V, ? extends O> function)
   {
     return ChainedFuture.of(Futures.transform(delegate, function));
   }
@@ -181,7 +181,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
   /**
    * @see Futures#transform(ListenableFuture, Function, Executor)
    */
-  public <O> ChainedFuture<O> transform(Function<? super V, ? extends O> function, Executor executor)
+  public <O> ChainedFuture<O> transform(final Function<? super V, ? extends O> function, final Executor executor)
   {
     return ChainedFuture.of(Futures.transform(delegate, function, executor));
   }
@@ -204,7 +204,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
    *
    * @return ourself so you can keep chaining
    */
-  public ChainedFuture<V> addCallback(FutureCallback<? super V> callback)
+  public ChainedFuture<V> addCallback(final FutureCallback<? super V> callback)
   {
     Futures.addCallback(delegate, callback);
     return this;
@@ -219,7 +219,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
    *
    * @return ourself so you can keep chaining
    */
-  public ChainedFuture<V> addCallback(FutureCallback<? super V> callback, Executor executor)
+  public ChainedFuture<V> addCallback(final FutureCallback<? super V> callback, final Executor executor)
   {
     Futures.addCallback(delegate, callback, executor);
     return this;
@@ -239,7 +239,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
    *
    * @return ourself so you can keep chaining
    */
-  public ChainedFuture<V> addCallback(Callback<? super V> callback)
+  public ChainedFuture<V> addCallback(final Callback<? super V> callback)
   {
     Futures.addCallback(delegate, CallbackWrappers.wrap(callback));
     return this;
@@ -258,7 +258,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
    *
    * @return ourself so you can keep chaining
    */
-  public ChainedFuture<V> addCallback(Callback<? super V> callback, Executor executor)
+  public ChainedFuture<V> addCallback(final Callback<? super V> callback, final Executor executor)
   {
     Futures.addCallback(delegate, CallbackWrappers.wrap(callback), executor);
     return this;
@@ -267,7 +267,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
   /**
    * @see Futures#get(Future, Class)
    */
-  public <X extends Exception> V get(Class<X> exceptionClass) throws X
+  public <X extends Exception> V get(final Class<X> exceptionClass) throws X
   {
     return Futures.get(delegate, exceptionClass);
   }
@@ -275,7 +275,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
   /**
    * @see Futures#get(Future, long, TimeUnit, Class)
    */
-  public <X extends Exception> V get(long timeout, TimeUnit unit, Class<X> exceptionClass) throws X
+  public <X extends Exception> V get(final long timeout, final TimeUnit unit, final Class<X> exceptionClass) throws X
   {
     return Futures.get(delegate, timeout, unit, exceptionClass);
   }
@@ -292,7 +292,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
    * @see Futures#allAsList(ListenableFuture[])
    */
   @SafeVarargs
-  public static <V> ChainedFuture<List<V>> allAsList(ListenableFuture<? extends V>... futures)
+  public static <V> ChainedFuture<List<V>> allAsList(final ListenableFuture<? extends V>... futures)
   {
     return ChainedFuture.of(Futures.allAsList(futures));
   }
@@ -301,7 +301,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
    * @see Futures#allAsList(Iterable)
    */
   public static <V> ChainedFuture<List<V>> allAsList(
-      Iterable<? extends ListenableFuture<? extends V>> futures)
+      final Iterable<? extends ListenableFuture<? extends V>> futures)
   {
     return ChainedFuture.of(Futures.allAsList(futures));
   }
@@ -311,7 +311,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
    */
   @SafeVarargs
   public static <V> ChainedFuture<List<V>> successfulAsList(
-      ListenableFuture<? extends V>... futures)
+      final ListenableFuture<? extends V>... futures)
   {
     return ChainedFuture.of(Futures.successfulAsList(futures));
   }
@@ -320,7 +320,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
    * @see Futures#successfulAsList(Iterable)
    */
   public static <V> ChainedFuture<List<V>> successfulAsList(
-      Iterable<? extends ListenableFuture<? extends V>> futures)
+      final Iterable<? extends ListenableFuture<? extends V>> futures)
   {
     return ChainedFuture.of(Futures.successfulAsList(futures));
   }
@@ -334,7 +334,7 @@ public class ChainedFuture<V> extends AbstractFuture<V>
    *          the type of result from the future
    * @return a chainable future
    */
-  public static <V> ChainedFuture<V> of(ListenableFuture<V> future)
+  public static <V> ChainedFuture<V> of(final ListenableFuture<V> future)
   {
     return new ChainedFuture<>(future);
   }
