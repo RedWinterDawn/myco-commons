@@ -5,25 +5,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * This Callback will call onSuccess or OnFailure and catch any
- * exceptions that occur while processing the result. This class
- * will also guarantee that the callback is invoked only once.
- *
- * Date: 2/12/14
+ * This callback will call {@link #handleSuccess(Object)} or {@link #handleFailure(Throwable)},
+ * catching any exceptions that occur while processing the result. This class will also guarantee
+ * that the callback is invoked only once, logging a warning when invoked more than once.
  *
  * @author zmorin
  */
 @Slf4j
 public abstract class SafeCallback<T> implements Callback<T>
 {
-  public abstract void handleSuccess(T result);
+  private static final String MULTIPLE_INVOCATION_ERROR_MSG = "Callback invoked multiple times.";
 
-  public abstract void handleFailure(Throwable cause);
-
-  private AtomicBoolean runOnceFlag = new AtomicBoolean(false);
+  private final AtomicBoolean runOnceFlag = new AtomicBoolean(false);
 
   @Override
-  public void onSuccess(T result)
+  public void onSuccess(final T result)
   {
     if (runOnceFlag.compareAndSet(false, true))
     {
@@ -32,15 +28,20 @@ public abstract class SafeCallback<T> implements Callback<T>
         handleSuccess(result);
 
       }
-      catch (Exception e)
+      catch (final Exception e)
       {
         log.error("Exception occurred while handling callback result [{}]", result, e);
       }
     }
+    else
+    {
+      log.warn(MULTIPLE_INVOCATION_ERROR_MSG, new IllegalStateException(
+          MULTIPLE_INVOCATION_ERROR_MSG));
+    }
   }
 
   @Override
-  public void onFailure(Throwable cause)
+  public void onFailure(final Throwable cause)
   {
     if (runOnceFlag.compareAndSet(false, true))
     {
@@ -48,10 +49,19 @@ public abstract class SafeCallback<T> implements Callback<T>
       {
         handleFailure(cause);
       }
-      catch (Exception e)
+      catch (final Exception e)
       {
         log.error("Exception occurred while handling callback failure [{}]", cause, e);
       }
     }
+    else
+    {
+      log.warn(MULTIPLE_INVOCATION_ERROR_MSG, new IllegalStateException(
+          MULTIPLE_INVOCATION_ERROR_MSG));
+    }
   }
+
+  protected abstract void handleSuccess(final T result);
+
+  protected abstract void handleFailure(final Throwable cause);
 }
