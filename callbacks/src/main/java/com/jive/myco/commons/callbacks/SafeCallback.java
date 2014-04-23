@@ -14,6 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public abstract class SafeCallback<T> implements Callback<T>
 {
+  private static final String MULTIPLE_INVOCATION_ERROR_MSG = "Callback invoked multiple times.";
+
   private final AtomicBoolean runOnceFlag = new AtomicBoolean(false);
 
   @Override
@@ -33,8 +35,8 @@ public abstract class SafeCallback<T> implements Callback<T>
     }
     else
     {
-      log.warn("Callback invoked multiple times.", new IllegalStateException(
-          "Safe callback invoked multiple times."));
+      log.warn(MULTIPLE_INVOCATION_ERROR_MSG, new IllegalStateException(
+          MULTIPLE_INVOCATION_ERROR_MSG));
     }
   }
 
@@ -54,8 +56,8 @@ public abstract class SafeCallback<T> implements Callback<T>
     }
     else
     {
-      log.warn("Callback invoked multiple times.", new IllegalStateException(
-          "Safe callback invoked multiple times."));
+      log.warn(MULTIPLE_INVOCATION_ERROR_MSG, new IllegalStateException(
+          MULTIPLE_INVOCATION_ERROR_MSG));
     }
   }
 

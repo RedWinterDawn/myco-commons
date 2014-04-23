@@ -24,6 +24,9 @@ import com.google.common.util.concurrent.MoreExecutors;
 @Slf4j
 public abstract class SafeCallbackRunnable<T> implements Runnable
 {
+  private static final String MULTIPLE_INVOCATION_ERROR_MSG =
+      "Runnable attempted to invoke the callback more than once.";
+
   @NonNull
   private final Callback<T> callback;
 
@@ -173,7 +176,8 @@ public abstract class SafeCallbackRunnable<T> implements Runnable
     }
     else
     {
-      log.error("Runnable attempted to invoke the callback more than once.");
+      log.error(MULTIPLE_INVOCATION_ERROR_MSG,
+          new IllegalStateException(MULTIPLE_INVOCATION_ERROR_MSG));
     }
   }
 
@@ -282,7 +286,8 @@ public abstract class SafeCallbackRunnable<T> implements Runnable
     }
     else
     {
-      log.error("Runnable attempted to invoke the callback more than once.", cause);
+      log.error(MULTIPLE_INVOCATION_ERROR_MSG,
+          new IllegalStateException(MULTIPLE_INVOCATION_ERROR_MSG));
     }
   }
 
