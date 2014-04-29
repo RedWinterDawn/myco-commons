@@ -28,5 +28,12 @@
       <groupId>org.fusesource.hawtdispatch</groupId>
       <artifactId>hawtdispatch</artifactId>
     </dependency>
+    
+    <dependency>
+      <groupId>com.codahale.metrics</groupId>
+      <artifactId>metrics-jvm</artifactId>
+      <version>${deps.metrics.version}</version>
+    </dependency>
+    
   </dependencies>
 </project>
