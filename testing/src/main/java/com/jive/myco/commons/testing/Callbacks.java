@@ -23,13 +23,25 @@ public final class Callbacks
   public static final Object DO_NOTHING = new Object();
 
   /**
+   * Interface for invoking the supplied callback with dynamically generated content or performing
+   * custom logic before or after the callback invocation.
+   *
+   * @author David Valeri
+   */
+  public static interface CallbackInvoker
+  {
+    void invokeCallback(final Callback<?> callback);
+  }
+
+  /**
    * Generate mocked responses to methods that require a callback for sending a response back. Each
    * invocation will trigger the next response in the list of responses provided to be provided to
    * the callback's response.
    * <p>
    * If the response is of type {@link Throwable} then the callback's {@link Callback#onFailure}
    * method will be invoked with the error. If the response is {@link #DO_NOTHING} then the callback
-   * will not be invoked. Any other response will be forwarded on to the callback's
+   * will not be invoked. If the response is of type {@link CallbackInvoker}, the invoker will be
+   * invoked with the callback. Any other response will be forwarded on to the callback's
    * {@link Callback#onSuccess} method.
    *
    * @param responses
@@ -60,6 +72,10 @@ public final class Callbacks
         else if (response instanceof Throwable)
         {
           callback.onFailure((Throwable) response);
+        }
+        else if (response instanceof CallbackInvoker)
+        {
+          ((CallbackInvoker) response).invokeCallback(callback);
         }
         else
         {
