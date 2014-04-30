@@ -23,16 +23,21 @@
       <groupId>com.codahale.metrics</groupId>
       <artifactId>metrics-core</artifactId>
     </dependency>
-
-    <dependency>
-      <groupId>org.fusesource.hawtdispatch</groupId>
-      <artifactId>hawtdispatch</artifactId>
-    </dependency>
     
     <dependency>
       <groupId>com.codahale.metrics</groupId>
       <artifactId>metrics-jvm</artifactId>
       <version>${deps.metrics.version}</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>com.codahale.metrics</groupId>
+      <artifactId>metrics-graphite</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.fusesource.hawtdispatch</groupId>
+      <artifactId>hawtdispatch</artifactId>
     </dependency>
     
   </dependencies>

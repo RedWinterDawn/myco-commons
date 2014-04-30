@@ -1,6 +1,7 @@
 package com.jive.myco.commons.metrics;
 
 import java.io.Closeable;
+import java.lang.management.ManagementFactory;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -33,6 +34,9 @@ import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.RatioGauge.Ratio;
 import com.codahale.metrics.Slf4jReporter;
 import com.codahale.metrics.Timer;
+import com.codahale.metrics.graphite.Graphite;
+import com.codahale.metrics.graphite.GraphiteReporter;
+import com.codahale.metrics.jvm.BufferPoolMetricSet;
 import com.codahale.metrics.jvm.FileDescriptorRatioGauge;
 import com.codahale.metrics.jvm.GarbageCollectorMetricSet;
 import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
@@ -120,11 +124,19 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
             else
             {
               registry = new MetricRegistry();
-              
+
               registry.register(MetricRegistry.name("jvm", "gc"), new GarbageCollectorMetricSet());
+
               registry.register(MetricRegistry.name("jvm", "memory"), new MemoryUsageGaugeSet());
-              registry.register(MetricRegistry.name("jvm", "thread-states"), new ThreadStatesGaugeSet());
-              registry.register(MetricRegistry.name("jvm", "fd", "usage"), new FileDescriptorRatioGauge());
+
+              registry.register(MetricRegistry.name("jvm", "buffer-pool"),
+                  new BufferPoolMetricSet(ManagementFactory.getPlatformMBeanServer()));
+
+              registry.register(MetricRegistry.name("jvm", "thread-states"),
+                  new ThreadStatesGaugeSet());
+
+              registry.register(MetricRegistry.name("jvm", "fd", "usage"),
+                  new FileDescriptorRatioGauge());
 
               if (metricsManagerConfiguration.isSlf4jReporterEnabled())
               {
@@ -144,11 +156,31 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
               {
                 final JmxReporter jmxReporter = JmxReporter.forRegistry(registry)
                     .inDomain(metricsManagerConfiguration.getJmxReporterDomain())
+                    .registerWith(ManagementFactory.getPlatformMBeanServer())
+                    .convertRatesTo(TimeUnit.SECONDS)
+                    .convertDurationsTo(TimeUnit.MILLISECONDS)
                     .build();
 
                 reporters.add(jmxReporter);
 
                 jmxReporter.start();
+              }
+
+              if (metricsManagerConfiguration.isGraphiteReporterEnabled())
+              {
+                final Graphite graphite =
+                    new Graphite(metricsManagerConfiguration.getGraphiteReporterAddress());
+
+                final GraphiteReporter graphiteReporter = GraphiteReporter.forRegistry(registry)
+                    .prefixedWith(metricsManagerConfiguration.getGraphiteReporterPrefix())
+                    .convertRatesTo(TimeUnit.SECONDS)
+                    .convertDurationsTo(TimeUnit.MILLISECONDS)
+                    .build(graphite);
+
+                reporters.add(graphiteReporter);
+
+                graphiteReporter.start(metricsManagerConfiguration.getGraphiteReporterPeriod(),
+                    TimeUnit.MILLISECONDS);
               }
 
               baseContext = new DefaultMetricsManagerContext(null);
@@ -409,7 +441,7 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
     // This method is OK w/ prefix being null. It will just ignore it.
     return MetricRegistry.name(prefix, parts);
   }
-  
+
   @ToString(of = { "prefix" })
   @RequiredArgsConstructor
   private final class DefaultMetricsManagerContext implements MetricsManagerContext
