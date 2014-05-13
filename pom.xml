@@ -35,7 +35,6 @@
     <module>retry</module>
     <module>testing</module>
     <module>versions</module>
-    <module>hawtdispatch</module>
   </modules>
 
   <dependencyManagement>
