@@ -5,7 +5,7 @@
   <parent>
     <groupId>com.jive.myco</groupId>
     <artifactId>parent</artifactId>
-    <version>14</version>
+    <version>15</version>
   </parent>
 
   <groupId>com.jive.myco.commons</groupId>
@@ -15,7 +15,7 @@
   <packaging>pom</packaging>
 
   <name>Myco :: Commons :: Root</name>
-  
+
   <properties>
     <deps.hawtdispatch.version>1.20</deps.hawtdispatch.version>
   </properties>
@@ -35,8 +35,9 @@
     <module>retry</module>
     <module>testing</module>
     <module>versions</module>
+    <module>hawtdispatch</module>
   </modules>
-  
+
   <dependencyManagement>
     <dependencies>
       <dependency>
