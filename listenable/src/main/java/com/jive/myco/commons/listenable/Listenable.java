@@ -34,5 +34,5 @@ public interface Listenable<T>
    * @param listener
    *          listener to remove
    */
-  public void removeListener(T listener);
+  public void removeListener(Object listener);
 }

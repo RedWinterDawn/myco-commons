@@ -2,11 +2,11 @@ package com.jive.myco.commons.listenable;
 
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 
@@ -31,13 +31,13 @@ public class DefaultListenableContainer<T> implements ListenableContainer<T>
   }
 
   @Override
-  public void removeListener(T listener)
+  public void removeListener(Object listener)
   {
     listeners.remove(listener);
   }
 
   @Override
-  public void forEach(final Function<T, Void> action)
+  public void forEach(final Consumer<? super T> action)
   {
     for (final Map.Entry<T, Executor> entry : listeners.entrySet())
     {
@@ -49,7 +49,7 @@ public class DefaultListenableContainer<T> implements ListenableContainer<T>
         {
           try
           {
-            action.apply(listener);
+            action.accept(listener);
           }
           catch (Exception e)
           {

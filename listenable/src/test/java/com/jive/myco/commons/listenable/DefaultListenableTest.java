@@ -7,14 +7,12 @@ import static org.mockito.Mockito.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
-import com.google.common.base.Function;
-import com.jive.myco.commons.listenable.DefaultListenableContainer;
 
 /**
  * @author Brandon Pedersen &lt;bpedersen@getjive.com&gt;
@@ -123,13 +121,12 @@ public class DefaultListenableTest
     }
   }
 
-  private static class ListenerInvoker implements Function<Listener, Void>
+  private static class ListenerInvoker implements Consumer<Listener>
   {
     @Override
-    public Void apply(final Listener input)
+    public void accept(final Listener input)
     {
       input.invoke();
-      return null;
     }
   }
 }

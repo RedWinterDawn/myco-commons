@@ -1,6 +1,6 @@
 package com.jive.myco.commons.listenable;
 
-import com.google.common.base.Function;
+import java.util.function.Consumer;
 
 /**
  * @author Brandon Pedersen &lt;bpedersen@getjive.com&gt;
@@ -13,7 +13,7 @@ public interface ListenableContainer<T> extends Listenable<T>
    *
    * @param action
    */
-  public void forEach(Function<T, Void> action);
+  public void forEach(Consumer<? super T> action);
 
   /**
    * Clear all listeners
