@@ -35,6 +35,7 @@
     <module>retry</module>
     <module>testing</module>
     <module>versions</module>
+    <module>concurrent</module>
   </modules>
 
   <dependencyManagement>
