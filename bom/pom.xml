@@ -71,6 +71,12 @@
         <artifactId>myco-commons-hawtdispatch</artifactId>
         <version>${project.version}</version>
       </dependency>
+
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>myco-commons-concurrent</artifactId>
+        <version>${project.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 </project>
