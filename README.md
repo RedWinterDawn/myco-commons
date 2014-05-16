@@ -4,6 +4,8 @@ Stuff that does things on different projects.
 
 * [**BOM**](./bom/README.md)
 * [**Callbacks**](./callbacks/README.md)
+* [**Concurrent**](./concurrent)
+* [**HawtDispatch**](./hawtdispatch/README.md)
 * [**IO**](./io)
 * [**Lifecycle**](./lifecycle)
 * [**Listenable**](./listenable)
@@ -11,7 +13,6 @@ Stuff that does things on different projects.
 * [**Retry**](./retry/README.md)
 * [**Testing**](./testing)
 * [**Versions**](./versions)
-* [**HawtDispatch**](./hawtdispatch/README.md)
 * [**Change Log**](#changes)
 
 ## <a name="changes"></a>Change Log
