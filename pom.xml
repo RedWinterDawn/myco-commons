@@ -37,6 +37,7 @@
     <module>testing</module>
     <module>versions</module>
     <module>concurrent</module>
+    <module>hawtdispatch</module>
   </modules>
 
   <dependencyManagement>

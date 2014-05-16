@@ -11,6 +11,7 @@ Stuff that does things on different projects.
 * [**Retry**](./retry/README.md)
 * [**Testing**](./testing)
 * [**Versions**](./versions)
+* [**HawtDispatch**](./hawtdispatch/README.md)
 * [**Change Log**](#changes)
 
 ## <a name="changes"></a>Change Log
@@ -23,8 +24,4 @@ Stuff that does things on different projects.
   * US3323 - Added BOM module
   * US3223 - Generic type changes to listenable API
   * US3223 - Move atomic integer additions to new commons module
-
-
-
-
-
+  * US3223 - Added HawtDispatch module which includes a queue builder utility
