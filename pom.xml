@@ -27,6 +27,7 @@
   </scm>
 
   <modules>
+    <module>bom</module>
     <module>callbacks</module>
     <module>io</module>
     <module>lifecycle</module>
