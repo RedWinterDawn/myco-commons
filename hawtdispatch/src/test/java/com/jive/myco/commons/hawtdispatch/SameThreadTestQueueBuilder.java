@@ -3,6 +3,8 @@ package com.jive.myco.commons.hawtdispatch;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.fusesource.hawtdispatch.DispatchPriority;
 import org.fusesource.hawtdispatch.DispatchQueue;
 import org.fusesource.hawtdispatch.Dispatcher;
@@ -53,7 +55,13 @@ public class SameThreadTestQueueBuilder extends DefaultDispatchQueueBuilder
   @Override
   public DispatchQueue build(DispatchPriority priority)
   {
+    return getTestQueue(getName());
+  }
+
+  public static DispatchQueue getTestQueue(String name)
+  {
     final HawtDispatchQueue testQueue = mock(HawtDispatchQueue.class);
+    final AtomicInteger suspended = new AtomicInteger();
     doAnswer(invocation ->
     {
       boolean set = false;
@@ -76,7 +84,10 @@ public class SameThreadTestQueueBuilder extends DefaultDispatchQueueBuilder
       }
       return null;
     }).when(testQueue).execute(any(Runnable.class));
-    when(testQueue.getLabel()).thenReturn(getName());
+    when(testQueue.getLabel()).thenReturn(name);
+    doAnswer(invocation -> suspended.incrementAndGet()).when(testQueue).suspend();
+    doAnswer(invocation -> suspended.decrementAndGet()).when(testQueue).resume();
+    when(testQueue.isSuspended()).thenReturn(suspended.get() != 0);
     return testQueue;
   }
 
