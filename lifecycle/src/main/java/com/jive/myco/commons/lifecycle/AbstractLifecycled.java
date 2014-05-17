@@ -1,7 +1,6 @@
 package com.jive.myco.commons.lifecycle;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import lombok.AccessLevel;
@@ -25,8 +24,7 @@ import com.jive.myco.commons.callbacks.SafeCallbackRunnable;
 @RequiredArgsConstructor
 public abstract class AbstractLifecycled implements Lifecycled
 {
-  protected final AtomicReference<LifecycleStage> lifecycleStage =
-      new AtomicReference<>(LifecycleStage.UNINITIALIZED);
+  protected volatile LifecycleStage lifecycleStage = LifecycleStage.UNINITIALIZED;
 
   @NonNull
   protected final DispatchQueue lifecycleQueue;
@@ -51,10 +49,10 @@ public abstract class AbstractLifecycled implements Lifecycled
       @Override
       protected void doRun() throws Exception
       {
-        if (lifecycleStage.compareAndSet(LifecycleStage.UNINITIALIZED, LifecycleStage.INITIALIZING)
-            || (isRestartable() && lifecycleStage.compareAndSet(LifecycleStage.DESTROYED,
-                LifecycleStage.INITIALIZING)))
+        if (lifecycleStage == LifecycleStage.UNINITIALIZED
+            || (isRestartable() && lifecycleStage == LifecycleStage.DESTROYED))
         {
+          lifecycleStage = LifecycleStage.INITIALIZING;
           SafeCallbackRunnable<Void> that = this;
           lifecycleQueue.suspend();
           try
@@ -64,7 +62,7 @@ public abstract class AbstractLifecycled implements Lifecycled
               @Override
               public void onSuccess(Void result)
               {
-                lifecycleStage.set(LifecycleStage.INITIALIZED);
+                lifecycleStage = LifecycleStage.INITIALIZED;
                 lifecycleQueue.resume();
                 that.onSuccess(null);
               }
@@ -81,21 +79,21 @@ public abstract class AbstractLifecycled implements Lifecycled
             handleInitFailure(e, that);
           }
         }
-        else if (lifecycleStage.get() == LifecycleStage.INITIALIZED)
+        else if (lifecycleStage == LifecycleStage.INITIALIZED)
         {
           onSuccess(null);
         }
         else
         {
           onFailure(new IllegalStateException(String.format(
-              "Cannot initialize controller in [%s] state", lifecycleStage.get())));
+              "Cannot initialize controller in [%s] state", lifecycleStage)));
         }
       }
 
       private void handleInitFailure(final Throwable initFailure,
           final SafeCallbackRunnable<Void> that)
       {
-        lifecycleStage.set(LifecycleStage.INITIALIZATION_FAILED);
+        lifecycleStage = LifecycleStage.INITIALIZATION_FAILED;
         try
         {
           failedInitHandler.accept(new Callback<Void>()
@@ -135,11 +133,11 @@ public abstract class AbstractLifecycled implements Lifecycled
       @Override
       protected void doRun() throws Exception
       {
-        if (lifecycleStage.compareAndSet(LifecycleStage.INITIALIZED, LifecycleStage.DESTROYING)
-            || lifecycleStage.compareAndSet(LifecycleStage.INITIALIZATION_FAILED,
-                LifecycleStage.DESTROYING)
-            || lifecycleStage.compareAndSet(LifecycleStage.DESTROYING, LifecycleStage.DESTROYING))
+        if (lifecycleStage == LifecycleStage.INITIALIZED
+            || lifecycleStage == LifecycleStage.INITIALIZATION_FAILED
+            || lifecycleStage == LifecycleStage.DESTROYING)
         {
+          lifecycleStage = LifecycleStage.DESTROYING;
           SafeCallbackRunnable<Void> that = this;
           lifecycleQueue.suspend();
           try
@@ -149,7 +147,7 @@ public abstract class AbstractLifecycled implements Lifecycled
               @Override
               public void onSuccess(Void result)
               {
-                lifecycleStage.set(LifecycleStage.DESTROYED);
+                lifecycleStage = LifecycleStage.DESTROYED;
                 lifecycleQueue.resume();
                 that.onSuccess(null);
               }
@@ -168,17 +166,24 @@ public abstract class AbstractLifecycled implements Lifecycled
             that.onFailure(e);
           }
         }
-        else if (lifecycleStage.get() == LifecycleStage.DESTROYED)
+        else if (lifecycleStage == LifecycleStage.DESTROYED)
         {
           onSuccess(null);
         }
         else
         {
           onFailure(new IllegalStateException(String.format("Cannot destroy in the [%s] stage.",
-              lifecycleStage.get())));
+              lifecycleStage)));
         }
       }
     });
+  }
+
+  @Override
+  public final LifecycleStage getLifecycleStage()
+  {
+    // note: can't use @Getter since it is not final
+    return lifecycleStage;
   }
 
   /**
@@ -208,12 +213,6 @@ public abstract class AbstractLifecycled implements Lifecycled
    *          callback to invoke when initialization is complete
    */
   protected abstract void destroyInternal(Callback<Void> callback);
-
-  @Override
-  public final LifecycleStage getLifecycleStage()
-  {
-    return lifecycleStage.get();
-  }
 
   /**
    * Retrieves the {@link Executor} that will be used to fire callbacks to {@link #init} and

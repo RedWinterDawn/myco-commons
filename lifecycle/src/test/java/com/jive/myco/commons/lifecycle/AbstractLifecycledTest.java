@@ -189,7 +189,7 @@ public class AbstractLifecycledTest
     Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       {
-        lifecycleStage.set(LifecycleStage.INITIALIZED);
+        lifecycleStage = LifecycleStage.INITIALIZED;
       }
 
       @Override
@@ -219,7 +219,7 @@ public class AbstractLifecycledTest
     Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       {
-        lifecycleStage.set(LifecycleStage.INITIALIZED);
+        lifecycleStage = LifecycleStage.INITIALIZED;
       }
 
       @Override
@@ -257,7 +257,7 @@ public class AbstractLifecycledTest
     Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       {
-        lifecycleStage.set(LifecycleStage.INITIALIZED);
+        lifecycleStage = LifecycleStage.INITIALIZED;
       }
 
       @Override
@@ -295,7 +295,7 @@ public class AbstractLifecycledTest
     Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       {
-        lifecycleStage.set(LifecycleStage.INITIALIZING);
+        lifecycleStage = LifecycleStage.INITIALIZING;
       }
 
       @Override
@@ -333,7 +333,7 @@ public class AbstractLifecycledTest
     Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       {
-        lifecycleStage.set(LifecycleStage.UNINITIALIZED);
+        lifecycleStage = LifecycleStage.UNINITIALIZED;
       }
 
       @Override
@@ -371,7 +371,7 @@ public class AbstractLifecycledTest
     Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       {
-        lifecycleStage.set(LifecycleStage.INITIALIZED);
+        lifecycleStage = LifecycleStage.INITIALIZED;
       }
 
       @Override
@@ -401,7 +401,7 @@ public class AbstractLifecycledTest
     Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       {
-        lifecycleStage.set(LifecycleStage.DESTROYED);
+        lifecycleStage = LifecycleStage.DESTROYED;
       }
 
       @Override
@@ -431,7 +431,7 @@ public class AbstractLifecycledTest
     Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       {
-        lifecycleStage.set(LifecycleStage.DESTROYED);
+        lifecycleStage = LifecycleStage.DESTROYED;
       }
 
       @Override
@@ -468,7 +468,7 @@ public class AbstractLifecycledTest
     Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       {
-        lifecycleStage.set(LifecycleStage.DESTROYED);
+        lifecycleStage = LifecycleStage.DESTROYED;
       }
 
       @Override
