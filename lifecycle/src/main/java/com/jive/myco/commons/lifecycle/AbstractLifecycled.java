@@ -1,15 +1,18 @@
 package com.jive.myco.commons.lifecycle;
 
-import static com.jive.myco.commons.callbacks.Util.*;
-
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
+import lombok.AccessLevel;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 
 import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.jive.myco.commons.callbacks.Callback;
 import com.jive.myco.commons.callbacks.SafeCallbackRunnable;
@@ -28,16 +31,29 @@ public abstract class AbstractLifecycled implements Lifecycled
   @NonNull
   protected final DispatchQueue lifecycleQueue;
 
-  @Override
-  public void init(Callback<Void> callback)
-  {
-    if (lifecycleStage.compareAndSet(LifecycleStage.UNINITIALIZED, LifecycleStage.INITIALIZING))
-    {
-      lifecycleQueue.execute(new SafeCallbackRunnable<Void>(callback, getCallbackExecutor())
-      {
+  // Don't use @SLF4J annotation, we want to know the actual implementing class
+  private final Logger log = LoggerFactory.getLogger(getClass());
 
-        @Override
-        protected void doRun() throws Exception
+  /**
+   * Handler which will be invoked when initialization fails. By default we will just invoke
+   * {@link #destroyInternal} to cleanup any created resources but this may be overridden for
+   * specific cleanup actions.
+   */
+  @Setter(AccessLevel.PROTECTED)
+  protected Consumer<Callback<Void>> failedInitHandler = this::destroyInternal;
+
+  @Override
+  public final void init(Callback<Void> callback)
+  {
+    lifecycleQueue.execute(new SafeCallbackRunnable<Void>(callback, getCallbackExecutor())
+    {
+
+      @Override
+      protected void doRun() throws Exception
+      {
+        if (lifecycleStage.compareAndSet(LifecycleStage.UNINITIALIZED, LifecycleStage.INITIALIZING)
+            || (isRestartable() && lifecycleStage.compareAndSet(LifecycleStage.DESTROYED,
+                LifecycleStage.INITIALIZING)))
         {
           SafeCallbackRunnable<Void> that = this;
           lifecycleQueue.suspend();
@@ -56,48 +72,73 @@ public abstract class AbstractLifecycled implements Lifecycled
               @Override
               public void onFailure(Throwable cause)
               {
-                lifecycleStage.set(LifecycleStage.INITIALIZATION_FAILED);
-                lifecycleQueue.resume();
-                that.onFailure(cause);
+                handleInitFailure(cause, that);
               }
             });
           }
           catch (Exception e)
           {
-            lifecycleStage.set(LifecycleStage.INITIALIZATION_FAILED);
-            lifecycleQueue.resume();
-            that.onFailure(e);
+            handleInitFailure(e, that);
           }
         }
-      });
-    }
-    else if (lifecycleStage.get() == LifecycleStage.INITIALIZED)
-    {
-      runCallback(callback, null, getCallbackExecutor());
-    }
-    else
-    {
-      runCallback(
-          callback,
-          new IllegalStateException(String.format(
-              "Cannot initialize controller in [%s] state", lifecycleStage.get())),
-          getCallbackExecutor());
-    }
+        else if (lifecycleStage.get() == LifecycleStage.INITIALIZED)
+        {
+          onSuccess(null);
+        }
+        else
+        {
+          onFailure(new IllegalStateException(String.format(
+              "Cannot initialize controller in [%s] state", lifecycleStage.get())));
+        }
+      }
+
+      private void handleInitFailure(final Throwable initFailure,
+          final SafeCallbackRunnable<Void> that)
+      {
+        lifecycleStage.set(LifecycleStage.INITIALIZATION_FAILED);
+        try
+        {
+          failedInitHandler.accept(new Callback<Void>()
+          {
+            @Override
+            public void onSuccess(Void result)
+            {
+              lifecycleQueue.resume();
+              that.onFailure(initFailure);
+            }
+
+            @Override
+            public void onFailure(Throwable e)
+            {
+              log.error("Error occurred during cleanup after failed initialization", e);
+              lifecycleQueue.resume();
+              that.onFailure(initFailure);
+            }
+          });
+        }
+        catch (Exception e)
+        {
+          log.error("Error occurred while invoking failed init handler", e);
+          lifecycleQueue.resume();
+          that.onFailure(initFailure);
+        }
+      }
+    });
   }
 
   @Override
-  public void destroy(Callback<Void> callback)
+  public final void destroy(Callback<Void> callback)
   {
-    if (lifecycleStage.compareAndSet(LifecycleStage.INITIALIZED, LifecycleStage.DESTROYING)
-        || lifecycleStage.compareAndSet(LifecycleStage.INITIALIZATION_FAILED,
-            LifecycleStage.DESTROYING)
-        || lifecycleStage.compareAndSet(LifecycleStage.DESTROYING, LifecycleStage.DESTROYING))
+    lifecycleQueue.execute(new SafeCallbackRunnable<Void>(callback, getCallbackExecutor())
     {
-      lifecycleQueue.execute(new SafeCallbackRunnable<Void>(callback, getCallbackExecutor())
-      {
 
-        @Override
-        protected void doRun() throws Exception
+      @Override
+      protected void doRun() throws Exception
+      {
+        if (lifecycleStage.compareAndSet(LifecycleStage.INITIALIZED, LifecycleStage.DESTROYING)
+            || lifecycleStage.compareAndSet(LifecycleStage.INITIALIZATION_FAILED,
+                LifecycleStage.DESTROYING)
+            || lifecycleStage.compareAndSet(LifecycleStage.DESTROYING, LifecycleStage.DESTROYING))
         {
           SafeCallbackRunnable<Void> that = this;
           lifecycleQueue.suspend();
@@ -127,23 +168,22 @@ public abstract class AbstractLifecycled implements Lifecycled
             that.onFailure(e);
           }
         }
-      });
-    }
-    else if (lifecycleStage.get() == LifecycleStage.DESTROYED)
-    {
-      runCallback(callback, null, getCallbackExecutor());
-    }
-    else
-    {
-      runCallback(callback,
-          new IllegalStateException(String.format("Cannot destroy in the [%s] stage.",
-              lifecycleStage.get())), getCallbackExecutor());
-    }
+        else if (lifecycleStage.get() == LifecycleStage.DESTROYED)
+        {
+          onSuccess(null);
+        }
+        else
+        {
+          onFailure(new IllegalStateException(String.format("Cannot destroy in the [%s] stage.",
+              lifecycleStage.get())));
+        }
+      }
+    });
   }
 
   /**
    * Initialize this {@link Lifecycled} instance. This will be run on the {@link #lifecycleQueue} so
-   * all you need to do is initialize your instance and it's components and protect the lifecycle
+   * all you need to do is initialize your instance and its components and protect the lifecycle
    * queue during initialization.
    * <p>
    * The {@code callback} here is used to trigger the setting of the state of the lifecycle stage
@@ -157,7 +197,7 @@ public abstract class AbstractLifecycled implements Lifecycled
 
   /**
    * Destroy this {@link Lifecycled} instance. This will be run on the {@link #lifecycleQueue} so
-   * all you need to do is destroy your instance and it's components and protect the lifecycle queue
+   * all you need to do is destroy your instance and its components and protect the lifecycle queue
    * during the destroy process.
    * <p>
    * The {@code callback} here is used to trigger the setting of the state of the lifecycle stage
@@ -170,7 +210,7 @@ public abstract class AbstractLifecycled implements Lifecycled
   protected abstract void destroyInternal(Callback<Void> callback);
 
   @Override
-  public LifecycleStage getLifecycleStage()
+  public final LifecycleStage getLifecycleStage()
   {
     return lifecycleStage.get();
   }
@@ -185,5 +225,17 @@ public abstract class AbstractLifecycled implements Lifecycled
   protected Executor getCallbackExecutor()
   {
     return Dispatch.getGlobalQueue();
+  }
+
+  /**
+   * Indicator that this {@code Lifecycled} instance is able to be re-initialized after it has been
+   * destroyed. In other words it would be possible to call {@link #init} after {@code #destroy}. By
+   * default this is {@code false}.
+   *
+   * @return if we can call {@code init} after {@code destroy}
+   */
+  protected boolean isRestartable()
+  {
+    return false;
   }
 }
