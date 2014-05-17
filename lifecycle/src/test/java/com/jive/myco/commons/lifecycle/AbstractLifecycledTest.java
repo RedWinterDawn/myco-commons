@@ -2,6 +2,7 @@ package com.jive.myco.commons.lifecycle;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -10,6 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.fusesource.hawtdispatch.DispatchQueue;
 import org.junit.Test;
+import org.mockito.Matchers;
 
 import com.jive.myco.commons.callbacks.Callback;
 import com.jive.myco.commons.callbacks.CallbackFuture;
@@ -24,6 +26,20 @@ public class AbstractLifecycledTest
 
   @Test
   public void testStageSetAfterSuccess() throws Exception
+  {
+    simpleInitTest();
+    verify(testQueue).execute(Matchers.any(Runnable.class));
+  }
+
+  @Test
+  public void testDontQueueIfAlreadyOnQueue() throws Exception
+  {
+    when(testQueue.isExecuting()).thenReturn(true);
+    simpleInitTest();
+    verify(testQueue, never()).execute(Matchers.any(Runnable.class));
+  }
+
+  private void simpleInitTest() throws Exception
   {
     Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {

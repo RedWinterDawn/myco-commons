@@ -13,6 +13,7 @@ import org.fusesource.hawtdispatch.DispatchQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.util.concurrent.MoreExecutors;
 import com.jive.myco.commons.callbacks.Callback;
 import com.jive.myco.commons.callbacks.SafeCallbackRunnable;
 
@@ -43,7 +44,13 @@ public abstract class AbstractLifecycled implements Lifecycled
   @Override
   public final void init(Callback<Void> callback)
   {
-    lifecycleQueue.execute(new SafeCallbackRunnable<Void>(callback, getCallbackExecutor())
+    Executor executor = lifecycleQueue;
+    if (lifecycleQueue.isExecuting())
+    {
+      executor = MoreExecutors.sameThreadExecutor();
+    }
+
+    executor.execute(new SafeCallbackRunnable<Void>(callback, getCallbackExecutor())
     {
 
       @Override
@@ -127,7 +134,13 @@ public abstract class AbstractLifecycled implements Lifecycled
   @Override
   public final void destroy(Callback<Void> callback)
   {
-    lifecycleQueue.execute(new SafeCallbackRunnable<Void>(callback, getCallbackExecutor())
+    Executor executor = lifecycleQueue;
+    if (lifecycleQueue.isExecuting())
+    {
+      executor = MoreExecutors.sameThreadExecutor();
+    }
+
+    executor.execute(new SafeCallbackRunnable<Void>(callback, getCallbackExecutor())
     {
 
       @Override
