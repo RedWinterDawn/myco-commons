@@ -119,76 +119,74 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
           {
             if (metricsManagerConfiguration == null)
             {
-              throw new IllegalStateException("Metrics configuration must not be null.");
+              metricsManagerConfiguration = MetricsManagerConfiguration.builder().build();
             }
-            else
+
+            registry = new MetricRegistry();
+
+            registry.register(MetricRegistry.name("jvm", "gc"), new GarbageCollectorMetricSet());
+
+            registry.register(MetricRegistry.name("jvm", "memory"), new MemoryUsageGaugeSet());
+
+            registry.register(MetricRegistry.name("jvm", "buffer-pool"),
+                new BufferPoolMetricSet(ManagementFactory.getPlatformMBeanServer()));
+
+            registry.register(MetricRegistry.name("jvm", "thread-states"),
+                new ThreadStatesGaugeSet());
+
+            registry.register(MetricRegistry.name("jvm", "fd", "usage"),
+                new FileDescriptorRatioGauge());
+
+            if (metricsManagerConfiguration.isSlf4jReporterEnabled())
             {
-              registry = new MetricRegistry();
+              final Slf4jReporter reporter = Slf4jReporter.forRegistry(registry)
+                  .outputTo(LoggerFactory.getLogger("com.jive.jotter.broker"))
+                  .convertRatesTo(TimeUnit.SECONDS)
+                  .convertDurationsTo(TimeUnit.MILLISECONDS)
+                  .build();
 
-              registry.register(MetricRegistry.name("jvm", "gc"), new GarbageCollectorMetricSet());
+              reporters.add(reporter);
 
-              registry.register(MetricRegistry.name("jvm", "memory"), new MemoryUsageGaugeSet());
-
-              registry.register(MetricRegistry.name("jvm", "buffer-pool"),
-                  new BufferPoolMetricSet(ManagementFactory.getPlatformMBeanServer()));
-
-              registry.register(MetricRegistry.name("jvm", "thread-states"),
-                  new ThreadStatesGaugeSet());
-
-              registry.register(MetricRegistry.name("jvm", "fd", "usage"),
-                  new FileDescriptorRatioGauge());
-
-              if (metricsManagerConfiguration.isSlf4jReporterEnabled())
-              {
-                final Slf4jReporter reporter = Slf4jReporter.forRegistry(registry)
-                    .outputTo(LoggerFactory.getLogger("com.jive.jotter.broker"))
-                    .convertRatesTo(TimeUnit.SECONDS)
-                    .convertDurationsTo(TimeUnit.MILLISECONDS)
-                    .build();
-
-                reporters.add(reporter);
-
-                reporter.start(metricsManagerConfiguration.getSlf4jReporterPeriod(),
-                    TimeUnit.MILLISECONDS);
-              }
-
-              if (metricsManagerConfiguration.isJmxReporterEnabled())
-              {
-                final JmxReporter jmxReporter = JmxReporter.forRegistry(registry)
-                    .inDomain(metricsManagerConfiguration.getJmxReporterDomain())
-                    .registerWith(ManagementFactory.getPlatformMBeanServer())
-                    .convertRatesTo(TimeUnit.SECONDS)
-                    .convertDurationsTo(TimeUnit.MILLISECONDS)
-                    .build();
-
-                reporters.add(jmxReporter);
-
-                jmxReporter.start();
-              }
-
-              if (metricsManagerConfiguration.isGraphiteReporterEnabled())
-              {
-                final Graphite graphite =
-                    new Graphite(metricsManagerConfiguration.getGraphiteReporterAddress());
-
-                final GraphiteReporter graphiteReporter = GraphiteReporter.forRegistry(registry)
-                    .prefixedWith(metricsManagerConfiguration.getGraphiteReporterPrefix())
-                    .convertRatesTo(TimeUnit.SECONDS)
-                    .convertDurationsTo(TimeUnit.MILLISECONDS)
-                    .build(graphite);
-
-                reporters.add(graphiteReporter);
-
-                graphiteReporter.start(metricsManagerConfiguration.getGraphiteReporterPeriod(),
-                    TimeUnit.MILLISECONDS);
-              }
-
-              baseContext = new DefaultMetricsManagerContext(null);
-
-              lifecycleStage.set(LifecycleStage.INITIALIZED);
-
-              onSuccess(null);
+              reporter.start(metricsManagerConfiguration.getSlf4jReporterPeriod(),
+                  TimeUnit.MILLISECONDS);
             }
+
+            if (metricsManagerConfiguration.isJmxReporterEnabled())
+            {
+              final JmxReporter jmxReporter = JmxReporter.forRegistry(registry)
+                  .inDomain(metricsManagerConfiguration.getJmxReporterDomain())
+                  .registerWith(ManagementFactory.getPlatformMBeanServer())
+                  .convertRatesTo(TimeUnit.SECONDS)
+                  .convertDurationsTo(TimeUnit.MILLISECONDS)
+                  .build();
+
+              reporters.add(jmxReporter);
+
+              jmxReporter.start();
+            }
+
+            if (metricsManagerConfiguration.isGraphiteReporterEnabled())
+            {
+              final Graphite graphite =
+                  new Graphite(metricsManagerConfiguration.getGraphiteReporterAddress());
+
+              final GraphiteReporter graphiteReporter = GraphiteReporter.forRegistry(registry)
+                  .prefixedWith(metricsManagerConfiguration.getGraphiteReporterPrefix())
+                  .convertRatesTo(TimeUnit.SECONDS)
+                  .convertDurationsTo(TimeUnit.MILLISECONDS)
+                  .build(graphite);
+
+              reporters.add(graphiteReporter);
+
+              graphiteReporter.start(metricsManagerConfiguration.getGraphiteReporterPeriod(),
+                  TimeUnit.MILLISECONDS);
+            }
+
+            baseContext = new DefaultMetricsManagerContext(null);
+
+            lifecycleStage.set(LifecycleStage.INITIALIZED);
+
+            onSuccess(null);
           }
           catch (final RuntimeException e)
           {

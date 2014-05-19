@@ -1,6 +1,7 @@
 package com.jive.myco.commons.metrics;
 
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -24,7 +25,9 @@ public class DefaultMetricsManagerTest
   @Test
   public void testInitFailure() throws Exception
   {
-    final MetricsManager manager = createMetricsManager(null, null, null);
+    MetricsManagerConfiguration config = mock(MetricsManagerConfiguration.class);
+    when(config.isSlf4jReporterEnabled()).thenThrow(new IllegalStateException());
+    final MetricsManager manager = createMetricsManager(null, null, config);
 
     final CallbackFuture<Void> callback = new CallbackFuture<>();
     manager.init(callback);
@@ -138,7 +141,7 @@ public class DefaultMetricsManagerTest
             return Ratio.of(1d, 1d);
           }
         }, "ratio", "2");
-    
+
     assertNotSame(baseRatio, baseRatio2);
 
     final Gauge<Integer> baseGauge = baseContext.addGauge(
@@ -183,7 +186,7 @@ public class DefaultMetricsManagerTest
           }
         },
         "ratio"));
-    
+
     assertNotSame(baseGauge, baseContext.addGauge(
         new Callable<Integer>()
         {
@@ -231,11 +234,11 @@ public class DefaultMetricsManagerTest
           }
         }, "gauge");
     assertNotSame(baseGauge, subGauge);
-    
+
     // Test duplicate name in different contexts with same prefix
     assertEquals(subContext2.getBaseName(), subContext2Alternate.getBaseName());
     assertSame(subContext2.getMeter("blah"), subContext2Alternate.getMeter("blah"));
-    
+
     // Test delete metric
     subContext.getMetricsManager().removeMetric(baseMeter);
     subContext.removeMetric(baseMeter2);
