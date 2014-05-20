@@ -93,7 +93,7 @@ public abstract class AbstractLifecycled implements Lifecycled
         else
         {
           onFailure(new IllegalStateException(String.format(
-              "Cannot initialize controller in [%s] state", lifecycleStage)));
+              "Cannot initialize in [%s] state", lifecycleStage)));
         }
       }
 
