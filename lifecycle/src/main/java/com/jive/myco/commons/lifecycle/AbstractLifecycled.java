@@ -37,7 +37,7 @@ public abstract class AbstractLifecycled implements Lifecycled
    * @param runnable
    *          the task to run on the lifecycle queue
    */
-  protected void runOnQueue(Runnable runnable)
+  protected final void runOnLifecycleQueue(Runnable runnable)
   {
     if (lifecycleQueue.isExecuting())
     {
@@ -52,7 +52,7 @@ public abstract class AbstractLifecycled implements Lifecycled
   @Override
   public final void init(Callback<Void> callback)
   {
-    runOnQueue(new SafeCallbackRunnable<Void>(callback, getCallbackExecutor())
+    runOnLifecycleQueue(new SafeCallbackRunnable<Void>(callback, getCallbackExecutor())
     {
 
       @Override
@@ -154,7 +154,7 @@ public abstract class AbstractLifecycled implements Lifecycled
   @Override
   public final void destroy(Callback<Void> callback)
   {
-    runOnQueue(new SafeCallbackRunnable<Void>(callback, getCallbackExecutor())
+    runOnLifecycleQueue(new SafeCallbackRunnable<Void>(callback, getCallbackExecutor())
     {
 
       @Override
