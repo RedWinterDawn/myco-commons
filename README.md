@@ -26,3 +26,6 @@ Stuff that does things on different projects.
   * US3223 - Generic type changes to listenable API
   * US3223 - Move atomic integer additions to new commons module
   * US3223 - Added HawtDispatch module which includes a queue builder utility
+  * US3223 - Added [AbstractLifecycled](./lifecycle/src/main/java/com/jive/myco/commons/lifecycle/AbstractLifecycled.java)
+             utility class to enforce desired behavior for lifecycled services as well as making it
+             much easier to create new lifecycled services.
