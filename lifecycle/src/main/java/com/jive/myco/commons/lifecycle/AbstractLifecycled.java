@@ -13,7 +13,6 @@ import org.fusesource.hawtdispatch.DispatchQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.util.concurrent.MoreExecutors;
 import com.jive.myco.commons.callbacks.Callback;
 import com.jive.myco.commons.callbacks.SafeCallbackRunnable;
 
@@ -41,16 +40,30 @@ public abstract class AbstractLifecycled implements Lifecycled
   @Setter(AccessLevel.PROTECTED)
   protected Consumer<Callback<Void>> failedInitHandler = this::destroyInternal;
 
+  /**
+   * Helper method to run a {@link Runnable} on the lifecycle queue. If not currently on the
+   * lifecycle queue the {@code runnable} will be launched on the lifecycle queue, otherwise it will
+   * be run in the current thread.
+   *
+   * @param runnable
+   *          the task to run on the lifecycle queue
+   */
+  protected void runOnQueue(Runnable runnable)
+  {
+    if (lifecycleQueue.isExecuting())
+    {
+      runnable.run();
+    }
+    else
+    {
+      lifecycleQueue.execute(runnable);
+    }
+  }
+
   @Override
   public final void init(Callback<Void> callback)
   {
-    Executor executor = lifecycleQueue;
-    if (lifecycleQueue.isExecuting())
-    {
-      executor = MoreExecutors.sameThreadExecutor();
-    }
-
-    executor.execute(new SafeCallbackRunnable<Void>(callback, getCallbackExecutor())
+    runOnQueue(new SafeCallbackRunnable<Void>(callback, getCallbackExecutor())
     {
 
       @Override
@@ -134,13 +147,7 @@ public abstract class AbstractLifecycled implements Lifecycled
   @Override
   public final void destroy(Callback<Void> callback)
   {
-    Executor executor = lifecycleQueue;
-    if (lifecycleQueue.isExecuting())
-    {
-      executor = MoreExecutors.sameThreadExecutor();
-    }
-
-    executor.execute(new SafeCallbackRunnable<Void>(callback, getCallbackExecutor())
+    runOnQueue(new SafeCallbackRunnable<Void>(callback, getCallbackExecutor())
     {
 
       @Override
