@@ -7,7 +7,8 @@ import static org.mockito.Mockito.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
+
+import lombok.extern.slf4j.Slf4j;
 
 import org.fusesource.hawtdispatch.DispatchQueue;
 import org.junit.Test;
@@ -20,6 +21,7 @@ import com.jive.myco.commons.hawtdispatch.SameThreadTestQueueBuilder;
 /**
  * @author Brandon Pedersen &lt;bpedersen@getjive.com&gt;
  */
+@Slf4j
 public class AbstractLifecycledTest
 {
   private DispatchQueue testQueue = SameThreadTestQueueBuilder.getTestQueue("lifecycle");
@@ -67,7 +69,7 @@ public class AbstractLifecycledTest
   @Test
   public void testFailedInitializationViaCallback() throws Exception
   {
-    final AtomicInteger badThings = new AtomicInteger();
+    final AtomicBoolean destroyInvoked = new AtomicBoolean();
     Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       @Override
@@ -79,15 +81,8 @@ public class AbstractLifecycledTest
       @Override
       protected void destroyInternal(Callback<Void> callback)
       {
-        if (getLifecycleStage() == LifecycleStage.INITIALIZATION_FAILED)
-        {
-          callback.onSuccess(null);
-        }
-        else
-        {
-          badThings.incrementAndGet();
-          callback.onFailure(new IllegalStateException());
-        }
+        destroyInvoked.set(true);
+        callback.onSuccess(null);
       }
     };
 
@@ -103,15 +98,15 @@ public class AbstractLifecycledTest
       assertThat(e.getCause(), instanceOf(IllegalArgumentException.class));
     }
 
-    assertEquals(LifecycleStage.INITIALIZATION_FAILED, testInstance.getLifecycleStage());
+    assertEquals(LifecycleStage.DESTROYED, testInstance.getLifecycleStage());
     assertFalse(testQueue.isSuspended());
-    assertEquals(0, badThings.get());
+    assertTrue(destroyInvoked.get());
   }
 
   @Test
   public void testInitializationFailedViaRuntimeError() throws Exception
   {
-    final AtomicInteger badThings = new AtomicInteger();
+    final AtomicBoolean destroyInvoked = new AtomicBoolean();
     Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       @Override
@@ -123,15 +118,8 @@ public class AbstractLifecycledTest
       @Override
       protected void destroyInternal(Callback<Void> callback)
       {
-        if (getLifecycleStage() == LifecycleStage.INITIALIZATION_FAILED)
-        {
-          callback.onSuccess(null);
-        }
-        else
-        {
-          badThings.incrementAndGet();
-          callback.onFailure(new IllegalStateException());
-        }
+        destroyInvoked.set(true);
+        callback.onSuccess(null);
       }
     };
 
@@ -147,25 +135,18 @@ public class AbstractLifecycledTest
       assertThat(e.getCause(), instanceOf(NumberFormatException.class));
     }
 
-    assertEquals(LifecycleStage.INITIALIZATION_FAILED, testInstance.getLifecycleStage());
+    assertEquals(LifecycleStage.DESTROYED, testInstance.getLifecycleStage());
     assertFalse(testQueue.isSuspended());
-    assertEquals(0, badThings.get());
+    assertTrue(destroyInvoked.get());
   }
 
   @Test
   public void testCustomCleanupCalledAfterFailedInit() throws Exception
   {
-    final AtomicInteger badThings = new AtomicInteger();
+    final AtomicBoolean destroyInvoked = new AtomicBoolean();
     final AtomicBoolean handlerInvoked = new AtomicBoolean();
     Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
-      {
-        failedInitHandler = cb ->
-        {
-          cb.onSuccess(null);
-          handlerInvoked.set(true);
-        };
-      }
 
       @Override
       protected void initInternal(Callback<Void> callback)
@@ -176,8 +157,22 @@ public class AbstractLifecycledTest
       @Override
       protected void destroyInternal(Callback<Void> callback)
       {
-        badThings.incrementAndGet();
-        callback.onFailure(new IllegalStateException());
+        destroyInvoked.set(true);
+        callback.onSuccess(null);
+      }
+
+      @Override
+      protected void handleInitFailure(Callback<Void> callback)
+      {
+        if (lifecycleStage == LifecycleStage.INITIALIZATION_FAILED)
+        {
+          handlerInvoked.set(true);
+        }
+        else
+        {
+          log.error("init failure invoked in wrong state: {}", lifecycleStage);
+        }
+        callback.onSuccess(null);
       }
     };
 
@@ -193,9 +188,117 @@ public class AbstractLifecycledTest
       assertThat(e.getCause(), instanceOf(NumberFormatException.class));
     }
 
-    assertEquals(LifecycleStage.INITIALIZATION_FAILED, testInstance.getLifecycleStage());
+    assertEquals(LifecycleStage.DESTROYED, testInstance.getLifecycleStage());
     assertFalse(testQueue.isSuspended());
-    assertEquals(0, badThings.get());
+    assertTrue(destroyInvoked.get());
+    assertTrue(handlerInvoked.get());
+  }
+
+  @Test
+  public void testFailedCustomCleanupViaCallback() throws Exception
+  {
+    final AtomicBoolean destroyInvoked = new AtomicBoolean();
+    final AtomicBoolean handlerInvoked = new AtomicBoolean();
+    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    {
+
+      @Override
+      protected void initInternal(Callback<Void> callback)
+      {
+        callback.onFailure(new NumberFormatException());
+      }
+
+      @Override
+      protected void destroyInternal(Callback<Void> callback)
+      {
+        destroyInvoked.set(true);
+        callback.onSuccess(null);
+      }
+
+      @Override
+      protected void handleInitFailure(Callback<Void> callback)
+      {
+        if (lifecycleStage == LifecycleStage.INITIALIZATION_FAILED)
+        {
+          handlerInvoked.set(true);
+        }
+        else
+        {
+          log.error("init failure invoked in wrong state: {}", lifecycleStage);
+        }
+        callback.onFailure(new NumberFormatException());
+      }
+    };
+
+    CallbackFuture<Void> callback = new CallbackFuture<>();
+    testInstance.init(callback);
+    try
+    {
+      callback.get(50, TimeUnit.MILLISECONDS);
+      fail();
+    }
+    catch (ExecutionException e)
+    {
+      assertThat(e.getCause(), instanceOf(NumberFormatException.class));
+    }
+
+    assertEquals(LifecycleStage.DESTROYED, testInstance.getLifecycleStage());
+    assertFalse(testQueue.isSuspended());
+    assertTrue(destroyInvoked.get());
+    assertTrue(handlerInvoked.get());
+  }
+
+  @Test
+  public void testFailedCustomCleanupViaRuntimeError() throws Exception
+  {
+    final AtomicBoolean destroyInvoked = new AtomicBoolean();
+    final AtomicBoolean handlerInvoked = new AtomicBoolean();
+    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    {
+
+      @Override
+      protected void initInternal(Callback<Void> callback)
+      {
+        callback.onFailure(new NumberFormatException());
+      }
+
+      @Override
+      protected void destroyInternal(Callback<Void> callback)
+      {
+        destroyInvoked.set(true);
+        callback.onSuccess(null);
+      }
+
+      @Override
+      protected void handleInitFailure(Callback<Void> callback)
+      {
+        if (lifecycleStage == LifecycleStage.INITIALIZATION_FAILED)
+        {
+          handlerInvoked.set(true);
+        }
+        else
+        {
+          log.error("init failure invoked in wrong state: {}", lifecycleStage);
+        }
+        throw new NumberFormatException();
+      }
+    };
+
+    CallbackFuture<Void> callback = new CallbackFuture<>();
+    testInstance.init(callback);
+    try
+    {
+      callback.get(50, TimeUnit.MILLISECONDS);
+      fail();
+    }
+    catch (ExecutionException e)
+    {
+      assertThat(e.getCause(), instanceOf(NumberFormatException.class));
+    }
+
+    assertEquals(LifecycleStage.DESTROYED, testInstance.getLifecycleStage());
+    assertFalse(testQueue.isSuspended());
+    assertTrue(destroyInvoked.get());
     assertTrue(handlerInvoked.get());
   }
 

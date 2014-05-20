@@ -1,12 +1,9 @@
 package com.jive.myco.commons.lifecycle;
 
 import java.util.concurrent.Executor;
-import java.util.function.Consumer;
 
-import lombok.AccessLevel;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 
 import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
@@ -31,14 +28,6 @@ public abstract class AbstractLifecycled implements Lifecycled
 
   // Don't use @SLF4J annotation, we want to know the actual implementing class
   private final Logger log = LoggerFactory.getLogger(getClass());
-
-  /**
-   * Handler which will be invoked when initialization fails. By default we will just invoke
-   * {@link #destroyInternal} to cleanup any created resources but this may be overridden for
-   * specific cleanup actions.
-   */
-  @Setter(AccessLevel.PROTECTED)
-  protected Consumer<Callback<Void>> failedInitHandler = this::destroyInternal;
 
   /**
    * Helper method to run a {@link Runnable} on the lifecycle queue. If not currently on the
@@ -90,13 +79,13 @@ public abstract class AbstractLifecycled implements Lifecycled
               @Override
               public void onFailure(Throwable cause)
               {
-                handleInitFailure(cause, that);
+                initFailure(cause);
               }
             });
           }
           catch (Exception e)
           {
-            handleInitFailure(e, that);
+            initFailure(e);
           }
         }
         else if (lifecycleStage == LifecycleStage.INITIALIZED)
@@ -110,36 +99,54 @@ public abstract class AbstractLifecycled implements Lifecycled
         }
       }
 
-      private void handleInitFailure(final Throwable initFailure,
-          final SafeCallbackRunnable<Void> that)
+      private void initFailure(final Throwable initFailure)
       {
         lifecycleStage = LifecycleStage.INITIALIZATION_FAILED;
+
         try
         {
-          failedInitHandler.accept(new Callback<Void>()
+          handleInitFailure(new Callback<Void>()
           {
             @Override
             public void onSuccess(Void result)
             {
-              lifecycleQueue.resume();
-              that.onFailure(initFailure);
+              doDestroy(initFailure);
             }
 
             @Override
             public void onFailure(Throwable e)
             {
               log.error("Error occurred during cleanup after failed initialization", e);
-              lifecycleQueue.resume();
-              that.onFailure(initFailure);
+              doDestroy(initFailure);
             }
           });
         }
         catch (Exception e)
         {
           log.error("Error occurred while invoking failed init handler", e);
-          lifecycleQueue.resume();
-          that.onFailure(initFailure);
+          doDestroy(initFailure);
         }
+      }
+
+      private void doDestroy(Throwable initFailure)
+      {
+        SafeCallbackRunnable<Void> that = this;
+        destroy(new Callback<Void>()
+        {
+          @Override
+          public void onSuccess(Void result)
+          {
+            that.onFailure(initFailure);
+          }
+
+          @Override
+          public void onFailure(Throwable cause)
+          {
+            log.error("Error occurred during destroy after failed initialization", cause);
+            that.onFailure(initFailure);
+          }
+        });
+        lifecycleQueue.resume();
       }
     });
   }
@@ -204,6 +211,18 @@ public abstract class AbstractLifecycled implements Lifecycled
   {
     // note: can't use @Getter since it is not final
     return lifecycleStage;
+  }
+
+  /**
+   * Override this method to perform additional cleanup after a call to {@link #init} has failed.
+   * This will be invoked prior to calling {@link #destroy}.
+   *
+   * @param callback
+   *          callback to invoke when cleanup is complete
+   */
+  protected void handleInitFailure(Callback<Void> callback)
+  {
+    callback.onSuccess(null);
   }
 
   /**
