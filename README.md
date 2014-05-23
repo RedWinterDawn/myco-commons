@@ -1,7 +1,5 @@
 # Myco Commons
 
-[![Build Status](http://build.devops.jive.com/buildStatus/icon?job=boneyard)](http://build.devops.jive.com/job/boneyard/)
-
 Stuff that does things on different projects.
 
 * [**BOM**](./bom/README.md)
