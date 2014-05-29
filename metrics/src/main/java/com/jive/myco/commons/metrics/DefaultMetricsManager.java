@@ -5,11 +5,10 @@ import java.lang.management.ManagementFactory;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -17,8 +16,6 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
-import org.fusesource.hawtdispatch.DispatchQueue;
-import org.fusesource.hawtdispatch.Dispatcher;
 import org.fusesource.hawtdispatch.internal.DispatcherConfig;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +25,6 @@ import com.codahale.metrics.Histogram;
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.Metric;
-import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.RatioGauge.Ratio;
@@ -43,8 +39,11 @@ import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
 import com.codahale.metrics.jvm.ThreadStatesGaugeSet;
 import com.google.common.base.Joiner;
 import com.google.common.collect.MapMaker;
+import com.google.common.collect.Sets;
 import com.jive.myco.commons.callbacks.Callback;
-import com.jive.myco.commons.callbacks.SafeCallbackRunnable;
+import com.jive.myco.commons.hawtdispatch.DefaultDispatchQueueBuilder;
+import com.jive.myco.commons.hawtdispatch.DispatchQueueBuilder;
+import com.jive.myco.commons.lifecycle.AbstractLifecycled;
 import com.jive.myco.commons.lifecycle.LifecycleStage;
 import com.jive.myco.commons.lifecycle.Lifecycled;
 
@@ -54,236 +53,141 @@ import com.jive.myco.commons.lifecycle.Lifecycled;
  * @author David Valeri
  */
 @Slf4j
-public final class DefaultMetricsManager implements MetricsManager, Lifecycled
+public final class DefaultMetricsManager extends AbstractLifecycled implements MetricsManager,
+    Lifecycled
 {
-  private static final String DISPATCH_QUEUE_METRICS_ENTITY_PREFIX =
-      "com.jive.myco.commons.metrics";
-
   private static final AtomicInteger INSTANCE_COUNT = new AtomicInteger();
-
-  private MetricRegistry registry = new MetricRegistry();
-
-  private final AtomicReference<LifecycleStage> lifecycleStage = new AtomicReference<>(
-      LifecycleStage.UNINITIALIZED);
 
   private final List<Closeable> reporters = new LinkedList<>();
 
   /**
-   * A map of {@link Metric}s back to the name of the metric in the registry. Used to make removal
-   * of metrics easier as one does not need to recalculate the name of the metric in order to remove
-   * it from the registry. Uses weak keys because there is a concurrency risk between the registry's
-   * internal map and this map. The weak keys let things that have actually been removed from the
-   * registry's internal map get removed from this map.
+   * A set of {@link Metric}s still valid for this manager. Uses weak keys because there is a
+   * concurrency risk between the registry's internal map and this map. The weak keys let things
+   * that have actually been removed from the registry's internal map get removed from this map.
    */
-  private final Map<Metric, String> metricNameMap = new MapMaker().weakKeys().makeMap();
+  private final Set<Metric> metrics = Sets.newSetFromMap(new MapMaker().weakKeys().makeMap());
 
-  private DispatchQueue lifecycleQueue;
+  private final MetricRegistry registry;
 
   private DefaultMetricsManagerContext baseContext;
 
   @Setter
+  @NonNull
   private MetricsManagerConfiguration metricsManagerConfiguration;
 
-  @Setter
-  private Dispatcher dispatcher;
+  public DefaultMetricsManager()
+  {
+    this(
+        String.valueOf(INSTANCE_COUNT.getAndIncrement()),
+        new DefaultDispatchQueueBuilder(
+            "com.jive.myco.commons",
+            DispatcherConfig.getDefaultDispatcher()),
+        new MetricRegistry(),
+        MetricsManagerConfiguration.builder().build());
+  }
 
-  @Setter
-  private String id;
+  public DefaultMetricsManager(@NonNull final String id,
+      final DispatchQueueBuilder dispatchQueueBuilder,
+      @NonNull final MetricRegistry metricRegistry,
+      @NonNull final MetricsManagerConfiguration metricsManagerConfiguration)
+  {
+    super(dispatchQueueBuilder.segment("metrics", id, "lifecycle").build());
+    this.registry = metricRegistry;
+    this.metricsManagerConfiguration = metricsManagerConfiguration;
+  }
 
   @Override
-  public void init(final Callback<Void> callback)
+  protected void initInternal(final Callback<Void> callback)
   {
-    if (lifecycleStage.compareAndSet(LifecycleStage.UNINITIALIZED, LifecycleStage.INITIALIZING))
+    registry.register(MetricRegistry.name("jvm", "gc"), new GarbageCollectorMetricSet());
+
+    registry.register(MetricRegistry.name("jvm", "memory"), new MemoryUsageGaugeSet());
+
+    registry.register(MetricRegistry.name("jvm", "buffer-pool"),
+        new BufferPoolMetricSet(ManagementFactory.getPlatformMBeanServer()));
+
+    registry.register(MetricRegistry.name("jvm", "thread-states"),
+        new ThreadStatesGaugeSet());
+
+    registry.register(MetricRegistry.name("jvm", "fd", "usage"),
+        new FileDescriptorRatioGauge());
+
+    if (metricsManagerConfiguration.isSlf4jReporterEnabled())
     {
-      if (dispatcher == null)
+      final Slf4jReporter reporter = Slf4jReporter.forRegistry(registry)
+          .outputTo(LoggerFactory.getLogger("com.jive.jotter.broker"))
+          .convertRatesTo(TimeUnit.SECONDS)
+          .convertDurationsTo(TimeUnit.MILLISECONDS)
+          .build();
+
+      reporters.add(reporter);
+
+      reporter.start(metricsManagerConfiguration.getSlf4jReporterPeriod(),
+          TimeUnit.MILLISECONDS);
+    }
+
+    if (metricsManagerConfiguration.isJmxReporterEnabled())
+    {
+      final JmxReporter jmxReporter = JmxReporter.forRegistry(registry)
+          .inDomain(metricsManagerConfiguration.getJmxReporterDomain())
+          .registerWith(ManagementFactory.getPlatformMBeanServer())
+          .convertRatesTo(TimeUnit.SECONDS)
+          .convertDurationsTo(TimeUnit.MILLISECONDS)
+          .build();
+
+      reporters.add(jmxReporter);
+
+      jmxReporter.start();
+    }
+
+    if (metricsManagerConfiguration.isGraphiteReporterEnabled())
+    {
+      final Graphite graphite =
+          new Graphite(metricsManagerConfiguration.getGraphiteReporterAddress());
+
+      final GraphiteReporter graphiteReporter = GraphiteReporter.forRegistry(registry)
+          .prefixedWith(metricsManagerConfiguration.getGraphiteReporterPrefix())
+          .convertRatesTo(TimeUnit.SECONDS)
+          .convertDurationsTo(TimeUnit.MILLISECONDS)
+          .build(graphite);
+
+      reporters.add(graphiteReporter);
+
+      graphiteReporter.start(metricsManagerConfiguration.getGraphiteReporterPeriod(),
+          TimeUnit.MILLISECONDS);
+    }
+
+    baseContext = new DefaultMetricsManagerContext(null);
+
+    callback.onSuccess(null);
+  }
+
+  @Override
+  protected void destroyInternal(final Callback<Void> callback)
+  {
+    for (final Closeable reporter : reporters)
+    {
+      try
       {
-        dispatcher = DispatcherConfig.getDefaultDispatcher();
+        reporter.close();
       }
-
-      if (id == null)
+      catch (final Exception e)
       {
-        id = String.valueOf(INSTANCE_COUNT.getAndIncrement());
+        log.warn("Error closing reporter of type [{}].", reporter.getClass());
       }
-
-      lifecycleQueue = dispatcher.createQueue(
-          Joiner.on(".").join(DISPATCH_QUEUE_METRICS_ENTITY_PREFIX, id, "lifecycle"));
-
-      lifecycleQueue.execute(new SafeCallbackRunnable<Void>(callback)
-      {
-        @Override
-        protected void doRun() throws Exception
-        {
-          final SafeCallbackRunnable<Void> that = this;
-
-          try
-          {
-            if (metricsManagerConfiguration == null)
-            {
-              metricsManagerConfiguration = MetricsManagerConfiguration.builder().build();
-            }
-
-            registry = new MetricRegistry();
-
-            registry.register(MetricRegistry.name("jvm", "gc"), new GarbageCollectorMetricSet());
-
-            registry.register(MetricRegistry.name("jvm", "memory"), new MemoryUsageGaugeSet());
-
-            registry.register(MetricRegistry.name("jvm", "buffer-pool"),
-                new BufferPoolMetricSet(ManagementFactory.getPlatformMBeanServer()));
-
-            registry.register(MetricRegistry.name("jvm", "thread-states"),
-                new ThreadStatesGaugeSet());
-
-            registry.register(MetricRegistry.name("jvm", "fd", "usage"),
-                new FileDescriptorRatioGauge());
-
-            if (metricsManagerConfiguration.isSlf4jReporterEnabled())
-            {
-              final Slf4jReporter reporter = Slf4jReporter.forRegistry(registry)
-                  .outputTo(LoggerFactory.getLogger("com.jive.jotter.broker"))
-                  .convertRatesTo(TimeUnit.SECONDS)
-                  .convertDurationsTo(TimeUnit.MILLISECONDS)
-                  .build();
-
-              reporters.add(reporter);
-
-              reporter.start(metricsManagerConfiguration.getSlf4jReporterPeriod(),
-                  TimeUnit.MILLISECONDS);
-            }
-
-            if (metricsManagerConfiguration.isJmxReporterEnabled())
-            {
-              final JmxReporter jmxReporter = JmxReporter.forRegistry(registry)
-                  .inDomain(metricsManagerConfiguration.getJmxReporterDomain())
-                  .registerWith(ManagementFactory.getPlatformMBeanServer())
-                  .convertRatesTo(TimeUnit.SECONDS)
-                  .convertDurationsTo(TimeUnit.MILLISECONDS)
-                  .build();
-
-              reporters.add(jmxReporter);
-
-              jmxReporter.start();
-            }
-
-            if (metricsManagerConfiguration.isGraphiteReporterEnabled())
-            {
-              final Graphite graphite =
-                  new Graphite(metricsManagerConfiguration.getGraphiteReporterAddress());
-
-              final GraphiteReporter graphiteReporter = GraphiteReporter.forRegistry(registry)
-                  .prefixedWith(metricsManagerConfiguration.getGraphiteReporterPrefix())
-                  .convertRatesTo(TimeUnit.SECONDS)
-                  .convertDurationsTo(TimeUnit.MILLISECONDS)
-                  .build(graphite);
-
-              reporters.add(graphiteReporter);
-
-              graphiteReporter.start(metricsManagerConfiguration.getGraphiteReporterPeriod(),
-                  TimeUnit.MILLISECONDS);
-            }
-
-            baseContext = new DefaultMetricsManagerContext(null);
-
-            lifecycleStage.set(LifecycleStage.INITIALIZED);
-
-            onSuccess(null);
-          }
-          catch (final RuntimeException e)
-          {
-            lifecycleStage.set(LifecycleStage.INITIALIZATION_FAILED);
-            destroy(new Callback<Void>()
-            {
-              @Override
-              public void onSuccess(final Void result)
-              {
-                that.onFailure(e);
-              }
-
-              @Override
-              public void onFailure(final Throwable cause)
-              {
-                log.warn("Failed to cleanup manager after failure.", cause);
-                that.onFailure(e);
-              }
-            });
-          }
-        }
-      });
     }
-    else if (lifecycleStage.get() == LifecycleStage.INITIALIZED)
-    {
-      callback.onSuccess(null);
-    }
-    else
-    {
-      callback.onFailure(new IllegalStateException(
-          "Cannot initialize manager in the [" + lifecycleStage.get() + "] stage."));
-    }
+
+    registry.removeMatching((name, metric) -> metrics.contains(metric));
+
+    metrics.clear();
+
+    callback.onSuccess(null);
   }
 
   @Override
-  public void destroy(final Callback<Void> callback)
+  public void removeMetric(final Metric metricToRemove)
   {
-    if (lifecycleStage.compareAndSet(LifecycleStage.INITIALIZED, LifecycleStage.DESTROYING)
-        || lifecycleStage.compareAndSet(LifecycleStage.INITIALIZATION_FAILED,
-            LifecycleStage.DESTROYING)
-        || lifecycleStage.compareAndSet(LifecycleStage.DESTROYING, LifecycleStage.DESTROYING))
-    {
-      lifecycleQueue.execute(new SafeCallbackRunnable<Void>(callback)
-      {
-        @Override
-        protected void doRun()
-        {
-          for (final Closeable reporter : reporters)
-          {
-            try
-            {
-              reporter.close();
-            }
-            catch (final Exception e)
-            {
-              log.warn("Error closing reporter of type [{}].", reporter.getClass());
-            }
-          }
-
-          if (registry != null)
-          {
-            final MetricRegistry previousRegistry = registry;
-            registry = null;
-            previousRegistry.removeMatching(MetricFilter.ALL);
-          }
-
-          lifecycleStage.set(LifecycleStage.DESTROYED);
-          onSuccess(null);
-        }
-      });
-    }
-    else if (lifecycleStage.get() == LifecycleStage.DESTROYED
-        || lifecycleStage.get() == LifecycleStage.UNINITIALIZED)
-    {
-      callback.onSuccess(null);
-    }
-    else
-    {
-      callback.onFailure(new IllegalStateException(
-          "Cannot destroy manager in the [" + lifecycleStage.get() + "] stage."));
-    }
-  }
-
-  @Override
-  public LifecycleStage getLifecycleStage()
-  {
-    return lifecycleStage.get();
-  }
-
-  @Override
-  public void removeMetric(final Metric metric)
-  {
-    final String name = metricNameMap.get(metric);
-    if (name != null)
-    {
-      registry.remove(name);
-    }
+    registry.removeMatching((name, metric) -> metric == metricToRemove);
   }
 
   @Override
@@ -326,8 +230,8 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
   {
     final String name = getMetricName(prefix, segment, additionalSegments);
     final Counter counter = registry.counter(name);
-    metricNameMap.put(counter, name);
-
+    metrics.add(counter);
+    checkState(name, counter);
     return counter;
   }
 
@@ -336,7 +240,8 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
   {
     final String name = getMetricName(prefix, segment, additionalSegments);
     final Timer timer = registry.timer(name);
-    metricNameMap.put(timer, name);
+    metrics.add(timer);
+    checkState(name, timer);
     return timer;
   }
 
@@ -345,7 +250,8 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
   {
     final String name = getMetricName(prefix, segment, additionalSegments);
     final Meter meter = registry.meter(name);
-    metricNameMap.put(meter, name);
+    metrics.add(meter);
+    checkState(name, meter);
     return meter;
   }
 
@@ -354,7 +260,8 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
   {
     final String name = getMetricName(prefix, segment, additionalSegments);
     final Histogram histogram = registry.histogram(name);
-    metricNameMap.put(histogram, name);
+    metrics.add(histogram);
+    checkState(name, histogram);
     return histogram;
   }
 
@@ -383,7 +290,9 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
     registry.remove(name);
     registry.register(name, gauge);
 
-    metricNameMap.put(gauge, name);
+    metrics.add(gauge);
+
+    checkState(name, gauge);
 
     return gauge;
   }
@@ -413,7 +322,9 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
     registry.remove(name);
     registry.register(name, gauge);
 
-    metricNameMap.put(gauge, name);
+    metrics.add(gauge);
+
+    checkState(name, gauge);
 
     return gauge;
   }
@@ -438,6 +349,16 @@ public final class DefaultMetricsManager implements MetricsManager, Lifecycled
 
     // This method is OK w/ prefix being null. It will just ignore it.
     return MetricRegistry.name(prefix, parts);
+  }
+
+  private void checkState(final String name, final Metric metric)
+  {
+    if (lifecycleStage != LifecycleStage.INITIALIZED)
+    {
+      registry.remove(name);
+      metrics.remove(metric);
+      throw new IllegalStateException("Manager destroyed");
+    }
   }
 
   @ToString(of = { "prefix" })

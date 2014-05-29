@@ -1,54 +1,32 @@
 package com.jive.myco.commons.metrics;
 
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import org.fusesource.hawtdispatch.Dispatcher;
+import org.fusesource.hawtdispatch.internal.DispatcherConfig;
 import org.junit.Test;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.RatioGauge.Ratio;
 import com.codahale.metrics.Timer;
 import com.jive.myco.commons.callbacks.CallbackFuture;
+import com.jive.myco.commons.hawtdispatch.DefaultDispatchQueueBuilder;
 import com.jive.myco.commons.lifecycle.LifecycleStage;
 
 public class DefaultMetricsManagerTest
 {
   @Test
-  public void testInitFailure() throws Exception
-  {
-    MetricsManagerConfiguration config = mock(MetricsManagerConfiguration.class);
-    when(config.isSlf4jReporterEnabled()).thenThrow(new IllegalStateException());
-    final MetricsManager manager = createMetricsManager(null, null, config);
-
-    final CallbackFuture<Void> callback = new CallbackFuture<>();
-    manager.init(callback);
-
-    try
-    {
-      callback.get(50, TimeUnit.MILLISECONDS);
-      fail();
-    }
-    catch (final ExecutionException e)
-    {
-      assertTrue(e.getCause() instanceof IllegalStateException);
-      assertEquals(LifecycleStage.DESTROYED, manager.getLifecycleStage());
-    }
-  }
-
-  @Test
   public void testLifecycle() throws Exception
   {
     final MetricsManager manager =
-        createMetricsManager(null, null, MetricsManagerConfiguration.builder().build());
+        createMetricsManager(MetricsManagerConfiguration.builder().build());
 
     try
     {
@@ -89,7 +67,7 @@ public class DefaultMetricsManagerTest
   public void testAll() throws Exception
   {
     final MetricsManager manager =
-        createMetricsManager(null, null, MetricsManagerConfiguration.builder().build());
+        createMetricsManager(MetricsManagerConfiguration.builder().build());
 
     CallbackFuture<Void> callback = new CallbackFuture<>();
     manager.init(callback);
@@ -257,7 +235,7 @@ public class DefaultMetricsManagerTest
   public void testRatio() throws Exception
   {
     final MetricsManager manager =
-        createMetricsManager(null, null, MetricsManagerConfiguration.builder().build());
+        createMetricsManager(MetricsManagerConfiguration.builder().build());
 
     final CallbackFuture<Void> callback = new CallbackFuture<>();
     manager.init(callback);
@@ -292,15 +270,14 @@ public class DefaultMetricsManagerTest
     assertNull(baseGauge.getValue());
   }
 
-  private MetricsManager createMetricsManager(final String id, final Dispatcher dispatcher,
+  private MetricsManager createMetricsManager(
       final MetricsManagerConfiguration metricsManagerConfiguration)
   {
-    final DefaultMetricsManager metricsManager = new DefaultMetricsManager();
 
-    metricsManager.setId(id);
-    metricsManager.setDispatcher(dispatcher);
-    metricsManager.setMetricsManagerConfiguration(metricsManagerConfiguration);
-
-    return metricsManager;
+    return new DefaultMetricsManager(
+        "test",
+        new DefaultDispatchQueueBuilder("test", DispatcherConfig.getDefaultDispatcher()),
+        new MetricRegistry(),
+        metricsManagerConfiguration);
   }
 }
