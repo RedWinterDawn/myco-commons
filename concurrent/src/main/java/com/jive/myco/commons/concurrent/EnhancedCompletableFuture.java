@@ -4,8 +4,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import lombok.NonNull;
 
@@ -13,15 +16,13 @@ import lombok.NonNull;
  * An enhanced version of {@link CompletableFuture} that provides additional capabilities beyond
  * those defined in {@link CompletionStage} and the utility methods on {@link CompletableFuture}.
  * This implementation follows the completion and exceptional completion rules defined in
- * {@link CompletionStage}.
+ * {@link EnhancedCompletionStage}.
  *
  * @param <T>
  *          the result type of the future
  *
  * @author David Valeri
  * @author Brandon Pederson
- *
- * @see CompletionStage
  */
 public class EnhancedCompletableFuture<T> implements EnhancedCompletionStage<T>
 {
@@ -35,19 +36,6 @@ public class EnhancedCompletableFuture<T> implements EnhancedCompletionStage<T>
   private EnhancedCompletableFuture(@NonNull final CompletableFuture<T> delegate)
   {
     this.delegate = delegate;
-  }
-
-  /**
-   * Creates a new instance from the provided {@link CompletionStage}.
-   *
-   * @param completionStage
-   *          the completion stage to convert
-   *
-   * @return a new {@code EnhancedCompletableFuture} based on the provided {@code CompletionStage}
-   */
-  public static <T> EnhancedCompletableFuture<T> from(final CompletionStage<T> completionStage)
-  {
-    return new EnhancedCompletableFuture<>(completionStage.toCompletableFuture());
   }
 
   /**
@@ -89,12 +77,54 @@ public class EnhancedCompletableFuture<T> implements EnhancedCompletionStage<T>
     return from(CompletableFutures.immediatelyFailed(cause));
   }
 
+  private static <T> Function<CompletionStage<T>, CompletionStage<T>> identity()
+  {
+    return (t) -> t;
+  }
+
+  // TODO
+  public static <T> EnhancedCompletableFuture<T> compose(
+      @NonNull final Supplier<CompletionStage<T>> supplier)
+  {
+    return supply(supplier)
+        .thenCompose((x) -> x);
+  }
+
+  // TODO
+  public static <T> EnhancedCompletableFuture<T> composeAsync(
+      @NonNull final Supplier<CompletionStage<T>> supplier)
+  {
+    return supplyAsync(supplier)
+        .thenCompose((x) -> x);
+  }
+
+  // TODO
+  public static <T> EnhancedCompletableFuture<T> composeAsync(
+      @NonNull final Supplier<CompletionStage<T>> supplier,
+      @NonNull final Executor executor)
+  {
+    return supplyAsync(supplier, executor)
+        .thenCompose((x) -> x);
+  }
+
+  // TODO JavaDoc
+  public static EnhancedCompletableFuture<Void> runAsync(final Runnable action)
+  {
+    return from(CompletableFuture.runAsync(action));
+  }
+
+  // TODO JavaDoc
+  public static EnhancedCompletableFuture<Void> runAsync(final Runnable action,
+      final Executor executor)
+  {
+    return from(CompletableFuture.runAsync(action, executor));
+  }
+
   /**
    * Returns a new {@code EnhancedCompletableFuture} that is asynchronously completed by a task
    * running in the {@link ForkJoinPool#commonPool()} after it runs the given
    * {@link ExceptionalRunnable action}. When the action completes by throwing an exception, the
-   * returned {@code EnhancedCompletableFuture} completes exceptionally also using the
-   * {@link ForkJoinPool#commonPool()}.
+   * returned {@code EnhancedCompletableFuture} completes exceptionally with the thrown exception.
    *
    * @param action
    *          the action to run before completing the returned {@code EnhancedCompletionStage}
@@ -111,8 +141,7 @@ public class EnhancedCompletableFuture<T> implements EnhancedCompletionStage<T>
    * Returns a new {@code EnhancedCompletableFuture} that is asynchronously completed by a task
    * running in the supplied {@code Executor} after it runs the given {@link ExceptionalRunnable
    * action}. When the action completes by throwing an exception, the returned
-   * {@code EnhancedCompletableFuture} completes exceptionally also using the supplied
-   * {@code Executor}.
+   * {@code EnhancedCompletableFuture} completes exceptionally with the thrown exception.
    *
    * @param action
    *          the action to run before completing the returned {@code EnhancedCompletionStage}
@@ -127,12 +156,34 @@ public class EnhancedCompletableFuture<T> implements EnhancedCompletionStage<T>
     return from(CompletableFutures.runExceptionallyAsync(action, executor));
   }
 
+  // TODO
+  protected static <T> EnhancedCompletableFuture<T> supply(
+      @NonNull final Supplier<T> supplier)
+  {
+    return from(CompletableFutures.supply(supplier));
+  }
+
+  // TODO
+  public static <T> EnhancedCompletableFuture<T> supplyAsync(
+      @NonNull final Supplier<T> supplier)
+  {
+    return from(CompletableFuture.supplyAsync(supplier));
+  }
+
+  // TODO
+  public static <T> EnhancedCompletableFuture<T> supplyAsync(
+      @NonNull final Supplier<T> supplier,
+      @NonNull final Executor executor)
+  {
+    return from(CompletableFuture.supplyAsync(supplier, executor));
+  }
+
   /**
    * Returns a new {@code EnhancedCompletableFuture} that is asynchronously completed by a task
    * running in the {@link ForkJoinPool#commonPool()} with the value obtained by calling the given
    * {@link ExceptionalSupplier supplier}. When the given {@link ExceptionalSupplier supplier}
    * completes by throwing an exception, the returned {@code EnhancedCompletableFuture} completes
-   * exceptionally also using the {@link ForkJoinPool#commonPool()}.
+   * exceptionally with the thrown exception.
    *
    * @param supplier
    *          a function returning the value to be used to complete the returned
@@ -153,7 +204,7 @@ public class EnhancedCompletableFuture<T> implements EnhancedCompletionStage<T>
    * running in the supplied {@code Executor} with the value obtained by calling the given
    * {@link ExceptionalSupplier supplier}. When the given {@link ExceptionalSupplier supplier}
    * completes by throwing an exception, the returned {@code EnhancedCompletableFuture} completes
-   * exceptionally also using the supplied {@code Executor}.
+   * exceptionally with the thrown exception.
    *
    * @param supplier
    *          a function returning the value to be used to complete the returned
@@ -173,129 +224,348 @@ public class EnhancedCompletableFuture<T> implements EnhancedCompletionStage<T>
   }
 
   @Override
-  public <U> EnhancedCompletionStage<U> thenApply(final Function<? super T, ? extends U> fn)
+  public <U> EnhancedCompletableFuture<U> thenApply(final Function<? super T, ? extends U> fn)
   {
     return from(delegate.thenApply(fn));
   }
 
   @Override
-  public <U> EnhancedCompletionStage<U> thenApplyAsync(final Function<? super T, ? extends U> fn)
+  public <U> EnhancedCompletableFuture<U> thenApplyAsync(final Function<? super T, ? extends U> fn)
   {
     return from(delegate.thenApplyAsync(fn));
   }
 
   @Override
-  public <U> EnhancedCompletionStage<U> thenApplyAsync(final Function<? super T, ? extends U> fn,
+  public <U> EnhancedCompletableFuture<U> thenApplyAsync(final Function<? super T, ? extends U> fn,
       final Executor executor)
   {
     return from(delegate.thenApplyAsync(fn, executor));
   }
 
   @Override
-  public <U> EnhancedCompletionStage<U> thenApplyExceptionally(
+  public <U> EnhancedCompletableFuture<U> thenApplyExceptionally(
       final ExceptionalFunction<? super T, ? extends U> efn)
   {
-    return from(delegate.thenCompose(
-        (input) -> CompletableFutures.applyExceptionally(input, efn)));
+    return from(delegate.thenCompose(CompletableFutures.thenApplyExceptionally(efn)));
   }
 
   @Override
-  public <U> EnhancedCompletionStage<U> thenApplyExceptionallyAsync(
+  public <U> EnhancedCompletableFuture<U> thenApplyExceptionallyAsync(
       final ExceptionalFunction<? super T, ? extends U> efn)
   {
-    return from(delegate.thenComposeAsync(
-        (input) -> CompletableFutures.applyExceptionally(input, efn)));
+    return from(delegate.thenComposeAsync(CompletableFutures.thenApplyExceptionally(efn)));
   }
 
   @Override
-  public <U> EnhancedCompletionStage<U> thenApplyExceptionallyAsync(
+  public <U> EnhancedCompletableFuture<U> thenApplyExceptionallyAsync(
       final ExceptionalFunction<? super T, ? extends U> efn, final Executor executor)
   {
     return from(delegate.thenComposeAsync(
-        (input) -> CompletableFutures.applyExceptionally(input, efn),
+        CompletableFutures.thenApplyExceptionally(efn),
         executor));
   }
 
   @Override
-  public EnhancedCompletionStage<Void> thenAccept(final Consumer<? super T> action)
+  public EnhancedCompletableFuture<Void> thenAccept(final Consumer<? super T> action)
   {
     return from(delegate.thenAccept(action));
   }
 
   @Override
-  public EnhancedCompletionStage<Void> thenAcceptAsync(final Consumer<? super T> action)
+  public EnhancedCompletableFuture<Void> thenAcceptAsync(final Consumer<? super T> action)
   {
     return from(delegate.thenAcceptAsync(action));
   }
 
   @Override
-  public EnhancedCompletionStage<Void> thenAcceptAsync(final Consumer<? super T> action,
+  public EnhancedCompletableFuture<Void> thenAcceptAsync(final Consumer<? super T> action,
       final Executor executor)
   {
     return from(delegate.thenAcceptAsync(action, executor));
   }
 
   @Override
-  public EnhancedCompletionStage<Void> thenAcceptExceptionally(
+  public EnhancedCompletableFuture<Void> thenAcceptExceptionally(
       final ExceptionalConsumer<? super T> action)
   {
-    return from(delegate.thenCompose(
-        (input) -> CompletableFutures.acceptExceptionally(input, action)));
+    return from(delegate.thenCompose(CompletableFutures.thenAcceptExceptionally(action)));
   }
 
   @Override
-  public EnhancedCompletionStage<Void> thenAcceptExceptionallyAsync(
+  public EnhancedCompletableFuture<Void> thenAcceptExceptionallyAsync(
       final ExceptionalConsumer<? super T> action)
   {
-    return from(delegate.thenComposeAsync(
-        (input) -> CompletableFutures.acceptExceptionally(input, action)));
+    return from(delegate.thenComposeAsync(CompletableFutures.thenAcceptExceptionally(action)));
   }
 
   @Override
-  public EnhancedCompletionStage<Void> thenAcceptExceptionallyAsync(
+  public EnhancedCompletableFuture<Void> thenAcceptExceptionallyAsync(
       final ExceptionalConsumer<? super T> action, final Executor executor)
   {
     return from(delegate.thenComposeAsync(
-        (input) -> CompletableFutures.acceptExceptionally(input, action),
+        CompletableFutures.thenAcceptExceptionally(action),
         executor));
   }
 
   @Override
-  public EnhancedCompletionStage<Void> thenRun(final Runnable action)
+  public EnhancedCompletableFuture<Void> thenRun(final Runnable action)
   {
     return from(delegate.thenRun(action));
   }
 
   @Override
-  public EnhancedCompletionStage<Void> thenRunAsync(final Runnable action)
+  public EnhancedCompletableFuture<Void> thenRunAsync(final Runnable action)
   {
     return from(delegate.thenRunAsync(action));
   }
 
   @Override
-  public EnhancedCompletionStage<Void> thenRunAsync(final Runnable action, final Executor executor)
+  public EnhancedCompletableFuture<Void> thenRunAsync(final Runnable action, final Executor executor)
   {
     return from(delegate.thenRunAsync(action, executor));
   }
 
   @Override
-  public EnhancedCompletionStage<Void> thenRunExceptionally(final ExceptionalRunnable action)
+  public EnhancedCompletableFuture<Void> thenRunExceptionally(final ExceptionalRunnable action)
   {
-    return from(delegate.thenCompose((input) -> CompletableFutures.runExceptionally(action)));
+    return from(delegate.thenCompose(CompletableFutures.thenRunExceptionally(action)));
   }
 
   @Override
-  public EnhancedCompletionStage<Void> thenRunExceptionallyAsync(final ExceptionalRunnable action)
+  public EnhancedCompletableFuture<Void> thenRunExceptionallyAsync(final ExceptionalRunnable action)
   {
-    return from(delegate.thenComposeAsync((input) -> CompletableFutures.runExceptionally(action)));
+    return from(delegate.thenComposeAsync(CompletableFutures.thenRunExceptionally(action)));
   }
 
   @Override
-  public EnhancedCompletionStage<Void> thenRunExceptionallyAsync(final ExceptionalRunnable action,
+  public EnhancedCompletableFuture<Void> thenRunExceptionallyAsync(
+      final ExceptionalRunnable action,
       final Executor executor)
   {
     return from(delegate.thenComposeAsync(
-        (input) -> CompletableFutures.runExceptionally(action),
+        CompletableFutures.thenRunExceptionally(action),
         executor));
+  }
+
+  @Override
+  public <U, V> EnhancedCompletableFuture<V> thenCombine(final CompletionStage<? extends U> other,
+      final BiFunction<? super T, ? super U, ? extends V> fn)
+  {
+    return from(delegate.thenCombine(other, fn));
+  }
+
+  @Override
+  public <U, V> EnhancedCompletableFuture<V> thenCombineAsync(
+      final CompletionStage<? extends U> other,
+      final BiFunction<? super T, ? super U, ? extends V> fn)
+  {
+    return from(delegate.thenCombineAsync(other, fn));
+  }
+
+  @Override
+  public <U, V> EnhancedCompletionStage<V> thenCombineAsync(
+      final CompletionStage<? extends U> other,
+      final BiFunction<? super T, ? super U, ? extends V> fn, final Executor executor)
+  {
+    return from(delegate.thenCombineAsync(other, fn, executor));
+  }
+
+  @Override
+  public <U> EnhancedCompletableFuture<Void> thenAcceptBoth(
+      final CompletionStage<? extends U> other,
+      final BiConsumer<? super T, ? super U> action)
+  {
+    return from(delegate.thenAcceptBoth(other, action));
+  }
+
+  @Override
+  public <U> EnhancedCompletableFuture<Void> thenAcceptBothAsync(
+      final CompletionStage<? extends U> other, final BiConsumer<? super T, ? super U> action)
+  {
+    return from(delegate.thenAcceptBothAsync(other, action));
+  }
+
+  @Override
+  public <U> EnhancedCompletableFuture<Void> thenAcceptBothAsync(
+      final CompletionStage<? extends U> other, final BiConsumer<? super T, ? super U> action,
+      final Executor executor)
+  {
+    return from(delegate.thenAcceptBothAsync(other, action, executor));
+  }
+
+  @Override
+  public EnhancedCompletableFuture<Void> runAfterBoth(final CompletionStage<?> other,
+      final Runnable action)
+  {
+    return from(delegate.runAfterBoth(other, action));
+  }
+
+  @Override
+  public EnhancedCompletableFuture<Void> runAfterBothAsync(final CompletionStage<?> other,
+      final Runnable action)
+  {
+    return from(delegate.runAfterBothAsync(other, action));
+  }
+
+  @Override
+  public EnhancedCompletableFuture<Void> runAfterBothAsync(final CompletionStage<?> other,
+      final Runnable action, final Executor executor)
+  {
+    return from(delegate.runAfterBothAsync(other, action, executor));
+  }
+
+  @Override
+  public <U> EnhancedCompletableFuture<U> applyToEither(final CompletionStage<? extends T> other,
+      final Function<? super T, U> fn)
+  {
+    return from(delegate.applyToEither(other, fn));
+  }
+
+  @Override
+  public <U> EnhancedCompletableFuture<U> applyToEitherAsync(
+      final CompletionStage<? extends T> other, final Function<? super T, U> fn)
+  {
+    return from(delegate.applyToEitherAsync(other, fn));
+  }
+
+  @Override
+  public <U> EnhancedCompletableFuture<U> applyToEitherAsync(
+      final CompletionStage<? extends T> other, final Function<? super T, U> fn,
+      final Executor executor)
+  {
+    return from(delegate.applyToEitherAsync(other, fn, executor));
+  }
+
+  @Override
+  public EnhancedCompletableFuture<Void> acceptEither(final CompletionStage<? extends T> other,
+      final Consumer<? super T> action)
+  {
+    return from(delegate.acceptEither(other, action));
+  }
+
+  @Override
+  public EnhancedCompletableFuture<Void> acceptEitherAsync(
+      final CompletionStage<? extends T> other,
+      final Consumer<? super T> action)
+  {
+    return from(delegate.acceptEitherAsync(other, action));
+  }
+
+  @Override
+  public EnhancedCompletableFuture<Void> acceptEitherAsync(
+      final CompletionStage<? extends T> other,
+      final Consumer<? super T> action, final Executor executor)
+  {
+    return from(delegate.acceptEitherAsync(other, action, executor));
+  }
+
+  @Override
+  public EnhancedCompletableFuture<Void> runAfterEither(final CompletionStage<?> other,
+      final Runnable action)
+  {
+    return from(delegate.runAfterEither(other, action));
+  }
+
+  @Override
+  public EnhancedCompletableFuture<Void> runAfterEitherAsync(final CompletionStage<?> other,
+      final Runnable action)
+  {
+    return from(delegate.runAfterEitherAsync(other, action));
+  }
+
+  @Override
+  public EnhancedCompletableFuture<Void> runAfterEitherAsync(final CompletionStage<?> other,
+      final Runnable action, final Executor executor)
+  {
+    return from(delegate.runAfterEitherAsync(other, action, executor));
+  }
+
+  @Override
+  public <U> EnhancedCompletableFuture<U> thenCompose(
+      final Function<? super T, ? extends CompletionStage<U>> fn)
+  {
+    return from(delegate.thenCompose(fn));
+  }
+
+  @Override
+  public <U> EnhancedCompletableFuture<U> thenComposeAsync(
+      final Function<? super T, ? extends CompletionStage<U>> fn)
+  {
+    return from(delegate.thenComposeAsync(fn));
+  }
+
+  @Override
+  public <U> EnhancedCompletableFuture<U> thenComposeAsync(
+      final Function<? super T, ? extends CompletionStage<U>> fn, final Executor executor)
+  {
+    return from(delegate.thenComposeAsync(fn, executor));
+  }
+
+  @Override
+  public EnhancedCompletableFuture<T> exceptionally(final Function<Throwable, ? extends T> fn)
+  {
+    return from(delegate.exceptionally(fn));
+  }
+
+  @Override
+  public EnhancedCompletableFuture<T> whenComplete(
+      final BiConsumer<? super T, ? super Throwable> action)
+  {
+    return from(delegate.whenComplete(action));
+  }
+
+  @Override
+  public EnhancedCompletableFuture<T> whenCompleteAsync(
+      final BiConsumer<? super T, ? super Throwable> action)
+  {
+    return from(delegate.whenCompleteAsync(action));
+  }
+
+  @Override
+  public EnhancedCompletableFuture<T> whenCompleteAsync(
+      final BiConsumer<? super T, ? super Throwable> action, final Executor executor)
+  {
+    return from(delegate.whenCompleteAsync(action, executor));
+  }
+
+  @Override
+  public <U> EnhancedCompletableFuture<U> handle(
+      final BiFunction<? super T, Throwable, ? extends U> fn)
+  {
+    return from(delegate.handle(fn));
+  }
+
+  @Override
+  public <U> EnhancedCompletableFuture<U> handleAsync(
+      final BiFunction<? super T, Throwable, ? extends U> fn)
+  {
+    return from(delegate.handleAsync(fn));
+  }
+
+  @Override
+  public <U> EnhancedCompletableFuture<U> handleAsync(
+      final BiFunction<? super T, Throwable, ? extends U> fn, final Executor executor)
+  {
+    return from(delegate.handleAsync(fn, executor));
+  }
+
+  @Override
+  public CompletableFuture<T> toCompletableFuture()
+  {
+    final CompletableFuture<T> completeMe = new CompletableFuture<>();
+
+    whenComplete((result, cause) ->
+    {
+      if (cause == null)
+      {
+        completeMe.complete(result);
+      }
+      else
+      {
+        completeMe.completeExceptionally(cause);
+      }
+    });
+
+    return completeMe;
   }
 }

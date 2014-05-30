@@ -29,6 +29,9 @@
   <modules>
     <module>bom</module>
     <module>callbacks</module>
+    <module>concurrent</module>
+    <module>function</module>
+    <module>hawtdispatch</module>
     <module>io</module>
     <module>lifecycle</module>
     <module>listenable</module>
@@ -36,8 +39,6 @@
     <module>retry</module>
     <module>testing</module>
     <module>versions</module>
-    <module>concurrent</module>
-    <module>hawtdispatch</module>
   </modules>
 
   <dependencyManagement>
