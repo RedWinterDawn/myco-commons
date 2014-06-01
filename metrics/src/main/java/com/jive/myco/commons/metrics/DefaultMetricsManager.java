@@ -1,5 +1,7 @@
 package com.jive.myco.commons.metrics;
 
+import static com.jive.myco.commons.concurrent.CompletableFutures.*;
+
 import java.io.Closeable;
 import java.lang.management.ManagementFactory;
 import java.util.Arrays;
@@ -7,6 +9,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -97,7 +100,7 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
   }
 
   @Override
-  protected void initInternal(final Callback<Void> callback)
+  protected CompletionStage<Void> initInternal()
   {
     registry.register(MetricRegistry.name("jvm", "gc"), new GarbageCollectorMetricSet());
 
@@ -159,11 +162,11 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
 
     baseContext = new DefaultMetricsManagerContext(null);
 
-    callback.onSuccess(null);
+    return immediatelyComplete(null);
   }
 
   @Override
-  protected void destroyInternal(final Callback<Void> callback)
+  protected CompletionStage<Void> destroyInternal()
   {
     for (final Closeable reporter : reporters)
     {
@@ -181,7 +184,7 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
 
     metrics.clear();
 
-    callback.onSuccess(null);
+    return immediatelyComplete(null);
   }
 
   @Override

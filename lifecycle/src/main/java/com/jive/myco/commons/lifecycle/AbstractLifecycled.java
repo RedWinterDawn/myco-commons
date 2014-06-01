@@ -1,6 +1,11 @@
 package com.jive.myco.commons.lifecycle;
 
+import static com.jive.myco.commons.concurrent.CompletableFutures.*;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
+import java.util.function.Function;
 
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -9,9 +14,6 @@ import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.jive.myco.commons.callbacks.Callback;
-import com.jive.myco.commons.callbacks.SafeCallbackRunnable;
 
 /**
  * Provides a common pattern for asynchronously initializing a {@link Lifecycled} service.
@@ -50,160 +52,134 @@ public abstract class AbstractLifecycled implements Lifecycled
   }
 
   @Override
-  public final void init(Callback<Void> callback)
+  public final CompletionStage<Void> init()
   {
-    runOnLifecycleQueue(new SafeCallbackRunnable<Void>(callback, getCallbackExecutor())
-    {
+    CompletableFuture<Void> dfd = new CompletableFuture<>();
 
+    runOnLifecycleQueue(new Runnable()
+    {
       @Override
-      protected void doRun() throws Exception
+      public void run()
       {
         if (lifecycleStage == LifecycleStage.UNINITIALIZED
             || (isRestartable() && lifecycleStage == LifecycleStage.DESTROYED))
         {
           lifecycleStage = LifecycleStage.INITIALIZING;
-          SafeCallbackRunnable<Void> that = this;
           lifecycleQueue.suspend();
           try
           {
-            initInternal(new Callback<Void>()
-            {
-              @Override
-              public void onSuccess(Void result)
-              {
-                lifecycleStage = LifecycleStage.INITIALIZED;
-                lifecycleQueue.resume();
-                that.onSuccess(null);
-              }
-
-              @Override
-              public void onFailure(Throwable cause)
-              {
-                initFailure(cause);
-              }
-            });
+            initInternal()
+                .whenComplete((result, initError) ->
+                {
+                  if (initError == null)
+                  {
+                    lifecycleStage = LifecycleStage.INITIALIZED;
+                    lifecycleQueue.resume();
+                    dfd.complete(null);
+                  }
+                  else
+                  {
+                    initFailure()
+                        .whenComplete((eResult, eError) -> dfd.completeExceptionally(initError));
+                  }
+                });
           }
           catch (Exception e)
           {
-            initFailure(e);
+            initFailure()
+                .whenComplete((eResult, eError) -> dfd.completeExceptionally(e));
           }
         }
         else if (lifecycleStage == LifecycleStage.INITIALIZED)
         {
-          onSuccess(null);
+          dfd.complete(null);
         }
         else
         {
-          onFailure(new IllegalStateException(String.format(
+          dfd.completeExceptionally(new IllegalStateException(String.format(
               "Cannot initialize in [%s] state", lifecycleStage)));
         }
       }
 
-      private void initFailure(final Throwable initFailure)
+      private CompletionStage<Void> initFailure()
       {
         lifecycleStage = LifecycleStage.INITIALIZATION_FAILED;
 
         try
         {
-          handleInitFailure(new Callback<Void>()
-          {
-            @Override
-            public void onSuccess(Void result)
-            {
-              doDestroy(initFailure);
-            }
-
-            @Override
-            public void onFailure(Throwable e)
-            {
-              log.error("Error occurred during cleanup after failed initialization", e);
-              doDestroy(initFailure);
-            }
-          });
+          return handleInitFailure()
+              .handle((result, error) ->
+              {
+                if (error != null)
+                {
+                  log.error("Error occurred during cleanup after failed initialization", error);
+                }
+                return doDestroy();
+              })
+              .thenCompose(Function.identity());
         }
         catch (Exception e)
         {
-          log.error("Error occurred while invoking failed init handler", e);
-          doDestroy(initFailure);
+          return doDestroy();
         }
       }
 
-      private void doDestroy(Throwable initFailure)
+      private CompletionStage<Void> doDestroy()
       {
-        SafeCallbackRunnable<Void> that = this;
-        destroy(new Callback<Void>()
-        {
-          @Override
-          public void onSuccess(Void result)
-          {
-            that.onFailure(initFailure);
-          }
-
-          @Override
-          public void onFailure(Throwable cause)
-          {
-            log.error("Error occurred during destroy after failed initialization", cause);
-            that.onFailure(initFailure);
-          }
-        });
+        CompletionStage<Void> destroyed = destroy()
+            .whenComplete((result, error) ->
+            {
+              if (error != null)
+              {
+                log.error("Error occurred during destroy after failed initialization", error);
+              }
+            });
         lifecycleQueue.resume();
+        return destroyed;
       }
     });
+
+    return dfd;
   }
 
   @Override
-  public final void destroy(Callback<Void> callback)
+  public final CompletionStage<Void> destroy()
   {
-    runOnLifecycleQueue(new SafeCallbackRunnable<Void>(callback, getCallbackExecutor())
+    return composeAsync(() ->
     {
-
-      @Override
-      protected void doRun() throws Exception
+      if (lifecycleStage == LifecycleStage.INITIALIZED
+          || lifecycleStage == LifecycleStage.INITIALIZATION_FAILED
+          || lifecycleStage == LifecycleStage.DESTROYING)
       {
-        if (lifecycleStage == LifecycleStage.INITIALIZED
-            || lifecycleStage == LifecycleStage.INITIALIZATION_FAILED
-            || lifecycleStage == LifecycleStage.DESTROYING)
+        lifecycleStage = LifecycleStage.DESTROYING;
+        lifecycleQueue.suspend();
+        try
         {
-          lifecycleStage = LifecycleStage.DESTROYING;
-          SafeCallbackRunnable<Void> that = this;
-          lifecycleQueue.suspend();
-          try
-          {
-            destroyInternal(new Callback<Void>()
-            {
-              @Override
-              public void onSuccess(Void result)
+          return destroyInternal()
+              .whenComplete((result, error) ->
               {
-                lifecycleStage = LifecycleStage.DESTROYED;
+                if (error == null)
+                {
+                  lifecycleStage = LifecycleStage.DESTROYED;
+                }
                 lifecycleQueue.resume();
-                that.onSuccess(null);
-              }
-
-              @Override
-              public void onFailure(Throwable cause)
-              {
-                lifecycleQueue.resume();
-                that.onFailure(cause);
-              }
-            });
-          }
-          catch (Exception e)
-          {
-            lifecycleQueue.resume();
-            that.onFailure(e);
-          }
+              });
         }
-        else if (lifecycleStage == LifecycleStage.DESTROYED)
+        catch (Exception e)
         {
-          onSuccess(null);
-        }
-        else
-        {
-          onFailure(new IllegalStateException(String.format("Cannot destroy in the [%s] stage.",
-              lifecycleStage)));
+          lifecycleQueue.resume();
+          return immediatelyFailed(e);
         }
       }
-    });
+      else if (lifecycleStage == LifecycleStage.DESTROYED)
+      {
+        return immediatelyComplete(null);
+      }
+      else
+      {
+        return immediatelyFailed(new IllegalStateException());
+      }
+    }, lifecycleQueue);
   }
 
   @Override
@@ -217,12 +193,11 @@ public abstract class AbstractLifecycled implements Lifecycled
    * Override this method to perform additional cleanup after a call to {@link #init} has failed.
    * This will be invoked prior to calling {@link #destroy}.
    *
-   * @param callback
-   *          callback to invoke when cleanup is complete
+   * @return completion stage to handle when cleanup is complete
    */
-  protected void handleInitFailure(Callback<Void> callback)
+  protected CompletionStage<Void> handleInitFailure()
   {
-    callback.onSuccess(null);
+    return CompletableFuture.completedFuture(null);
   }
 
   /**
@@ -231,13 +206,12 @@ public abstract class AbstractLifecycled implements Lifecycled
    * queue during initialization.
    * <p>
    * The {@code callback} here is used to trigger the setting of the state of the lifecycle stage
-   * and trigger the {@code callback} passed to {@link #init(Callback)}. You do not need to set the
+   * and trigger the {@code callback} passed to {@link #init}. You do not need to set the
    * lifecycle stage in this method.
    *
-   * @param callback
-   *          callback to invoke when initialization is complete
+   * @return completion stage to handle when initialization is complete
    */
-  protected abstract void initInternal(Callback<Void> callback);
+  protected abstract CompletionStage<Void> initInternal();
 
   /**
    * Destroy this {@link Lifecycled} instance. This will be run on the {@link #lifecycleQueue} so
@@ -245,13 +219,12 @@ public abstract class AbstractLifecycled implements Lifecycled
    * during the destroy process.
    * <p>
    * The {@code callback} here is used to trigger the setting of the state of the lifecycle stage
-   * and trigger the {@code callback} passed to {@link #destroy(Callback)}. You do not need to set
+   * and trigger the {@code callback} passed to {@link #destroy}. You do not need to set
    * the lifecycle stage in this method.
    *
-   * @param callback
-   *          callback to invoke when initialization is complete
+   * @return completion stage to handle when initialization is complete
    */
-  protected abstract void destroyInternal(Callback<Void> callback);
+  protected abstract CompletionStage<Void> destroyInternal();
 
   /**
    * Retrieves the {@link Executor} that will be used to fire callbacks to {@link #init} and

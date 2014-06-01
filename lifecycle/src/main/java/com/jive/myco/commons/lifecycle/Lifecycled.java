@@ -1,10 +1,12 @@
 package com.jive.myco.commons.lifecycle;
 
+import java.util.concurrent.CompletionStage;
+
 import com.jive.myco.commons.callbacks.Callback;
 
 /**
  * Represents a resource that has a lifecycle.
- * 
+ *
  * @author David Valeri
  */
 public interface Lifecycled
@@ -22,11 +24,10 @@ public interface Lifecycled
    * current thread. If initialization is not possible from the resource's current stage, this
    * callback method is invoked immediately on the current thread.</li>
    * </ul>
-   * 
-   * @param callback
-   *          the callback to invoke on success or failure
+   *
+   * @return completion stage to respond to success or failure
    */
-  void init(final Callback<Void> callback);
+  CompletionStage<Void> init();
 
   /**
    * Destroys the resource asynchronously, invoking the callback under the following conditions:
@@ -44,11 +45,10 @@ public interface Lifecycled
    * This method is intended to be reentrant to allow repeated attempts at destruction. Subsequent
    * attempts to destroy a resource after a failed attempt at destruction should attempt to destroy
    * any remaining resources managed by this resource.
-   * 
-   * @param callback
-   *          the callback to invoke on success or failure
+   *
+   * @return completion stage to respond to success or failure
    */
-  void destroy(final Callback<Void> callback);
+  CompletionStage<Void> destroy();
 
   LifecycleStage getLifecycleStage();
 }

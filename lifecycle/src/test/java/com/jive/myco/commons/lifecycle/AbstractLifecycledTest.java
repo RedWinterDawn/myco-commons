@@ -1,9 +1,11 @@
 package com.jive.myco.commons.lifecycle;
 
+import static com.jive.myco.commons.concurrent.CompletableFutures.*;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -14,8 +16,6 @@ import org.fusesource.hawtdispatch.DispatchQueue;
 import org.junit.Test;
 import org.mockito.Matchers;
 
-import com.jive.myco.commons.callbacks.Callback;
-import com.jive.myco.commons.callbacks.CallbackFuture;
 import com.jive.myco.commons.hawtdispatch.SameThreadTestQueueBuilder;
 
 /**
@@ -46,21 +46,19 @@ public class AbstractLifecycledTest
     Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       @Override
-      protected void initInternal(Callback<Void> callback)
+      protected CompletionStage<Void> initInternal()
       {
-        callback.onSuccess(null);
+        return immediatelyComplete(null);
       }
 
       @Override
-      protected void destroyInternal(Callback<Void> callback)
+      protected CompletionStage<Void> destroyInternal()
       {
-        callback.onFailure(new IllegalStateException());
+        return immediatelyFailed(new IllegalStateException());
       }
     };
 
-    CallbackFuture<Void> callback = new CallbackFuture<>();
-    testInstance.init(callback);
-    callback.get(50, TimeUnit.MILLISECONDS);
+    testInstance.init().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
 
     assertEquals(LifecycleStage.INITIALIZED, testInstance.getLifecycleStage());
     assertFalse(testQueue.isSuspended());
@@ -73,24 +71,22 @@ public class AbstractLifecycledTest
     Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       @Override
-      protected void initInternal(Callback<Void> callback)
+      protected CompletionStage<Void> initInternal()
       {
-        callback.onFailure(new IllegalArgumentException("foo"));
+        return immediatelyFailed(new IllegalArgumentException("foo"));
       }
 
       @Override
-      protected void destroyInternal(Callback<Void> callback)
+      protected CompletionStage<Void> destroyInternal()
       {
         destroyInvoked.set(true);
-        callback.onSuccess(null);
+        return immediatelyComplete(null);
       }
     };
 
-    CallbackFuture<Void> callback = new CallbackFuture<>();
-    testInstance.init(callback);
     try
     {
-      callback.get(50, TimeUnit.MILLISECONDS);
+      testInstance.init().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
     catch (ExecutionException e)
@@ -110,24 +106,22 @@ public class AbstractLifecycledTest
     Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       @Override
-      protected void initInternal(Callback<Void> callback)
+      protected CompletionStage<Void> initInternal()
       {
         throw new NumberFormatException();
       }
 
       @Override
-      protected void destroyInternal(Callback<Void> callback)
+      protected CompletionStage<Void> destroyInternal()
       {
         destroyInvoked.set(true);
-        callback.onSuccess(null);
+        return immediatelyComplete(null);
       }
     };
 
-    CallbackFuture<Void> callback = new CallbackFuture<>();
-    testInstance.init(callback);
     try
     {
-      callback.get(50, TimeUnit.MILLISECONDS);
+      testInstance.init().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
     catch (ExecutionException e)
@@ -149,20 +143,20 @@ public class AbstractLifecycledTest
     {
 
       @Override
-      protected void initInternal(Callback<Void> callback)
+      protected CompletionStage<Void> initInternal()
       {
-        callback.onFailure(new NumberFormatException());
+        return immediatelyFailed(new NumberFormatException());
       }
 
       @Override
-      protected void destroyInternal(Callback<Void> callback)
+      protected CompletionStage<Void> destroyInternal()
       {
         destroyInvoked.set(true);
-        callback.onSuccess(null);
+        return immediatelyComplete(null);
       }
 
       @Override
-      protected void handleInitFailure(Callback<Void> callback)
+      protected CompletionStage<Void> handleInitFailure()
       {
         if (lifecycleStage == LifecycleStage.INITIALIZATION_FAILED)
         {
@@ -172,15 +166,13 @@ public class AbstractLifecycledTest
         {
           log.error("init failure invoked in wrong state: {}", lifecycleStage);
         }
-        callback.onSuccess(null);
+        return immediatelyComplete(null);
       }
     };
 
-    CallbackFuture<Void> callback = new CallbackFuture<>();
-    testInstance.init(callback);
     try
     {
-      callback.get(50, TimeUnit.MILLISECONDS);
+      testInstance.init().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
     catch (ExecutionException e)
@@ -203,20 +195,20 @@ public class AbstractLifecycledTest
     {
 
       @Override
-      protected void initInternal(Callback<Void> callback)
+      protected CompletionStage<Void> initInternal()
       {
-        callback.onFailure(new NumberFormatException());
+        return immediatelyFailed(new NumberFormatException());
       }
 
       @Override
-      protected void destroyInternal(Callback<Void> callback)
+      protected CompletionStage<Void> destroyInternal()
       {
         destroyInvoked.set(true);
-        callback.onSuccess(null);
+        return immediatelyComplete(null);
       }
 
       @Override
-      protected void handleInitFailure(Callback<Void> callback)
+      protected CompletionStage<Void> handleInitFailure()
       {
         if (lifecycleStage == LifecycleStage.INITIALIZATION_FAILED)
         {
@@ -226,15 +218,13 @@ public class AbstractLifecycledTest
         {
           log.error("init failure invoked in wrong state: {}", lifecycleStage);
         }
-        callback.onFailure(new NumberFormatException());
+        return immediatelyFailed(new NumberFormatException());
       }
     };
 
-    CallbackFuture<Void> callback = new CallbackFuture<>();
-    testInstance.init(callback);
     try
     {
-      callback.get(50, TimeUnit.MILLISECONDS);
+      testInstance.init().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
     catch (ExecutionException e)
@@ -257,20 +247,20 @@ public class AbstractLifecycledTest
     {
 
       @Override
-      protected void initInternal(Callback<Void> callback)
+      protected CompletionStage<Void> initInternal()
       {
-        callback.onFailure(new NumberFormatException());
+        return immediatelyFailed(new NumberFormatException());
       }
 
       @Override
-      protected void destroyInternal(Callback<Void> callback)
+      protected CompletionStage<Void> destroyInternal()
       {
         destroyInvoked.set(true);
-        callback.onSuccess(null);
+        return immediatelyComplete(null);
       }
 
       @Override
-      protected void handleInitFailure(Callback<Void> callback)
+      protected CompletionStage<Void> handleInitFailure()
       {
         if (lifecycleStage == LifecycleStage.INITIALIZATION_FAILED)
         {
@@ -284,11 +274,9 @@ public class AbstractLifecycledTest
       }
     };
 
-    CallbackFuture<Void> callback = new CallbackFuture<>();
-    testInstance.init(callback);
     try
     {
-      callback.get(50, TimeUnit.MILLISECONDS);
+      testInstance.init().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
     catch (ExecutionException e)
@@ -312,21 +300,19 @@ public class AbstractLifecycledTest
       }
 
       @Override
-      protected void initInternal(Callback<Void> callback)
+      protected CompletionStage<Void> initInternal()
       {
-        callback.onFailure(new IllegalStateException());
+        return immediatelyFailed(new IllegalStateException());
       }
 
       @Override
-      protected void destroyInternal(Callback<Void> callback)
+      protected CompletionStage<Void> destroyInternal()
       {
-        callback.onSuccess(null);
+        return immediatelyComplete(null);
       }
     };
 
-    CallbackFuture<Void> callback = new CallbackFuture<>();
-    testInstance.destroy(callback);
-    callback.get(50, TimeUnit.MILLISECONDS);
+    testInstance.destroy().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
 
     assertEquals(LifecycleStage.DESTROYED, testInstance.getLifecycleStage());
     assertFalse(testQueue.isSuspended());
@@ -342,23 +328,21 @@ public class AbstractLifecycledTest
       }
 
       @Override
-      protected void initInternal(Callback<Void> callback)
+      protected CompletionStage<Void> initInternal()
       {
-        callback.onFailure(new IllegalStateException());
+        return immediatelyFailed(new IllegalStateException());
       }
 
       @Override
-      protected void destroyInternal(Callback<Void> callback)
+      protected CompletionStage<Void> destroyInternal()
       {
-        callback.onFailure(new IllegalArgumentException("destroy"));
+        return immediatelyFailed(new IllegalArgumentException("destroy"));
       }
     };
 
-    CallbackFuture<Void> callback = new CallbackFuture<>();
-    testInstance.destroy(callback);
     try
     {
-      callback.get(50, TimeUnit.MILLISECONDS);
+      testInstance.destroy().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
     catch (ExecutionException e)
@@ -380,23 +364,21 @@ public class AbstractLifecycledTest
       }
 
       @Override
-      protected void initInternal(Callback<Void> callback)
+      protected CompletionStage<Void> initInternal()
       {
-        callback.onFailure(new IllegalStateException());
+        return immediatelyFailed(new IllegalStateException());
       }
 
       @Override
-      protected void destroyInternal(Callback<Void> callback)
+      protected CompletionStage<Void> destroyInternal()
       {
         throw new NumberFormatException();
       }
     };
 
-    CallbackFuture<Void> callback = new CallbackFuture<>();
-    testInstance.destroy(callback);
     try
     {
-      callback.get(50, TimeUnit.MILLISECONDS);
+      testInstance.destroy().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
     catch (ExecutionException e)
@@ -418,23 +400,21 @@ public class AbstractLifecycledTest
       }
 
       @Override
-      protected void initInternal(Callback<Void> callback)
+      protected CompletionStage<Void> initInternal()
       {
-        callback.onSuccess(null);
+        return immediatelyComplete(null);
       }
 
       @Override
-      protected void destroyInternal(Callback<Void> callback)
+      protected CompletionStage<Void> destroyInternal()
       {
-        callback.onSuccess(null);
+        return immediatelyComplete(null);
       }
     };
 
-    CallbackFuture<Void> callback = new CallbackFuture<>();
-    testInstance.init(callback);
     try
     {
-      callback.get(50, TimeUnit.MILLISECONDS);
+      testInstance.init().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
     catch (ExecutionException e)
@@ -456,23 +436,21 @@ public class AbstractLifecycledTest
       }
 
       @Override
-      protected void initInternal(Callback<Void> callback)
+      protected CompletionStage<Void> initInternal()
       {
-        callback.onSuccess(null);
+        return immediatelyComplete(null);
       }
 
       @Override
-      protected void destroyInternal(Callback<Void> callback)
+      protected CompletionStage<Void> destroyInternal()
       {
-        callback.onSuccess(null);
+        return immediatelyComplete(null);
       }
     };
 
-    CallbackFuture<Void> callback = new CallbackFuture<>();
-    testInstance.destroy(callback);
     try
     {
-      callback.get(50, TimeUnit.MILLISECONDS);
+      testInstance.destroy().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
     catch (ExecutionException e)
@@ -494,21 +472,19 @@ public class AbstractLifecycledTest
       }
 
       @Override
-      protected void initInternal(Callback<Void> callback)
+      protected CompletionStage<Void> initInternal()
       {
-        callback.onFailure(new Exception());
+        return immediatelyFailed(new Exception());
       }
 
       @Override
-      protected void destroyInternal(Callback<Void> callback)
+      protected CompletionStage<Void> destroyInternal()
       {
-        callback.onFailure(new IllegalStateException());
+        return immediatelyFailed(new IllegalStateException());
       }
     };
 
-    CallbackFuture<Void> callback = new CallbackFuture<>();
-    testInstance.init(callback);
-    callback.get(50, TimeUnit.MILLISECONDS);
+    testInstance.init().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
 
     assertEquals(LifecycleStage.INITIALIZED, testInstance.getLifecycleStage());
     assertFalse(testQueue.isSuspended());
@@ -524,21 +500,19 @@ public class AbstractLifecycledTest
       }
 
       @Override
-      protected void initInternal(Callback<Void> callback)
+      protected CompletionStage<Void> initInternal()
       {
-        callback.onFailure(new Exception());
+        return immediatelyFailed(new Exception());
       }
 
       @Override
-      protected void destroyInternal(Callback<Void> callback)
+      protected CompletionStage<Void> destroyInternal()
       {
-        callback.onFailure(new Exception());
+        return immediatelyFailed(new Exception());
       }
     };
 
-    CallbackFuture<Void> callback = new CallbackFuture<>();
-    testInstance.destroy(callback);
-    callback.get(50, TimeUnit.MILLISECONDS);
+    testInstance.destroy().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
 
     assertEquals(LifecycleStage.DESTROYED, testInstance.getLifecycleStage());
     assertFalse(testQueue.isSuspended());
@@ -554,23 +528,21 @@ public class AbstractLifecycledTest
       }
 
       @Override
-      protected void initInternal(Callback<Void> callback)
+      protected CompletionStage<Void> initInternal()
       {
-        callback.onFailure(new Exception());
+        return immediatelyFailed(new Exception());
       }
 
       @Override
-      protected void destroyInternal(Callback<Void> callback)
+      protected CompletionStage<Void> destroyInternal()
       {
-        callback.onFailure(new Exception());
+        return immediatelyFailed(new Exception());
       }
     };
 
-    CallbackFuture<Void> callback = new CallbackFuture<>();
-    testInstance.init(callback);
     try
     {
-      callback.get(50, TimeUnit.MILLISECONDS);
+      testInstance.init().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
     }
     catch (ExecutionException e)
     {
@@ -591,15 +563,15 @@ public class AbstractLifecycledTest
       }
 
       @Override
-      protected void initInternal(Callback<Void> callback)
+      protected CompletionStage<Void> initInternal()
       {
-        callback.onSuccess(null);
+        return immediatelyComplete(null);
       }
 
       @Override
-      protected void destroyInternal(Callback<Void> callback)
+      protected CompletionStage<Void> destroyInternal()
       {
-        callback.onFailure(new Exception());
+        return immediatelyFailed(new Exception());
       }
 
       @Override
@@ -609,9 +581,7 @@ public class AbstractLifecycledTest
       }
     };
 
-    CallbackFuture<Void> callback = new CallbackFuture<>();
-    testInstance.init(callback);
-    callback.get(50, TimeUnit.MILLISECONDS);
+    testInstance.init().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
 
     assertEquals(LifecycleStage.INITIALIZED, testInstance.getLifecycleStage());
     assertFalse(testQueue.isSuspended());
