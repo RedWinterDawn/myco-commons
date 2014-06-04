@@ -42,6 +42,7 @@ import com.codahale.metrics.jvm.ThreadStatesGaugeSet;
 import com.google.common.base.Joiner;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
+import com.jive.myco.commons.callbacks.Callback;
 import com.jive.myco.commons.concurrent.PnkyPromise;
 import com.jive.myco.commons.hawtdispatch.DefaultDispatchQueueBuilder;
 import com.jive.myco.commons.hawtdispatch.DispatchQueueBuilder;
@@ -162,6 +163,18 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
     baseContext = new DefaultMetricsManagerContext(null);
 
     return immediateFuture(null);
+  }
+
+  @Override
+  protected void initInternal(final Callback<Void> callback)
+  {
+    initInternal().alwaysAccept(callback::onSuccess, callback::onFailure);
+  }
+
+  @Override
+  protected void destroyInternal(final Callback<Void> callback)
+  {
+    destroyInternal().alwaysAccept(callback::onSuccess, callback::onFailure);
   }
 
   @Override

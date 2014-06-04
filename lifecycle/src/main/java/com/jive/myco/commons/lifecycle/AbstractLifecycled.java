@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.util.concurrent.MoreExecutors;
+import com.jive.myco.commons.callbacks.Callback;
 import com.jive.myco.commons.concurrent.Pnky;
 import com.jive.myco.commons.concurrent.PnkyPromise;
 
@@ -31,6 +32,13 @@ public abstract class AbstractLifecycled implements Lifecycled
 
   // Don't use @SLF4J annotation, we want to know the actual implementing class
   private final Logger log = LoggerFactory.getLogger(getClass());
+
+
+  @Override
+  public final void init(final Callback<Void> callback)
+  {
+    init().alwaysAccept(callback::onSuccess, callback::onFailure);
+  }
 
   @Override
   public final PnkyPromise<Void> init()
@@ -107,6 +115,12 @@ public abstract class AbstractLifecycled implements Lifecycled
   }
 
   @Override
+  public final void destroy(final Callback<Void> callback)
+  {
+    destroy().alwaysAccept(callback::onSuccess, callback::onFailure);
+  }
+
+  @Override
   public final PnkyPromise<Void> destroy()
   {
     return composeAsync(() ->
@@ -157,11 +171,53 @@ public abstract class AbstractLifecycled implements Lifecycled
    * Override this method to perform additional cleanup after a call to {@link #init} has failed.
    * This will be invoked prior to calling {@link #destroy}.
    *
+   * @param callback
+   *          callback to invoke when cleanup is complete
+   */
+  protected void handleInitFailure(Callback<Void> callback)
+  {
+    callback.onSuccess(null);
+  }
+
+  /**
+   * Initialize this {@link Lifecycled} instance. This will be run on the {@link #lifecycleQueue} so
+   * all you need to do is initialize your instance and its components and protect the lifecycle
+   * queue during initialization.
+   * <p>
+   * The {@code callback} here is used to trigger the setting of the state of the lifecycle stage
+   * and trigger the {@code callback} passed to {@link #init(Callback)}. You do not need to set the
+   * lifecycle stage in this method.
+   *
+   * @param callback
+   *          callback to invoke when initialization is complete
+   */
+  protected abstract void initInternal(Callback<Void> callback);
+
+  /**
+   * Destroy this {@link Lifecycled} instance. This will be run on the {@link #lifecycleQueue} so
+   * all you need to do is destroy your instance and its components and protect the lifecycle queue
+   * during the destroy process.
+   * <p>
+   * The {@code callback} here is used to trigger the setting of the state of the lifecycle stage
+   * and trigger the {@code callback} passed to {@link #destroy(Callback)}. You do not need to set
+   * the lifecycle stage in this method.
+   *
+   * @param callback
+   *          callback to invoke when initialization is complete
+   */
+  protected abstract void destroyInternal(Callback<Void> callback);
+
+  /**
+   * Override this method to perform additional cleanup after a call to {@link #init} has failed.
+   * This will be invoked prior to calling {@link #destroy}.
+   *
    * @return completion stage to handle when cleanup is complete
    */
   protected PnkyPromise<Void> handleInitFailure()
   {
-    return Pnky.immediateFuture(null);
+    PnkyCallback<Void> pnky = new PnkyCallback<>();
+    handleInitFailure(pnky);
+    return pnky;
   }
 
   /**
@@ -175,7 +231,12 @@ public abstract class AbstractLifecycled implements Lifecycled
    *
    * @return completion stage to handle when initialization is complete
    */
-  protected abstract PnkyPromise<Void> initInternal();
+  protected PnkyPromise<Void> initInternal()
+  {
+    PnkyCallback<Void> pnky = new PnkyCallback<>();
+    initInternal(pnky);
+    return pnky;
+  }
 
   /**
    * Destroy this {@link Lifecycled} instance. This will be run on the {@link #lifecycleQueue} so
@@ -188,7 +249,12 @@ public abstract class AbstractLifecycled implements Lifecycled
    *
    * @return completion stage to handle when initialization is complete
    */
-  protected abstract PnkyPromise<Void> destroyInternal();
+  protected PnkyPromise<Void> destroyInternal()
+  {
+    PnkyCallback<Void> pnky = new PnkyCallback<>();
+    destroyInternal(pnky);
+    return pnky;
+  }
 
   /**
    * Retrieves the {@link Executor} that will be used to fire callbacks to {@link #init} and

@@ -866,4 +866,23 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
     return pnky;
   }
 
+  /**
+   * Temporary utility class to make transitioning from callbacks to {@link PnkyPromise} more
+   * accessible.
+   */
+  public static final class PnkyCallback<V> extends Pnky<V> implements Callback<V>
+  {
+
+    @Override
+    public void onSuccess(final V result)
+    {
+      set(result);
+    }
+
+    @Override
+    public void onFailure(final Throwable cause)
+    {
+      setException(cause);
+    }
+  }
 }

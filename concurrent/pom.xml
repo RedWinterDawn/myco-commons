@@ -28,6 +28,12 @@
       <artifactId>myco-commons-function</artifactId>
       <version>${project.version}</version>
     </dependency>
+
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>myco-commons-callbacks</artifactId>
+      <version>${project.version}</version>
+    </dependency>
   </dependencies>
 
 </project>

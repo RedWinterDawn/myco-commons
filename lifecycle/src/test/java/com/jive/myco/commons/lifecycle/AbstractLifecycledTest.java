@@ -15,6 +15,7 @@ import org.fusesource.hawtdispatch.DispatchQueue;
 import org.junit.Test;
 import org.mockito.Matchers;
 
+import com.jive.myco.commons.callbacks.Callback;
 import com.jive.myco.commons.concurrent.PnkyPromise;
 import com.jive.myco.commons.hawtdispatch.SameThreadTestQueueBuilder;
 
@@ -43,7 +44,7 @@ public class AbstractLifecycledTest
 
   private void simpleInitTest() throws Exception
   {
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    Lifecycled testInstance = new AbstractTestLifecycled(testQueue)
     {
       @Override
       protected PnkyPromise<Void> initInternal()
@@ -68,7 +69,7 @@ public class AbstractLifecycledTest
   public void testFailedInitializationViaCallback() throws Exception
   {
     final AtomicBoolean destroyInvoked = new AtomicBoolean();
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    Lifecycled testInstance = new AbstractTestLifecycled(testQueue)
     {
       @Override
       protected PnkyPromise<Void> initInternal()
@@ -103,7 +104,7 @@ public class AbstractLifecycledTest
   public void testInitializationFailedViaRuntimeError() throws Exception
   {
     final AtomicBoolean destroyInvoked = new AtomicBoolean();
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    Lifecycled testInstance = new AbstractTestLifecycled(testQueue)
     {
       @Override
       protected PnkyPromise<Void> initInternal()
@@ -139,7 +140,7 @@ public class AbstractLifecycledTest
   {
     final AtomicBoolean destroyInvoked = new AtomicBoolean();
     final AtomicBoolean handlerInvoked = new AtomicBoolean();
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    Lifecycled testInstance = new AbstractTestLifecycled(testQueue)
     {
 
       @Override
@@ -191,7 +192,7 @@ public class AbstractLifecycledTest
   {
     final AtomicBoolean destroyInvoked = new AtomicBoolean();
     final AtomicBoolean handlerInvoked = new AtomicBoolean();
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    Lifecycled testInstance = new AbstractTestLifecycled(testQueue)
     {
 
       @Override
@@ -243,7 +244,7 @@ public class AbstractLifecycledTest
   {
     final AtomicBoolean destroyInvoked = new AtomicBoolean();
     final AtomicBoolean handlerInvoked = new AtomicBoolean();
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    Lifecycled testInstance = new AbstractTestLifecycled(testQueue)
     {
 
       @Override
@@ -293,7 +294,7 @@ public class AbstractLifecycledTest
   @Test
   public void testStageSetAfterDestroy() throws Exception
   {
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    Lifecycled testInstance = new AbstractTestLifecycled(testQueue)
     {
       {
         lifecycleStage = LifecycleStage.INITIALIZED;
@@ -321,7 +322,7 @@ public class AbstractLifecycledTest
   @Test
   public void testFailedDestroyViaCallback() throws Exception
   {
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    Lifecycled testInstance = new AbstractTestLifecycled(testQueue)
     {
       {
         lifecycleStage = LifecycleStage.INITIALIZED;
@@ -357,7 +358,7 @@ public class AbstractLifecycledTest
   @Test
   public void testDestroyFailedViaRuntimeError() throws Exception
   {
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    Lifecycled testInstance = new AbstractTestLifecycled(testQueue)
     {
       {
         lifecycleStage = LifecycleStage.INITIALIZED;
@@ -393,7 +394,7 @@ public class AbstractLifecycledTest
   @Test
   public void testInitInWrongState() throws Exception
   {
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    Lifecycled testInstance = new AbstractTestLifecycled(testQueue)
     {
       {
         lifecycleStage = LifecycleStage.INITIALIZING;
@@ -429,7 +430,7 @@ public class AbstractLifecycledTest
   @Test
   public void testDestroyInWrongState() throws Exception
   {
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    Lifecycled testInstance = new AbstractTestLifecycled(testQueue)
     {
       {
         lifecycleStage = LifecycleStage.UNINITIALIZED;
@@ -465,7 +466,7 @@ public class AbstractLifecycledTest
   @Test
   public void testInitWhenAlreadyInited() throws Exception
   {
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    Lifecycled testInstance = new AbstractTestLifecycled(testQueue)
     {
       {
         lifecycleStage = LifecycleStage.INITIALIZED;
@@ -493,7 +494,7 @@ public class AbstractLifecycledTest
   @Test
   public void testDestroyWhenAlreadyDestroyed() throws Exception
   {
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    Lifecycled testInstance = new AbstractTestLifecycled(testQueue)
     {
       {
         lifecycleStage = LifecycleStage.DESTROYED;
@@ -521,7 +522,7 @@ public class AbstractLifecycledTest
   @Test
   public void testCannotRestart() throws Exception
   {
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    Lifecycled testInstance = new AbstractTestLifecycled(testQueue)
     {
       {
         lifecycleStage = LifecycleStage.DESTROYED;
@@ -556,7 +557,7 @@ public class AbstractLifecycledTest
   @Test
   public void testCanBeRestartedIfRestartable() throws Exception
   {
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    Lifecycled testInstance = new AbstractTestLifecycled(testQueue)
     {
       {
         lifecycleStage = LifecycleStage.DESTROYED;
@@ -585,5 +586,26 @@ public class AbstractLifecycledTest
 
     assertEquals(LifecycleStage.INITIALIZED, testInstance.getLifecycleStage());
     assertFalse(testQueue.isSuspended());
+  }
+
+  private static abstract class AbstractTestLifecycled extends AbstractLifecycled
+  {
+
+    public AbstractTestLifecycled(final DispatchQueue lifecycleQueue)
+    {
+      super(lifecycleQueue);
+    }
+
+    @Override
+    protected void initInternal(final Callback<Void> callback)
+    {
+      callback.onFailure(new Exception("init shouldn't be called here"));
+    }
+
+    @Override
+    protected void destroyInternal(final Callback<Void> callback)
+    {
+      callback.onFailure(new Exception("destroy shouldn't be called here"));
+    }
   }
 }
