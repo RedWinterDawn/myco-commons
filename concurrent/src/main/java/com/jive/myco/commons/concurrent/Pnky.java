@@ -762,4 +762,108 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
     pnky.setException(e);
     return pnky;
   }
+
+  /**
+   * Create a promise that is completed when all of the provided promises are complete.
+   *
+   * @param <V>
+   *          the type of value for all promises
+   * @param promises
+   *          the set of promises to watch for completion
+   * @return a promise that is completed when all provided promises are complete or failed when any
+   *         of the promises fail
+   */
+  public static <V> PnkyPromise<List<V>> all(Iterable<? extends PnkyPromise<? extends V>> promises)
+  {
+    Pnky<List<V>> pnky = Pnky.create();
+    ListenableFuture<List<V>> result = Futures.allAsList(promises);
+
+    Futures.addCallback(result, new FutureCallback<List<V>>()
+    {
+      @Override
+      public void onSuccess(@Nullable final List<V> result)
+      {
+        pnky.set(result);
+      }
+
+      @Override
+      public void onFailure(@Nonnull final Throwable t)
+      {
+        pnky.setException(t);
+      }
+    });
+
+    return pnky;
+  }
+
+  /**
+   * Create a promise that is completed with the results of all successfully completed promises.
+   *
+   * @param <V>
+   *          the type of value for all promises
+   * @param promises
+   *          the set of promises to watch for completion
+   * @return a promise that is completed when all provided promises are complete any any are
+   *         successful, or failed if all provided promises fail
+   */
+  public static <V> PnkyPromise<List<V>> any(Iterable<? extends PnkyPromise<? extends V>> promises)
+  {
+    Pnky<List<V>> pnky = Pnky.create();
+    ListenableFuture<List<V>> result = Futures.successfulAsList(promises);
+
+    Futures.addCallback(result, new FutureCallback<List<V>>()
+    {
+      @Override
+      public void onSuccess(@Nullable final List<V> result)
+      {
+        pnky.set(result);
+      }
+
+      @Override
+      public void onFailure(@Nonnull final Throwable t)
+      {
+        pnky.setException(t);
+      }
+    });
+
+    return pnky;
+  }
+
+  /**
+   * Create a promise that is completed when the first of any of the provided promises complete
+   * successfully.
+   *
+   * @param <V>
+   *          the type of value for all promises
+   * @param promises
+   *          the set of promises to watch for completion
+   * @return a promise that is completed when the first successfully completed promise is done or
+   *         failed if all of the promises fail
+   */
+  public static <V> PnkyPromise<V> first(Iterable<? extends PnkyPromise<? extends V>> promises)
+  {
+    Pnky<V> pnky = Pnky.create();
+
+    final AtomicInteger remaining = new AtomicInteger(Iterables.size(promises));
+
+    for (PnkyPromise<? extends V> promise : promises)
+    {
+      promise.alwaysAccept((result, error) ->
+      {
+        if (error == null)
+        {
+          // May be called multiple times but the contract guarantees that only the first call
+          // will set the value on the promise
+          pnky.set(result);
+        }
+        else if (remaining.decrementAndGet() == 0)
+        {
+          pnky.setException(error);
+        }
+      });
+    }
+
+    return pnky;
+  }
+
 }
