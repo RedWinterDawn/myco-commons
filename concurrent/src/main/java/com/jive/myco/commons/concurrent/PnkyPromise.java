@@ -129,7 +129,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *          operation to perform when there is a failure
    * @return a new promise
    */
-  PnkyPromise<V> alwaysAccept(ExceptionalConsumer<V> onSuccess,
+  PnkyPromise<V> alwaysAccept(ExceptionalConsumer<? super V> onSuccess,
       ExceptionalConsumer<Throwable> onFailure);
 
   /**
@@ -146,7 +146,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *          the executor to use for asynchronous processing of the operations
    * @return a new promise
    */
-  PnkyPromise<V> alwaysAccept(ExceptionalConsumer<V> onSuccess,
+  PnkyPromise<V> alwaysAccept(ExceptionalConsumer<? super V> onSuccess,
       ExceptionalConsumer<Throwable> onFailure, Executor executor);
 
   /**
@@ -161,7 +161,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *          function used to potentially recover from a failure
    * @return a new promise
    */
-  <O> PnkyPromise<O> alwaysTransform(ExceptionalFunction<V, O> onSuccess,
+  <O> PnkyPromise<O> alwaysTransform(ExceptionalFunction<? super V, O> onSuccess,
       ExceptionalFunction<Throwable, O> onFailure);
 
   /**
@@ -179,7 +179,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *          the executor to use for asynchronous processing of the function
    * @return a new promise
    */
-  <O> PnkyPromise<O> alwaysTransform(ExceptionalFunction<V, O> onSuccess,
+  <O> PnkyPromise<O> alwaysTransform(ExceptionalFunction<? super V, O> onSuccess,
       ExceptionalFunction<Throwable, O> onFailure, Executor executor);
 
   /**
@@ -196,7 +196,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *          function to use to potentially recover from a failure
    * @return a new promise that is completed when the promise from the function completes
    */
-  <O> PnkyPromise<O> alwaysCompose(ExceptionalFunction<V, PnkyPromise<O>> onSuccess,
+  <O> PnkyPromise<O> alwaysCompose(ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess,
       ExceptionalFunction<Throwable, PnkyPromise<O>> onFailure);
 
   /**
@@ -215,7 +215,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *          the executor to use for asynchronous processing of the function
    * @return a new promise that is completed when the promise from the function completes
    */
-  <O> PnkyPromise<O> alwaysCompose(ExceptionalFunction<V, PnkyPromise<O>> onSuccess,
+  <O> PnkyPromise<O> alwaysCompose(ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess,
       ExceptionalFunction<Throwable, PnkyPromise<O>> onFailure, Executor executor);
 
   /**
@@ -229,7 +229,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *          operation to perform with the successful result or error on completion
    * @return a new promise
    */
-  PnkyPromise<V> alwaysAccept(ExceptionalBiConsumer<V, Throwable> handler);
+  PnkyPromise<V> alwaysAccept(ExceptionalBiConsumer<? super V, Throwable> handler);
 
   /**
    * Provide an operation to perform with a successful or failed condition, executing the operation
@@ -244,7 +244,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *          the executor to use for asynchronous processing of the operation
    * @return a new promise
    */
-  PnkyPromise<V> alwaysAccept(ExceptionalBiConsumer<V, Throwable> handler, Executor executor);
+  PnkyPromise<V> alwaysAccept(ExceptionalBiConsumer<? super V, Throwable> handler, Executor executor);
 
   /**
    * Provide a function to transform the given result on success or recover with a valid result on
@@ -258,7 +258,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *          function used to transform the successful or failed result on completion
    * @return a new promise
    */
-  <O> PnkyPromise<O> alwaysTransform(ExceptionalBiFunction<V, Throwable, O> handler);
+  <O> PnkyPromise<O> alwaysTransform(ExceptionalBiFunction<? super V, Throwable, O> handler);
 
   /**
    * Provide a function to transform the given result on success or recover with a valid result on
@@ -274,7 +274,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *          the executor to use for asynchronous processing of the function
    * @return a new promise
    */
-  <O> PnkyPromise<O> alwaysTransform(ExceptionalBiFunction<V, Throwable, O> handler,
+  <O> PnkyPromise<O> alwaysTransform(ExceptionalBiFunction<? super V, Throwable, O> handler,
       Executor executor);
 
   /**
@@ -290,7 +290,8 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *          function to use to transform a successful or failed result on completion
    * @return a new promise that is completed when the promise from the function completes
    */
-  <O> PnkyPromise<O> alwaysCompose(ExceptionalBiFunction<V, Throwable, PnkyPromise<O>> handler);
+  <O> PnkyPromise<O> alwaysCompose(
+      ExceptionalBiFunction<? super V, Throwable, PnkyPromise<O>> handler);
 
   /**
    * Provide a function that will return a new promise on success or recover with a new promise on
@@ -307,7 +308,8 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *          the executor to use for asynchronous processing of the function
    * @return a new promise that is completed when the promise from the function completes
    */
-  <O> PnkyPromise<O> alwaysCompose(ExceptionalBiFunction<V, Throwable, PnkyPromise<O>> handler,
+  <O> PnkyPromise<O> alwaysCompose(
+      ExceptionalBiFunction<? super V, Throwable, PnkyPromise<O>> handler,
       Executor executor);
 
   /**
@@ -321,7 +323,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *          operation to perform with the successful result
    * @return a new promise
    */
-  PnkyPromise<V> thenAccept(ExceptionalConsumer<V> onSuccess);
+  PnkyPromise<V> thenAccept(ExceptionalConsumer<? super V> onSuccess);
 
   /**
    * Provide an operation to perform with a successful result, executing the opertation on the
@@ -336,7 +338,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *          the executor to use for asynchronous processing of the operation
    * @return a new promise
    */
-  PnkyPromise<V> thenAccept(ExceptionalConsumer<V> onSuccess, Executor executor);
+  PnkyPromise<V> thenAccept(ExceptionalConsumer<? super V> onSuccess, Executor executor);
 
   /**
    * Provide a function to transform the given result on success. If this promise has failed, that
@@ -349,7 +351,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *          function used to transform the successful result on completion
    * @return a new promise
    */
-  <O> PnkyPromise<O> thenTransform(ExceptionalFunction<V, O> onSuccess);
+  <O> PnkyPromise<O> thenTransform(ExceptionalFunction<? super V, O> onSuccess);
 
   /**
    * Provide a function to transform the given result on success, executing the function on the
@@ -365,7 +367,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *          the executor to use for asynchronous processing of the function
    * @return a new promise
    */
-  <O> PnkyPromise<O> thenTransform(ExceptionalFunction<V, O> onSuccess, Executor executor);
+  <O> PnkyPromise<O> thenTransform(ExceptionalFunction<? super V, O> onSuccess, Executor executor);
 
   /**
    * Provide a function that will return a new promise on success. If this promise has failed, that
@@ -380,7 +382,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *          function to use to transform the successful result on completion
    * @return a new promise that is completed when the promise from the function completes
    */
-  <O> PnkyPromise<O> thenCompose(ExceptionalFunction<V, PnkyPromise<O>> onSuccess);
+  <O> PnkyPromise<O> thenCompose(ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess);
 
   /**
    * Provide a function that will return a new promise on success, executing the function on the
@@ -397,7 +399,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *          the executor to use for asynchronous processing of the function
    * @return a new promise that is completed when the promise from the function completes
    */
-  <O> PnkyPromise<O> thenCompose(ExceptionalFunction<V, PnkyPromise<O>> onSuccess,
+  <O> PnkyPromise<O> thenCompose(ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess,
       Executor executor);
 
   /**
@@ -451,7 +453,8 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *          the executor to use for asynchronous processing of the function
    * @return a new promise
    */
-  PnkyPromise<V> withFallback(ExceptionalFunction<Throwable, V> onFailure, Executor executor);
+  PnkyPromise<V> withFallback(ExceptionalFunction<Throwable, V> onFailure,
+      Executor executor);
 
   /**
    * Provide a function to recover from a failure with a new promise that will return a valid
@@ -480,6 +483,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *          the executor to use for asynchronous processing of the function
    * @return a new promise that is completed when the promise from the function completes
    */
-  PnkyPromise<V> composeFallback(ExceptionalFunction<Throwable, PnkyPromise<V>> onFailure,
+  PnkyPromise<V> composeFallback(
+      ExceptionalFunction<Throwable, PnkyPromise<V>> onFailure,
       Executor executor);
 }

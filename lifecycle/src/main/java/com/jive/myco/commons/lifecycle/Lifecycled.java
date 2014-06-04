@@ -56,13 +56,13 @@ public interface Lifecycled
       @Override
       public void onSuccess(final Void result)
       {
-        pnky.set(null);
+        pnky.resolve(null);
       }
 
       @Override
       public void onFailure(final Throwable cause)
       {
-        pnky.setException(cause);
+        pnky.reject(cause);
       }
     });
 
@@ -123,13 +123,13 @@ public interface Lifecycled
       @Override
       public void onSuccess(final Void result)
       {
-        pnky.set(null);
+        pnky.resolve(null);
       }
 
       @Override
       public void onFailure(final Throwable cause)
       {
-        pnky.setException(cause);
+        pnky.reject(cause);
       }
     });
 

@@ -114,7 +114,7 @@ public class PnkyTest
         {
           assertEquals(1, (int) result);
           assertNull(error);
-          return Pnky.immediateFuture(result + 1);
+          return Pnky.immediatelyComplete(result + 1);
         })
         .alwaysAccept((result, error) ->
         {
@@ -144,13 +144,13 @@ public class PnkyTest
           assertThat(error, instanceOf(IllegalStateException.class));
         })
         .thenAccept((result) -> badThings.incrementAndGet())
-        .alwaysCompose((result, error) -> Pnky.immediateFuture(2))
+        .alwaysCompose((result, error) -> Pnky.immediatelyComplete(2))
         .alwaysAccept((result, error) ->
         {
           assertNull(error);
           assertEquals(2, (int) result);
         })
-        .alwaysCompose((result, error) -> Pnky.immediateFailedFuture(
+        .alwaysCompose((result, error) -> Pnky.immediatelyFailed(
             new IllegalArgumentException()))
         .alwaysAccept((result, error) ->
         {

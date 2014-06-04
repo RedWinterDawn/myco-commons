@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.util.concurrent.MoreExecutors;
 import com.jive.myco.commons.callbacks.Callback;
+import com.jive.myco.commons.callbacks.PnkyCallback;
 import com.jive.myco.commons.concurrent.Pnky;
 import com.jive.myco.commons.concurrent.PnkyPromise;
 
@@ -46,7 +47,7 @@ public abstract class AbstractLifecycled implements Lifecycled
     return composeAsync(() ->
     {
       if (lifecycleStage == LifecycleStage.UNINITIALIZED
-          || (isRestartable() && lifecycleStage == LifecycleStage.DESTROYED))
+          || isRestartable() && lifecycleStage == LifecycleStage.DESTROYED)
       {
         lifecycleStage = LifecycleStage.INITIALIZING;
         lifecycleQueue.suspend();
@@ -67,11 +68,11 @@ public abstract class AbstractLifecycled implements Lifecycled
       }
       else if (lifecycleStage == LifecycleStage.INITIALIZED)
       {
-        return Pnky.immediateFuture(null);
+        return Pnky.immediatelyComplete(null);
       }
       else
       {
-        return Pnky.immediateFailedFuture(new IllegalStateException(String.format(
+        return Pnky.immediatelyFailed(new IllegalStateException(String.format(
             "Cannot initialize in [%s] state", lifecycleStage)));
       }
     }, lifecycleQueue.isExecuting() ? MoreExecutors.sameThreadExecutor() : lifecycleQueue);
@@ -88,7 +89,7 @@ public abstract class AbstractLifecycled implements Lifecycled
     }
     catch (Exception e)
     {
-      initFailureFuture = Pnky.immediateFailedFuture(e);
+      initFailureFuture = Pnky.immediatelyFailed(e);
     }
 
     return initFailureFuture
@@ -109,7 +110,7 @@ public abstract class AbstractLifecycled implements Lifecycled
                 "Error occurred during cleanup after failed initialization", destroyError);
           }
 
-          return Pnky.<Void> immediateFailedFuture(initError);
+          return Pnky.<Void> immediatelyFailed(initError);
         })
         .alwaysAccept((result, error) -> lifecycleQueue.resume());
   }
@@ -146,16 +147,16 @@ public abstract class AbstractLifecycled implements Lifecycled
         catch (Exception e)
         {
           lifecycleQueue.resume();
-          return immediateFailedFuture(e);
+          return immediatelyFailed(e);
         }
       }
       else if (lifecycleStage == LifecycleStage.DESTROYED)
       {
-        return immediateFuture(null);
+        return immediatelyComplete(null);
       }
       else
       {
-        return immediateFailedFuture(new IllegalStateException());
+        return immediatelyFailed(new IllegalStateException());
       }
     }, lifecycleQueue.isExecuting() ? MoreExecutors.sameThreadExecutor() : lifecycleQueue);
   }

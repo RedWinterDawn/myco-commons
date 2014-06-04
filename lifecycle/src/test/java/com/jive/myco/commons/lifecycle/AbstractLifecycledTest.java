@@ -49,13 +49,13 @@ public class AbstractLifecycledTest
       @Override
       protected PnkyPromise<Void> initInternal()
       {
-        return immediateFuture(null);
+        return immediatelyComplete(null);
       }
 
       @Override
       protected PnkyPromise<Void> destroyInternal()
       {
-        return immediateFailedFuture(new IllegalStateException());
+        return immediatelyFailed(new IllegalStateException());
       }
     };
 
@@ -74,14 +74,14 @@ public class AbstractLifecycledTest
       @Override
       protected PnkyPromise<Void> initInternal()
       {
-        return immediateFailedFuture(new IllegalArgumentException("foo"));
+        return immediatelyFailed(new IllegalArgumentException("foo"));
       }
 
       @Override
       protected PnkyPromise<Void> destroyInternal()
       {
         destroyInvoked.set(true);
-        return immediateFuture(null);
+        return immediatelyComplete(null);
       }
     };
 
@@ -116,7 +116,7 @@ public class AbstractLifecycledTest
       protected PnkyPromise<Void> destroyInternal()
       {
         destroyInvoked.set(true);
-        return immediateFuture(null);
+        return immediatelyComplete(null);
       }
     };
 
@@ -146,14 +146,14 @@ public class AbstractLifecycledTest
       @Override
       protected PnkyPromise<Void> initInternal()
       {
-        return immediateFailedFuture(new NumberFormatException());
+        return immediatelyFailed(new NumberFormatException());
       }
 
       @Override
       protected PnkyPromise<Void> destroyInternal()
       {
         destroyInvoked.set(true);
-        return immediateFuture(null);
+        return immediatelyComplete(null);
       }
 
       @Override
@@ -167,7 +167,7 @@ public class AbstractLifecycledTest
         {
           log.error("init failure invoked in wrong state: {}", lifecycleStage);
         }
-        return immediateFuture(null);
+        return immediatelyComplete(null);
       }
     };
 
@@ -198,14 +198,14 @@ public class AbstractLifecycledTest
       @Override
       protected PnkyPromise<Void> initInternal()
       {
-        return immediateFailedFuture(new NumberFormatException());
+        return immediatelyFailed(new NumberFormatException());
       }
 
       @Override
       protected PnkyPromise<Void> destroyInternal()
       {
         destroyInvoked.set(true);
-        return immediateFuture(null);
+        return immediatelyComplete(null);
       }
 
       @Override
@@ -219,7 +219,7 @@ public class AbstractLifecycledTest
         {
           log.error("init failure invoked in wrong state: {}", lifecycleStage);
         }
-        return immediateFailedFuture(new NumberFormatException());
+        return immediatelyFailed(new NumberFormatException());
       }
     };
 
@@ -250,14 +250,14 @@ public class AbstractLifecycledTest
       @Override
       protected PnkyPromise<Void> initInternal()
       {
-        return immediateFailedFuture(new NumberFormatException());
+        return immediatelyFailed(new NumberFormatException());
       }
 
       @Override
       protected PnkyPromise<Void> destroyInternal()
       {
         destroyInvoked.set(true);
-        return immediateFuture(null);
+        return immediatelyComplete(null);
       }
 
       @Override
@@ -303,13 +303,13 @@ public class AbstractLifecycledTest
       @Override
       protected PnkyPromise<Void> initInternal()
       {
-        return immediateFailedFuture(new IllegalStateException());
+        return immediatelyFailed(new IllegalStateException());
       }
 
       @Override
       protected PnkyPromise<Void> destroyInternal()
       {
-        return immediateFuture(null);
+        return immediatelyComplete(null);
       }
     };
 
@@ -331,13 +331,13 @@ public class AbstractLifecycledTest
       @Override
       protected PnkyPromise<Void> initInternal()
       {
-        return immediateFailedFuture(new IllegalStateException());
+        return immediatelyFailed(new IllegalStateException());
       }
 
       @Override
       protected PnkyPromise<Void> destroyInternal()
       {
-        return immediateFailedFuture(new IllegalArgumentException("destroy"));
+        return immediatelyFailed(new IllegalArgumentException("destroy"));
       }
     };
 
@@ -367,7 +367,7 @@ public class AbstractLifecycledTest
       @Override
       protected PnkyPromise<Void> initInternal()
       {
-        return immediateFailedFuture(new IllegalStateException());
+        return immediatelyFailed(new IllegalStateException());
       }
 
       @Override
@@ -403,13 +403,13 @@ public class AbstractLifecycledTest
       @Override
       protected PnkyPromise<Void> initInternal()
       {
-        return immediateFuture(null);
+        return immediatelyComplete(null);
       }
 
       @Override
       protected PnkyPromise<Void> destroyInternal()
       {
-        return immediateFuture(null);
+        return immediatelyComplete(null);
       }
     };
 
@@ -439,13 +439,13 @@ public class AbstractLifecycledTest
       @Override
       protected PnkyPromise<Void> initInternal()
       {
-        return immediateFuture(null);
+        return immediatelyComplete(null);
       }
 
       @Override
       protected PnkyPromise<Void> destroyInternal()
       {
-        return immediateFuture(null);
+        return immediatelyComplete(null);
       }
     };
 
@@ -475,13 +475,13 @@ public class AbstractLifecycledTest
       @Override
       protected PnkyPromise<Void> initInternal()
       {
-        return immediateFailedFuture(new Exception());
+        return immediatelyFailed(new Exception());
       }
 
       @Override
       protected PnkyPromise<Void> destroyInternal()
       {
-        return immediateFailedFuture(new IllegalStateException());
+        return immediatelyFailed(new IllegalStateException());
       }
     };
 
@@ -503,13 +503,13 @@ public class AbstractLifecycledTest
       @Override
       protected PnkyPromise<Void> initInternal()
       {
-        return immediateFailedFuture(new Exception());
+        return immediatelyFailed(new Exception());
       }
 
       @Override
       protected PnkyPromise<Void> destroyInternal()
       {
-        return immediateFailedFuture(new Exception());
+        return immediatelyFailed(new Exception());
       }
     };
 
@@ -531,13 +531,13 @@ public class AbstractLifecycledTest
       @Override
       protected PnkyPromise<Void> initInternal()
       {
-        return immediateFailedFuture(new Exception());
+        return immediatelyFailed(new Exception());
       }
 
       @Override
       protected PnkyPromise<Void> destroyInternal()
       {
-        return immediateFailedFuture(new Exception());
+        return immediatelyFailed(new Exception());
       }
     };
 
@@ -566,13 +566,13 @@ public class AbstractLifecycledTest
       @Override
       protected PnkyPromise<Void> initInternal()
       {
-        return immediateFuture(null);
+        return immediatelyComplete(null);
       }
 
       @Override
       protected PnkyPromise<Void> destroyInternal()
       {
-        return immediateFailedFuture(new Exception());
+        return immediatelyFailed(new Exception());
       }
 
       @Override

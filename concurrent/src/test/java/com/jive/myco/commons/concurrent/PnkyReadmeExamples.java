@@ -26,11 +26,11 @@ public class PnkyReadmeExamples
       try
       {
         doSomethingExceptional();
-        future.set(null);
+        future.resolve(null);
       }
       catch (final Exception e)
       {
-        future.setException(e);
+        future.reject(e);
       }
     });
 
@@ -52,11 +52,11 @@ public class PnkyReadmeExamples
           try
           {
             doSomethingExceptional();
-            future.set(null);
+            future.resolve(null);
           }
           catch (final Exception e)
           {
-            future.setException(e);
+            future.reject(e);
           }
 
           return future;
@@ -92,11 +92,11 @@ public class PnkyReadmeExamples
             try
             {
               doSomethingExceptional();
-              future.set(null);
+              future.resolve(null);
             }
             catch (final Exception e)
             {
-              future.setException(e);
+              future.reject(e);
             }
           }
 
@@ -147,11 +147,11 @@ public class PnkyReadmeExamples
 
             if (error != null)
             {
-              future.setException(error);
+              future.reject(error);
             }
             else
             {
-              future.set(result);
+              future.resolve(result);
             }
           });
     });

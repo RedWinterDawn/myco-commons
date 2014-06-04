@@ -162,7 +162,7 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
 
     baseContext = new DefaultMetricsManagerContext(null);
 
-    return immediateFuture(null);
+    return immediatelyComplete(null);
   }
 
   @Override
@@ -196,7 +196,7 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
 
     metrics.clear();
 
-    return immediateFuture(null);
+    return immediatelyComplete(null);
   }
 
   @Override

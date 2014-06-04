@@ -10,4 +10,11 @@
   <artifactId>myco-commons-callbacks</artifactId>
   <name>Myco :: Commons :: Callbacks</name>
 
+  <dependencies>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>myco-commons-concurrent</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+  </dependencies>
 </project>
