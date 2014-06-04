@@ -5,17 +5,28 @@
     <groupId>com.jive.myco.commons</groupId>
     <version>0.0.5-SNAPSHOT</version>
   </parent>
-  
+
   <modelVersion>4.0.0</modelVersion>
 
   <artifactId>myco-commons-concurrent</artifactId>
   <name>Myco :: Commons :: Concurrent</name>
-  
+
   <dependencies>
     <dependency>
       <groupId>org.fusesource.hawtdispatch</groupId>
       <artifactId>hawtdispatch</artifactId>
       <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>myco-commons-function</artifactId>
+      <version>${project.version}</version>
     </dependency>
   </dependencies>
 

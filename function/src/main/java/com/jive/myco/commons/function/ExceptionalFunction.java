@@ -13,4 +13,12 @@ package com.jive.myco.commons.function;
 public interface ExceptionalFunction<T, R>
 {
   R apply(final T input) throws Exception;
+
+  static final ExceptionalFunction<?, ?> IDENTITY = (x) -> x;
+
+  @SuppressWarnings("unchecked")
+  static <T> ExceptionalFunction<T, T> identity()
+  {
+    return (ExceptionalFunction<T, T>) IDENTITY;
+  }
 }

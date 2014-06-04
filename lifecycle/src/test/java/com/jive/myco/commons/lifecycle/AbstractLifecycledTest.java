@@ -1,11 +1,10 @@
 package com.jive.myco.commons.lifecycle;
 
-import static com.jive.myco.commons.concurrent.CompletableFutures.*;
+import static com.jive.myco.commons.concurrent.Pnky.*;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -16,6 +15,7 @@ import org.fusesource.hawtdispatch.DispatchQueue;
 import org.junit.Test;
 import org.mockito.Matchers;
 
+import com.jive.myco.commons.concurrent.PnkyPromise;
 import com.jive.myco.commons.hawtdispatch.SameThreadTestQueueBuilder;
 
 /**
@@ -46,19 +46,19 @@ public class AbstractLifecycledTest
     Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       @Override
-      protected CompletionStage<Void> initInternal()
+      protected PnkyPromise<Void> initInternal()
       {
-        return immediatelyComplete(null);
+        return immediateFuture(null);
       }
 
       @Override
-      protected CompletionStage<Void> destroyInternal()
+      protected PnkyPromise<Void> destroyInternal()
       {
-        return immediatelyFailed(new IllegalStateException());
+        return immediateFailedFuture(new IllegalStateException());
       }
     };
 
-    testInstance.init().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
+    testInstance.init().get(50, TimeUnit.MILLISECONDS);
 
     assertEquals(LifecycleStage.INITIALIZED, testInstance.getLifecycleStage());
     assertFalse(testQueue.isSuspended());
@@ -71,22 +71,22 @@ public class AbstractLifecycledTest
     Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       @Override
-      protected CompletionStage<Void> initInternal()
+      protected PnkyPromise<Void> initInternal()
       {
-        return immediatelyFailed(new IllegalArgumentException("foo"));
+        return immediateFailedFuture(new IllegalArgumentException("foo"));
       }
 
       @Override
-      protected CompletionStage<Void> destroyInternal()
+      protected PnkyPromise<Void> destroyInternal()
       {
         destroyInvoked.set(true);
-        return immediatelyComplete(null);
+        return immediateFuture(null);
       }
     };
 
     try
     {
-      testInstance.init().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
+      testInstance.init().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
     catch (ExecutionException e)
@@ -106,22 +106,22 @@ public class AbstractLifecycledTest
     Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       @Override
-      protected CompletionStage<Void> initInternal()
+      protected PnkyPromise<Void> initInternal()
       {
         throw new NumberFormatException();
       }
 
       @Override
-      protected CompletionStage<Void> destroyInternal()
+      protected PnkyPromise<Void> destroyInternal()
       {
         destroyInvoked.set(true);
-        return immediatelyComplete(null);
+        return immediateFuture(null);
       }
     };
 
     try
     {
-      testInstance.init().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
+      testInstance.init().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
     catch (ExecutionException e)
@@ -143,20 +143,20 @@ public class AbstractLifecycledTest
     {
 
       @Override
-      protected CompletionStage<Void> initInternal()
+      protected PnkyPromise<Void> initInternal()
       {
-        return immediatelyFailed(new NumberFormatException());
+        return immediateFailedFuture(new NumberFormatException());
       }
 
       @Override
-      protected CompletionStage<Void> destroyInternal()
+      protected PnkyPromise<Void> destroyInternal()
       {
         destroyInvoked.set(true);
-        return immediatelyComplete(null);
+        return immediateFuture(null);
       }
 
       @Override
-      protected CompletionStage<Void> handleInitFailure()
+      protected PnkyPromise<Void> handleInitFailure()
       {
         if (lifecycleStage == LifecycleStage.INITIALIZATION_FAILED)
         {
@@ -166,13 +166,13 @@ public class AbstractLifecycledTest
         {
           log.error("init failure invoked in wrong state: {}", lifecycleStage);
         }
-        return immediatelyComplete(null);
+        return immediateFuture(null);
       }
     };
 
     try
     {
-      testInstance.init().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
+      testInstance.init().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
     catch (ExecutionException e)
@@ -195,20 +195,20 @@ public class AbstractLifecycledTest
     {
 
       @Override
-      protected CompletionStage<Void> initInternal()
+      protected PnkyPromise<Void> initInternal()
       {
-        return immediatelyFailed(new NumberFormatException());
+        return immediateFailedFuture(new NumberFormatException());
       }
 
       @Override
-      protected CompletionStage<Void> destroyInternal()
+      protected PnkyPromise<Void> destroyInternal()
       {
         destroyInvoked.set(true);
-        return immediatelyComplete(null);
+        return immediateFuture(null);
       }
 
       @Override
-      protected CompletionStage<Void> handleInitFailure()
+      protected PnkyPromise<Void> handleInitFailure()
       {
         if (lifecycleStage == LifecycleStage.INITIALIZATION_FAILED)
         {
@@ -218,13 +218,13 @@ public class AbstractLifecycledTest
         {
           log.error("init failure invoked in wrong state: {}", lifecycleStage);
         }
-        return immediatelyFailed(new NumberFormatException());
+        return immediateFailedFuture(new NumberFormatException());
       }
     };
 
     try
     {
-      testInstance.init().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
+      testInstance.init().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
     catch (ExecutionException e)
@@ -247,20 +247,20 @@ public class AbstractLifecycledTest
     {
 
       @Override
-      protected CompletionStage<Void> initInternal()
+      protected PnkyPromise<Void> initInternal()
       {
-        return immediatelyFailed(new NumberFormatException());
+        return immediateFailedFuture(new NumberFormatException());
       }
 
       @Override
-      protected CompletionStage<Void> destroyInternal()
+      protected PnkyPromise<Void> destroyInternal()
       {
         destroyInvoked.set(true);
-        return immediatelyComplete(null);
+        return immediateFuture(null);
       }
 
       @Override
-      protected CompletionStage<Void> handleInitFailure()
+      protected PnkyPromise<Void> handleInitFailure()
       {
         if (lifecycleStage == LifecycleStage.INITIALIZATION_FAILED)
         {
@@ -276,7 +276,7 @@ public class AbstractLifecycledTest
 
     try
     {
-      testInstance.init().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
+      testInstance.init().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
     catch (ExecutionException e)
@@ -300,19 +300,19 @@ public class AbstractLifecycledTest
       }
 
       @Override
-      protected CompletionStage<Void> initInternal()
+      protected PnkyPromise<Void> initInternal()
       {
-        return immediatelyFailed(new IllegalStateException());
+        return immediateFailedFuture(new IllegalStateException());
       }
 
       @Override
-      protected CompletionStage<Void> destroyInternal()
+      protected PnkyPromise<Void> destroyInternal()
       {
-        return immediatelyComplete(null);
+        return immediateFuture(null);
       }
     };
 
-    testInstance.destroy().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
+    testInstance.destroy().get(50, TimeUnit.MILLISECONDS);
 
     assertEquals(LifecycleStage.DESTROYED, testInstance.getLifecycleStage());
     assertFalse(testQueue.isSuspended());
@@ -328,21 +328,21 @@ public class AbstractLifecycledTest
       }
 
       @Override
-      protected CompletionStage<Void> initInternal()
+      protected PnkyPromise<Void> initInternal()
       {
-        return immediatelyFailed(new IllegalStateException());
+        return immediateFailedFuture(new IllegalStateException());
       }
 
       @Override
-      protected CompletionStage<Void> destroyInternal()
+      protected PnkyPromise<Void> destroyInternal()
       {
-        return immediatelyFailed(new IllegalArgumentException("destroy"));
+        return immediateFailedFuture(new IllegalArgumentException("destroy"));
       }
     };
 
     try
     {
-      testInstance.destroy().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
+      testInstance.destroy().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
     catch (ExecutionException e)
@@ -364,13 +364,13 @@ public class AbstractLifecycledTest
       }
 
       @Override
-      protected CompletionStage<Void> initInternal()
+      protected PnkyPromise<Void> initInternal()
       {
-        return immediatelyFailed(new IllegalStateException());
+        return immediateFailedFuture(new IllegalStateException());
       }
 
       @Override
-      protected CompletionStage<Void> destroyInternal()
+      protected PnkyPromise<Void> destroyInternal()
       {
         throw new NumberFormatException();
       }
@@ -378,7 +378,7 @@ public class AbstractLifecycledTest
 
     try
     {
-      testInstance.destroy().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
+      testInstance.destroy().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
     catch (ExecutionException e)
@@ -400,21 +400,21 @@ public class AbstractLifecycledTest
       }
 
       @Override
-      protected CompletionStage<Void> initInternal()
+      protected PnkyPromise<Void> initInternal()
       {
-        return immediatelyComplete(null);
+        return immediateFuture(null);
       }
 
       @Override
-      protected CompletionStage<Void> destroyInternal()
+      protected PnkyPromise<Void> destroyInternal()
       {
-        return immediatelyComplete(null);
+        return immediateFuture(null);
       }
     };
 
     try
     {
-      testInstance.init().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
+      testInstance.init().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
     catch (ExecutionException e)
@@ -436,21 +436,21 @@ public class AbstractLifecycledTest
       }
 
       @Override
-      protected CompletionStage<Void> initInternal()
+      protected PnkyPromise<Void> initInternal()
       {
-        return immediatelyComplete(null);
+        return immediateFuture(null);
       }
 
       @Override
-      protected CompletionStage<Void> destroyInternal()
+      protected PnkyPromise<Void> destroyInternal()
       {
-        return immediatelyComplete(null);
+        return immediateFuture(null);
       }
     };
 
     try
     {
-      testInstance.destroy().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
+      testInstance.destroy().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
     catch (ExecutionException e)
@@ -472,19 +472,19 @@ public class AbstractLifecycledTest
       }
 
       @Override
-      protected CompletionStage<Void> initInternal()
+      protected PnkyPromise<Void> initInternal()
       {
-        return immediatelyFailed(new Exception());
+        return immediateFailedFuture(new Exception());
       }
 
       @Override
-      protected CompletionStage<Void> destroyInternal()
+      protected PnkyPromise<Void> destroyInternal()
       {
-        return immediatelyFailed(new IllegalStateException());
+        return immediateFailedFuture(new IllegalStateException());
       }
     };
 
-    testInstance.init().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
+    testInstance.init().get(50, TimeUnit.MILLISECONDS);
 
     assertEquals(LifecycleStage.INITIALIZED, testInstance.getLifecycleStage());
     assertFalse(testQueue.isSuspended());
@@ -500,19 +500,19 @@ public class AbstractLifecycledTest
       }
 
       @Override
-      protected CompletionStage<Void> initInternal()
+      protected PnkyPromise<Void> initInternal()
       {
-        return immediatelyFailed(new Exception());
+        return immediateFailedFuture(new Exception());
       }
 
       @Override
-      protected CompletionStage<Void> destroyInternal()
+      protected PnkyPromise<Void> destroyInternal()
       {
-        return immediatelyFailed(new Exception());
+        return immediateFailedFuture(new Exception());
       }
     };
 
-    testInstance.destroy().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
+    testInstance.destroy().get(50, TimeUnit.MILLISECONDS);
 
     assertEquals(LifecycleStage.DESTROYED, testInstance.getLifecycleStage());
     assertFalse(testQueue.isSuspended());
@@ -528,21 +528,21 @@ public class AbstractLifecycledTest
       }
 
       @Override
-      protected CompletionStage<Void> initInternal()
+      protected PnkyPromise<Void> initInternal()
       {
-        return immediatelyFailed(new Exception());
+        return immediateFailedFuture(new Exception());
       }
 
       @Override
-      protected CompletionStage<Void> destroyInternal()
+      protected PnkyPromise<Void> destroyInternal()
       {
-        return immediatelyFailed(new Exception());
+        return immediateFailedFuture(new Exception());
       }
     };
 
     try
     {
-      testInstance.init().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
+      testInstance.init().get(50, TimeUnit.MILLISECONDS);
     }
     catch (ExecutionException e)
     {
@@ -563,15 +563,15 @@ public class AbstractLifecycledTest
       }
 
       @Override
-      protected CompletionStage<Void> initInternal()
+      protected PnkyPromise<Void> initInternal()
       {
-        return immediatelyComplete(null);
+        return immediateFuture(null);
       }
 
       @Override
-      protected CompletionStage<Void> destroyInternal()
+      protected PnkyPromise<Void> destroyInternal()
       {
-        return immediatelyFailed(new Exception());
+        return immediateFailedFuture(new Exception());
       }
 
       @Override
@@ -581,7 +581,7 @@ public class AbstractLifecycledTest
       }
     };
 
-    testInstance.init().toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
+    testInstance.init().get(50, TimeUnit.MILLISECONDS);
 
     assertEquals(LifecycleStage.INITIALIZED, testInstance.getLifecycleStage());
     assertFalse(testQueue.isSuspended());

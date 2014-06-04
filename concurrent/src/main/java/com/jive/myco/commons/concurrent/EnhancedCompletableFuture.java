@@ -12,6 +12,11 @@ import java.util.function.Supplier;
 
 import lombok.NonNull;
 
+import com.jive.myco.commons.function.ExceptionalConsumer;
+import com.jive.myco.commons.function.ExceptionalFunction;
+import com.jive.myco.commons.function.ExceptionalRunnable;
+import com.jive.myco.commons.function.ExceptionalSupplier;
+
 /**
  * An enhanced version of {@link CompletableFuture} that provides additional capabilities beyond
  * those defined in {@link CompletionStage} and the utility methods on {@link CompletableFuture}.

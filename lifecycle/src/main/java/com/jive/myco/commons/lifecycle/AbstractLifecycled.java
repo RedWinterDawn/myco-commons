@@ -1,11 +1,8 @@
 package com.jive.myco.commons.lifecycle;
 
-import static com.jive.myco.commons.concurrent.CompletableFutures.*;
+import static com.jive.myco.commons.concurrent.Pnky.*;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
-import java.util.function.Function;
 
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +11,10 @@ import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.util.concurrent.MoreExecutors;
+import com.jive.myco.commons.concurrent.Pnky;
+import com.jive.myco.commons.concurrent.PnkyPromise;
 
 /**
  * Provides a common pattern for asynchronously initializing a {@link Lifecycled} service.
@@ -31,119 +32,82 @@ public abstract class AbstractLifecycled implements Lifecycled
   // Don't use @SLF4J annotation, we want to know the actual implementing class
   private final Logger log = LoggerFactory.getLogger(getClass());
 
-  /**
-   * Helper method to run a {@link Runnable} on the lifecycle queue. If not currently on the
-   * lifecycle queue the {@code runnable} will be launched on the lifecycle queue, otherwise it will
-   * be run in the current thread.
-   *
-   * @param runnable
-   *          the task to run on the lifecycle queue
-   */
-  protected final void runOnLifecycleQueue(Runnable runnable)
-  {
-    if (lifecycleQueue.isExecuting())
-    {
-      runnable.run();
-    }
-    else
-    {
-      lifecycleQueue.execute(runnable);
-    }
-  }
-
   @Override
-  public final CompletionStage<Void> init()
+  public final PnkyPromise<Void> init()
   {
-    CompletableFuture<Void> dfd = new CompletableFuture<>();
-
-    runOnLifecycleQueue(new Runnable()
+    return composeAsync(() ->
     {
-      @Override
-      public void run()
+      if (lifecycleStage == LifecycleStage.UNINITIALIZED
+          || (isRestartable() && lifecycleStage == LifecycleStage.DESTROYED))
       {
-        if (lifecycleStage == LifecycleStage.UNINITIALIZED
-            || (isRestartable() && lifecycleStage == LifecycleStage.DESTROYED))
-        {
-          lifecycleStage = LifecycleStage.INITIALIZING;
-          lifecycleQueue.suspend();
-          try
-          {
-            initInternal()
-                .whenComplete((result, initError) ->
-                {
-                  if (initError == null)
-                  {
-                    lifecycleStage = LifecycleStage.INITIALIZED;
-                    lifecycleQueue.resume();
-                    dfd.complete(null);
-                  }
-                  else
-                  {
-                    initFailure()
-                        .whenComplete((eResult, eError) -> dfd.completeExceptionally(initError));
-                  }
-                });
-          }
-          catch (Exception e)
-          {
-            initFailure()
-                .whenComplete((eResult, eError) -> dfd.completeExceptionally(e));
-          }
-        }
-        else if (lifecycleStage == LifecycleStage.INITIALIZED)
-        {
-          dfd.complete(null);
-        }
-        else
-        {
-          dfd.completeExceptionally(new IllegalStateException(String.format(
-              "Cannot initialize in [%s] state", lifecycleStage)));
-        }
-      }
-
-      private CompletionStage<Void> initFailure()
-      {
-        lifecycleStage = LifecycleStage.INITIALIZATION_FAILED;
-
+        lifecycleStage = LifecycleStage.INITIALIZING;
+        lifecycleQueue.suspend();
         try
         {
-          return handleInitFailure()
-              .handle((result, error) ->
+          return initInternal()
+              .thenHandle((result) ->
               {
-                if (error != null)
-                {
-                  log.error("Error occurred during cleanup after failed initialization", error);
-                }
-                return doDestroy();
+                lifecycleStage = LifecycleStage.INITIALIZED;
+                lifecycleQueue.resume();
               })
-              .thenCompose(Function.identity());
+              .composeFallback(this::initFailure);
         }
         catch (Exception e)
         {
-          return doDestroy();
+          return initFailure(e);
         }
       }
-
-      private CompletionStage<Void> doDestroy()
+      else if (lifecycleStage == LifecycleStage.INITIALIZED)
       {
-        CompletionStage<Void> destroyed = destroy()
-            .whenComplete((result, error) ->
-            {
-              if (error != null)
-              {
-                log.error("Error occurred during destroy after failed initialization", error);
-              }
-            });
-        lifecycleQueue.resume();
-        return destroyed;
+        return Pnky.immediateFuture(null);
       }
-    });
+      else
+      {
+        return Pnky.immediateFailedFuture(new IllegalStateException(String.format(
+            "Cannot initialize in [%s] state", lifecycleStage)));
+      }
+    }, lifecycleQueue.isExecuting() ? MoreExecutors.sameThreadExecutor() : lifecycleQueue);
+  }
 
-    return dfd;
+  private PnkyPromise<Void> initFailure(final Throwable initError)
+  {
+    lifecycleStage = LifecycleStage.INITIALIZATION_FAILED;
+
+    PnkyPromise<Void> initFailureFuture;
+    try
+    {
+      initFailureFuture = handleInitFailure();
+    }
+    catch (Exception e)
+    {
+      initFailureFuture = Pnky.immediateFailedFuture(e);
+    }
+
+    return initFailureFuture
+        .thenCompose((result, error) ->
+        {
+          if (error != null)
+          {
+            log.error("Error occurred during handling of failed init", error);
+          }
+
+          return destroy();
+        })
+        .thenCompose((res, destroyError) ->
+        {
+          if (destroyError != null)
+          {
+            log.error(
+                "Error occurred during cleanup after failed initialization", destroyError);
+          }
+
+          return Pnky.<Void> immediateFailedFuture(initError);
+        })
+        .thenHandle((result, error) -> lifecycleQueue.resume());
   }
 
   @Override
-  public final CompletionStage<Void> destroy()
+  public final PnkyPromise<Void> destroy()
   {
     return composeAsync(() ->
     {
@@ -156,7 +120,7 @@ public abstract class AbstractLifecycled implements Lifecycled
         try
         {
           return destroyInternal()
-              .whenComplete((result, error) ->
+              .thenHandle((result, error) ->
               {
                 if (error == null)
                 {
@@ -168,18 +132,18 @@ public abstract class AbstractLifecycled implements Lifecycled
         catch (Exception e)
         {
           lifecycleQueue.resume();
-          return immediatelyFailed(e);
+          return immediateFailedFuture(e);
         }
       }
       else if (lifecycleStage == LifecycleStage.DESTROYED)
       {
-        return immediatelyComplete(null);
+        return immediateFuture(null);
       }
       else
       {
-        return immediatelyFailed(new IllegalStateException());
+        return immediateFailedFuture(new IllegalStateException());
       }
-    }, lifecycleQueue);
+    }, lifecycleQueue.isExecuting() ? MoreExecutors.sameThreadExecutor() : lifecycleQueue);
   }
 
   @Override
@@ -195,9 +159,9 @@ public abstract class AbstractLifecycled implements Lifecycled
    *
    * @return completion stage to handle when cleanup is complete
    */
-  protected CompletionStage<Void> handleInitFailure()
+  protected PnkyPromise<Void> handleInitFailure()
   {
-    return CompletableFuture.completedFuture(null);
+    return Pnky.immediateFuture(null);
   }
 
   /**
@@ -211,7 +175,7 @@ public abstract class AbstractLifecycled implements Lifecycled
    *
    * @return completion stage to handle when initialization is complete
    */
-  protected abstract CompletionStage<Void> initInternal();
+  protected abstract PnkyPromise<Void> initInternal();
 
   /**
    * Destroy this {@link Lifecycled} instance. This will be run on the {@link #lifecycleQueue} so
@@ -224,7 +188,7 @@ public abstract class AbstractLifecycled implements Lifecycled
    *
    * @return completion stage to handle when initialization is complete
    */
-  protected abstract CompletionStage<Void> destroyInternal();
+  protected abstract PnkyPromise<Void> destroyInternal();
 
   /**
    * Retrieves the {@link Executor} that will be used to fire callbacks to {@link #init} and

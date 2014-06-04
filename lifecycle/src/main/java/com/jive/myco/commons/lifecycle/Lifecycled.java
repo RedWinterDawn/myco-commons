@@ -1,8 +1,7 @@
 package com.jive.myco.commons.lifecycle;
 
-import java.util.concurrent.CompletionStage;
-
 import com.jive.myco.commons.callbacks.Callback;
+import com.jive.myco.commons.concurrent.PnkyPromise;
 
 /**
  * Represents a resource that has a lifecycle.
@@ -27,7 +26,7 @@ public interface Lifecycled
    *
    * @return completion stage to respond to success or failure
    */
-  CompletionStage<Void> init();
+  PnkyPromise<Void> init();
 
   /**
    * Destroys the resource asynchronously, invoking the callback under the following conditions:
@@ -48,7 +47,7 @@ public interface Lifecycled
    *
    * @return completion stage to respond to success or failure
    */
-  CompletionStage<Void> destroy();
+  PnkyPromise<Void> destroy();
 
   LifecycleStage getLifecycleStage();
 }

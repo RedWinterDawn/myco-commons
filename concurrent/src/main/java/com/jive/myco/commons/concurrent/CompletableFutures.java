@@ -10,6 +10,11 @@ import java.util.function.Supplier;
 
 import lombok.NonNull;
 
+import com.jive.myco.commons.function.ExceptionalConsumer;
+import com.jive.myco.commons.function.ExceptionalFunction;
+import com.jive.myco.commons.function.ExceptionalRunnable;
+import com.jive.myco.commons.function.ExceptionalSupplier;
+
 /**
  * A utility class providing helper methods for working with {@link CompletableFuture}s.
  * <p>
@@ -94,8 +99,6 @@ public final class CompletableFutures
    *
    * @param action
    *          the action to run before completing the returned {@code CompletableFuture}
-   * @param <U>
-   *          the result type
    *
    * @return the new {@code CompletableFuture}
    */
@@ -210,7 +213,7 @@ public final class CompletableFutures
    *             StuffClass::FunctionThatMightThrowACheckedException));
    * </pre>
    *
-   * @param fn
+   * @param efn
    *          the function to use to compute the value of the returned CompletionStage
    * @param <T>
    *          the function's input type
@@ -264,7 +267,7 @@ public final class CompletableFutures
    *             (stuff) -> throw new CheckedException(stuff.toString()));
    * </pre>
    *
-   * @param action
+   * @param consumer
    *          the action to perform before completing the {@code CompletionStage} created by the
    *          returned function
    * @param <T>

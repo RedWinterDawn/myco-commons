@@ -1,6 +1,6 @@
 package com.jive.myco.commons.metrics;
 
-import static com.jive.myco.commons.concurrent.CompletableFutures.*;
+import static com.jive.myco.commons.concurrent.Pnky.*;
 
 import java.io.Closeable;
 import java.lang.management.ManagementFactory;
@@ -9,7 +9,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -43,7 +42,7 @@ import com.codahale.metrics.jvm.ThreadStatesGaugeSet;
 import com.google.common.base.Joiner;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
-import com.jive.myco.commons.callbacks.Callback;
+import com.jive.myco.commons.concurrent.PnkyPromise;
 import com.jive.myco.commons.hawtdispatch.DefaultDispatchQueueBuilder;
 import com.jive.myco.commons.hawtdispatch.DispatchQueueBuilder;
 import com.jive.myco.commons.lifecycle.AbstractLifecycled;
@@ -100,7 +99,7 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
   }
 
   @Override
-  protected CompletionStage<Void> initInternal()
+  protected PnkyPromise<Void> initInternal()
   {
     registry.register(MetricRegistry.name("jvm", "gc"), new GarbageCollectorMetricSet());
 
@@ -162,11 +161,11 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
 
     baseContext = new DefaultMetricsManagerContext(null);
 
-    return immediatelyComplete(null);
+    return immediateFuture(null);
   }
 
   @Override
-  protected CompletionStage<Void> destroyInternal()
+  protected PnkyPromise<Void> destroyInternal()
   {
     for (final Closeable reporter : reporters)
     {
@@ -184,7 +183,7 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
 
     metrics.clear();
 
-    return immediatelyComplete(null);
+    return immediateFuture(null);
   }
 
   @Override

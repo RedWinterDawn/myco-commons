@@ -9,6 +9,10 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import com.jive.myco.commons.function.ExceptionalConsumer;
+import com.jive.myco.commons.function.ExceptionalFunction;
+import com.jive.myco.commons.function.ExceptionalRunnable;
+
 /**
  * An enhanced version of {@link CompletionStage} providing value-added operations to reduce
  * boilerplate code and simplify asynchronous processing.
