@@ -28,7 +28,9 @@ import com.jive.myco.commons.function.ExceptionalRunnable;
  *
  * @param <T>
  *          the type of the completion result
+ * @deprecated Use {@link PnkyPromise} instead
  */
+@Deprecated
 public interface EnhancedCompletionStage<T> extends CompletionStage<T>
 {
   /**

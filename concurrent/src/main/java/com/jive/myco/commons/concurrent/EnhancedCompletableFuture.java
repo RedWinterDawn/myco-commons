@@ -28,7 +28,10 @@ import com.jive.myco.commons.function.ExceptionalSupplier;
  *
  * @author David Valeri
  * @author Brandon Pederson
+ *
+ * @deprecated Use {@link Pnky} instead
  */
+@Deprecated
 public class EnhancedCompletableFuture<T> implements EnhancedCompletionStage<T>
 {
   private final CompletableFuture<T> delegate;
