@@ -45,7 +45,7 @@ public abstract class AbstractLifecycled implements Lifecycled
         try
         {
           return initInternal()
-              .thenHandle((result) ->
+              .thenAccept((result) ->
               {
                 lifecycleStage = LifecycleStage.INITIALIZED;
                 lifecycleQueue.resume();
@@ -84,7 +84,7 @@ public abstract class AbstractLifecycled implements Lifecycled
     }
 
     return initFailureFuture
-        .thenCompose((result, error) ->
+        .alwaysCompose((result, error) ->
         {
           if (error != null)
           {
@@ -93,7 +93,7 @@ public abstract class AbstractLifecycled implements Lifecycled
 
           return destroy();
         })
-        .thenCompose((res, destroyError) ->
+        .alwaysCompose((res, destroyError) ->
         {
           if (destroyError != null)
           {
@@ -103,7 +103,7 @@ public abstract class AbstractLifecycled implements Lifecycled
 
           return Pnky.<Void> immediateFailedFuture(initError);
         })
-        .thenHandle((result, error) -> lifecycleQueue.resume());
+        .alwaysAccept((result, error) -> lifecycleQueue.resume());
   }
 
   @Override
@@ -120,7 +120,7 @@ public abstract class AbstractLifecycled implements Lifecycled
         try
         {
           return destroyInternal()
-              .thenHandle((result, error) ->
+              .alwaysAccept((result, error) ->
               {
                 if (error == null)
                 {

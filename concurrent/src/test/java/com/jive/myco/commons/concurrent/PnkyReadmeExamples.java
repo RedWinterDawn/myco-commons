@@ -141,7 +141,7 @@ public class PnkyReadmeExamples
 
       doSomethingUsingCf()
           .thenCompose((value) -> doSomethingElseUsingCf(value, 2))
-          .thenHandle((result, error) ->
+          .alwaysAccept((result, error) ->
           {
             dispatchQueue.resume();
 
@@ -172,7 +172,7 @@ public class PnkyReadmeExamples
 
           return doSomethingUsingCf()
               .thenCompose((value) -> doSomethingElseUsingCf(value, 2))
-              .thenHandle((result, cause) -> dispatchQueue.resume());
+              .alwaysAccept((result, cause) -> dispatchQueue.resume());
         }, dispatchQueue)
         .thenCompose((x) -> x);
   }
@@ -195,7 +195,7 @@ public class PnkyReadmeExamples
 
           return doSomethingUsingCf()
               .thenCompose((value) -> doSomethingElseUsingCf(value, 2))
-              .thenHandle((result, cause) -> dispatchQueue.resume());
+              .alwaysAccept((result, cause) -> dispatchQueue.resume());
         }, dispatchQueue);
   }
 
