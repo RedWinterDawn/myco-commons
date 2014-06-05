@@ -12,25 +12,25 @@ import com.jive.myco.commons.function.ExceptionalFunction;
 
 //@formatter:off
 /**
- * {@code PnkyPromise} is a custom implementation of a {@link ListenableFuture} that provides
- * methods to handle most all scenarios that would be needed in an asynchronous environment. While
- * much more verbose, and a different API, a {@code PnkyPromise} will work similarly to a JavaScript
+ * {@code PnkyPromise} is an enhancement of {@link ListenableFuture} that provides methods to handle
+ * most scenarios needed in an asynchronous environment. While much more verbose, and a different
+ * API, a {@code PnkyPromise} will work similarly to JavaScript
  * <a href="http://people.mozilla.org/~jorendorff/es6-draft.html#sec-promise-objects">promises</a>.
  *
  * <p>
- *   While experimenting with Guava's {@link ListenableFuture} and Java 8's {@link CompletableFuture},
- *   we ran into shortcomings of either approach using the built in components. We identified 3 cross-
- *   cutting concerns that we wanted to be addressed through different APIs.
+ *   Experimentation with Guava's {@link ListenableFuture} and Java 8's {@link CompletableFuture},
+ *   uncovered shortcomings with both existing solutions. Efforts uncovered 3 cross-cutting concerns
+ *   to be addressed through a different APIs.
  *   <ol>
  *     <li>When to perform an action (always, on success only, or on failure only).</li>
  *     <li>Whether or not to propagate the successful result or error on completion or transform or
- *     recover the result</li>
- *     <li>Handle a transformed result that returns the result of another asynchronous action</li>
+ *     recover the result.</li>
+ *     <li>Handle a transformed result that returns the result of another asynchronous action.</li>
  *   </ol>
  * </p>
  *
  * <p>
- * This set of operations led us to the following results:
+ * This set of operations led to the following results:
  *   <table>
  *     <tr>
  *       <th colspan="4">Listenable Future</th>
@@ -93,24 +93,56 @@ import com.jive.myco.commons.function.ExceptionalFunction;
  * </p>
  *
  * <p>
- *   {@link ListenableFuture} is missing a lot of operations and also does not actually provide the
- *   ability to chain handling one after the other, you must go use the extension class
- *   {@link Futures}.
+ *   {@link ListenableFuture} is missing a lot of the desired operations and also does not provide
+ *   the ability to chain actions in a fluent pattern.  Chaining must be performed in a verbose
+ *   manner via the extension class {@link Futures}.
  * </p>
  *
  * <p>
- *   {@link CompletableFuture} was close but still did not provide all the operations we want to
- *   handle. There are also issues with the functional interfaces in Java 8 that do not allow you
- *   to throw checked exceptions from the method. While it is generally not the best idea to be
- *   throwing checked exceptions within an asynchronous chain, it is easy to acknowledge that these
- *   types of errors can happen and we should just be prepared to handle the exceptional result.
+ *   {@link CompletableFuture} meets many of the identified concerns but still did not provide all
+ *   of the desired  capabilities.  There are also issues with the functional interfaces in Java 8
+ *   not allow for checked exceptions. While it is generally not the best idea to throw checked
+ *   exceptions within an asynchronous chain, it is easy to acknowledge that these types of errors
+ *   can happen and a library should be prepared to handle the exceptional result.
  * </p>
  *
  * <p>
- *   Since neither of these tools gave us all of what we wanted, we decided to come up with our own.
- *   While {@link ListenableFuture} is not nearly as close to what we want with regard to all these
- *   operations, it was the easiest and cleanest to get started with and add the exact functionality
- *   that we needed.
+ *   Since neither of these existing tools provides the full set of desired capabilities, this
+ *   interface was developed to fill the gap. While {@link ListenableFuture} is not nearly as close
+ *   to the desired set of capabilities, it is the easiest and cleanest base upon which to build the
+ *   desired capabilities.
+ * </p>
+ *
+ * This interface provides the following capabilities.
+ * <table>
+ *     <tr>
+ *       <th colspan="4">Pnky Promise</th>
+ *     </tr>
+ *     <tr>
+ *       <td></td>
+ *       <td>Always invoke</td>
+ *       <td>Invoke on success only</td>
+ *       <td>Invoke on failure only</td>
+ *     </tr>
+ *     <tr>
+ *       <td>Propagate result</td>
+ *       <td>Yes - alwaysAccept</td>
+ *       <td>Yes - thenAccept</td>
+ *       <td>Yes - onFailure</td>
+ *     </tr>
+ *     <tr>
+ *       <td>Transform/recover result</td>
+ *       <td>Yes - alwaysTransform</td>
+ *       <td>Yes - thenTransform</td>
+ *       <td>Yes - withFallback</td>
+ *     </tr>
+ *     <tr>
+ *       <td>Transform/recover with new future</td>
+ *       <td>Yes - alwaysCompose</td>
+ *       <td>Yes - thenCompose</td>
+ *       <td>Yes - composeFallback</td>
+ *     </tr>
+ *   </table>
  * </p>
  *
  * @author Brandon Pedersen &lt;bpedersen@getjive.com&gt;
@@ -119,371 +151,459 @@ import com.jive.myco.commons.function.ExceptionalFunction;
 public interface PnkyPromise<V> extends ListenableFuture<V>
 {
   /**
-   * Provide operations to perform with a successful or failed condition. Since these operations do
-   * not return a result, the existing result will be propagated unless one of the operations throws
-   * an exception in which case a failed promise will be propagated with that error.
+   * Creates a new {@link PnkyPromise future} that performs an operation when this future completes,
+   * executing the operation on the thread that completes this future. The returned future completes
+   * after executing the operation with the same completion state as this future, except when the
+   * operation throws an exception. In this case, the returned future completes exceptionally with
+   * the thrown exception.
    *
    * @param onSuccess
-   *          operation to perform with a successful result
+   *          operation to supply with the result of this future when this future completes
+   *          successfully
    * @param onFailure
-   *          operation to perform when there is a failure
-   * @return a new promise
+   *          operation to supply with the failure cause when this future completes exceptionally
+   *
+   * @return a new {@link PnkyPromise future}
    */
-  PnkyPromise<V> alwaysAccept(ExceptionalConsumer<? super V> onSuccess,
-      ExceptionalConsumer<Throwable> onFailure);
+  PnkyPromise<V> alwaysAccept(final ExceptionalConsumer<? super V> onSuccess,
+      final ExceptionalConsumer<Throwable> onFailure);
 
   /**
-   * Provide operations to perform with a successful or failed condition, executing the operations
-   * on the provided executor. Since these operations do not return a result, the existing result
-   * will be propagated unless one of the operations throws an exception in which case a failed
-   * promise will be propagated with that error.
+   * Creates a new {@link PnkyPromise future} that performs an operation when this future completes,
+   * executing the operation on the provided executor. The returned future completes after executing
+   * the operation with the same completion state as this future, except when the operation throws
+   * an exception. In this case, the returned future completes exceptionally with the thrown
+   * exception.
    *
    * @param onSuccess
-   *          operation to perform with a successful result
+   *          operation to supply with the result of this future when this future completes
+   *          successfully
    * @param onFailure
-   *          operation to perform when there is a failure
+   *          operation to supply with the failure cause when this future completes exceptionally
    * @param executor
-   *          the executor to use for asynchronous processing of the operations
-   * @return a new promise
-   */
-  PnkyPromise<V> alwaysAccept(ExceptionalConsumer<? super V> onSuccess,
-      ExceptionalConsumer<Throwable> onFailure, Executor executor);
-
-  /**
-   * Provide functions to transform the given result on success or recover with a valid result on
-   * failure. A failed promise will be propagated if either of the functions throw an exception.
+   *          the executor used to execute the supplied operation and complete the returned future
    *
-   * @param <O>
-   *          type of transformed result
-   * @param onSuccess
-   *          function used to transform a successful result on completion
-   * @param onFailure
-   *          function used to potentially recover from a failure
-   * @return a new promise
+   * @return a new {@link PnkyPromise future}
    */
-  <O> PnkyPromise<O> alwaysTransform(ExceptionalFunction<? super V, O> onSuccess,
-      ExceptionalFunction<Throwable, O> onFailure);
+  PnkyPromise<V> alwaysAccept(final ExceptionalConsumer<? super V> onSuccess,
+      final ExceptionalConsumer<Throwable> onFailure, final Executor executor);
 
   /**
-   * Provide functions to transform the given result on success or recover with a valid result on
-   * failure, executing the function on the provided executor. A failed promise will be propagated
-   * if either of the functions throw an exception.
-   *
-   * @param <O>
-   *          type of transformed result
-   * @param onSuccess
-   *          function used to transform a successful result on completion
-   * @param onFailure
-   *          function used to potentially recover from a failure
-   * @param executor
-   *          the executor to use for asynchronous processing of the function
-   * @return a new promise
-   */
-  <O> PnkyPromise<O> alwaysTransform(ExceptionalFunction<? super V, O> onSuccess,
-      ExceptionalFunction<Throwable, O> onFailure, Executor executor);
-
-  /**
-   * Provide functions that will return a new promise on success or recover with a new promise on
-   * failure. The returned promise will be completed only when the promise returned from the
-   * function is complete. A failed promise will be propagated if either of the functions throw an
+   * Creates a new {@link PnkyPromise future} that completes via a supplied function after this
+   * future completes, executing the function on the thread that completes this future. The returned
+   * future completes with the result of executing the supplied function, except when the function
+   * throws an exception. In this case, the returned future completes exceptionally with the thrown
    * exception.
    *
    * @param <O>
-   *          type of transformed result from the returned promise
+   *          type of the result
    * @param onSuccess
-   *          function to use to transform a successful result on completion
+   *          the function to supply with the result of this future when this future completes
+   *          successfully
    * @param onFailure
-   *          function to use to potentially recover from a failure
-   * @return a new promise that is completed when the promise from the function completes
+   *          the function to supply with the failure cause when this future completes exceptionally
+   *
+   * @return a new {@link PnkyPromise future}
    */
-  <O> PnkyPromise<O> alwaysCompose(ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess,
-      ExceptionalFunction<Throwable, PnkyPromise<O>> onFailure);
+  <O> PnkyPromise<O> alwaysTransform(final ExceptionalFunction<? super V, O> onSuccess,
+      final ExceptionalFunction<Throwable, O> onFailure);
 
   /**
-   * Provide functions that will return a new promise on success or recover with a new promise on
-   * failure, executing the function on the provided executor. The returned promise will be
-   * completed only when the promise returned from the function is complete. A failed promise will
-   * be propagated if either of the functions throw an exception.
+   * Creates a new {@link PnkyPromise future} that completes via a supplied function after this
+   * future completes, executing the function on the provided executor. The returned future
+   * completes with the result of executing the supplied function, except when the function throws
+   * an exception. In this case, the returned future completes exceptionally with the thrown
+   * exception.
    *
    * @param <O>
-   *          type of transformed result from the returned promise
+   *          type of the result
    * @param onSuccess
-   *          function to use to transform a successful result on completion
+   *          the function to supply with the result of this future when this future completes
+   *          successfully
    * @param onFailure
-   *          function to use to potentially recover from a failure
+   *          the function to supply with the failure cause when this future completes exceptionally
    * @param executor
-   *          the executor to use for asynchronous processing of the function
-   * @return a new promise that is completed when the promise from the function completes
-   */
-  <O> PnkyPromise<O> alwaysCompose(ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess,
-      ExceptionalFunction<Throwable, PnkyPromise<O>> onFailure, Executor executor);
-
-  /**
-   * Provide an operation to perform with a successful or failed condition. The function will
-   * receive arguments for both values. If the promise has failed, the {@code Throwable} will be a
-   * non-null value. Since this operation does not return a result, the existing result will be
-   * propagated unless the operation throws an exception in which case a failed promise will be
-   * propagated with that error.
+   *          the executor used to execute the supplied function and complete the returned future
    *
-   * @param handler
-   *          operation to perform with the successful result or error on completion
-   * @return a new promise
+   * @return a new {@link PnkyPromise future}
    */
-  PnkyPromise<V> alwaysAccept(ExceptionalBiConsumer<? super V, Throwable> handler);
+  <O> PnkyPromise<O> alwaysTransform(final ExceptionalFunction<? super V, O> onSuccess,
+      final ExceptionalFunction<Throwable, O> onFailure, final Executor executor);
 
   /**
-   * Provide an operation to perform with a successful or failed condition, executing the operation
-   * on the provided executor. The function will receive arguments for both values. If the promise
-   * has failed, the {@code Throwable} will be a non-null value. Since this operation does not
-   * return a result, the existing result will be propagated unless the operation throws an
-   * exception in which case a failed promise will be propagated with that error.
-   *
-   * @param handler
-   *          operation to perform with the successful result or error on completion
-   * @param executor
-   *          the executor to use for asynchronous processing of the operation
-   * @return a new promise
-   */
-  PnkyPromise<V> alwaysAccept(ExceptionalBiConsumer<? super V, Throwable> handler, Executor executor);
-
-  /**
-   * Provide a function to transform the given result on success or recover with a valid result on
-   * failure. The function will receive arguments for both values. If the promise has failed, the
-   * {@code Throwable} will be a non-null value. A failed promise will be propagated if the function
-   * throws an exception.
+   * Creates a new {@link PnkyPromise future} that completes via the future returned by a supplied
+   * function after this future completes, executing the function on the thread that completes this
+   * future. The returned future completes with the result of the future returned by the supplied
+   * function, except when the function throws an exception. In this case, the returned future
+   * completes exceptionally with the thrown exception. The completion of the returned future is
+   * performed on the thread that completes the future returned by the supplied function.
    *
    * @param <O>
-   *          type of transformed result
-   * @param handler
-   *          function used to transform the successful or failed result on completion
-   * @return a new promise
+   *          type of the result
+   * @param onSuccess
+   *          the function to supply with the result of this future when this future completes
+   *          successfully
+   * @param onFailure
+   *          the function to supply with the failure cause when this future completes exceptionally
+   *
+   * @return a new {@link PnkyPromise future}
    */
-  <O> PnkyPromise<O> alwaysTransform(ExceptionalBiFunction<? super V, Throwable, O> handler);
+  <O> PnkyPromise<O> alwaysCompose(final ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess,
+      final ExceptionalFunction<Throwable, PnkyPromise<O>> onFailure);
 
   /**
-   * Provide a function to transform the given result on success or recover with a valid result on
-   * failure, executing the function on the provided executor. The function will receive arguments
-   * for both values. If the promise has failed, the {@code Throwable} will be a non-null value. A
-   * failed promise will be propagated if the function throws an exception.
+   * Creates a new {@link PnkyPromise future} that completes via the future returned by a supplied
+   * function after this future completes, executing the function on the supplied executor. The
+   * returned future completes with the result of the future returned by the supplied function,
+   * except when the function throws an exception. In this case, the returned future completes
+   * exceptionally with the thrown exception. The completion of the returned future is performed on
+   * the thread that completes the future returned by the supplied function.
    *
    * @param <O>
-   *          type of transformed result
-   * @param handler
-   *          function used to transform the successful or failed result on completion
+   *          type of the result
+   * @param onSuccess
+   *          the function to supply with the result of this future when this future completes
+   *          successfully
+   * @param onFailure
+   *          the function to supply with the failure cause when this future completes exceptionally
    * @param executor
-   *          the executor to use for asynchronous processing of the function
-   * @return a new promise
+   *          the executor used to execute the supplied function
+   *
+   * @return a new {@link PnkyPromise future}
    */
-  <O> PnkyPromise<O> alwaysTransform(ExceptionalBiFunction<? super V, Throwable, O> handler,
-      Executor executor);
+  <O> PnkyPromise<O> alwaysCompose(final ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess,
+      final ExceptionalFunction<Throwable, PnkyPromise<O>> onFailure, final Executor executor);
 
   /**
-   * Provide a function that will return a new promise on success or recover with a new promise on
-   * failure. The function will receive arguments for both values. If the promise has failed, the
-   * {@code Throwable} will be a non-null value. The returned promise will be completed only when
-   * the promise returned from the function is complete. A failed promise will be propagated if the
-   * function throws an exception.
+   * Creates a new {@link PnkyPromise future} that performs an operation when this future completes,
+   * executing the operation on the thread that completes this future. The returned future completes
+   * after executing the operation with the same completion state as this future, except when the
+   * operation throws an exception. In this case, the returned future completes exceptionally with
+   * the thrown exception.
+   *
+   * @param operation
+   *          operation to supply with the result of this future when this future completes
+   *
+   * @return a new {@link PnkyPromise future}
+   */
+  PnkyPromise<V> alwaysAccept(final ExceptionalBiConsumer<? super V, Throwable> operation);
+
+  /**
+   * Creates a new {@link PnkyPromise future} that performs an operation when this future completes,
+   * executing the operation on the supplied executor. The returned future completes after executing
+   * the operation with the same completion state as this future, except when the operation throws
+   * an exception. In this case, the returned future completes exceptionally with the thrown
+   * exception.
+   *
+   * @param operation
+   *          operation to supply with the result of this future when this future completes
+   *
+   * @return a new {@link PnkyPromise future}
+   */
+  PnkyPromise<V> alwaysAccept(final ExceptionalBiConsumer<? super V, Throwable> operation,
+      final Executor executor);
+
+  /**
+   * Creates a new {@link PnkyPromise future} that completes via a supplied function after this
+   * future completes, executing the function on the thread that completes this future. The returned
+   * future completes with the result of executing the supplied function, except when the function
+   * throws an exception. In this case, the returned future completes exceptionally with the thrown
+   * exception.
    *
    * @param <O>
-   *          type of transformed result from the returned promise
-   * @param handler
-   *          function to use to transform a successful or failed result on completion
-   * @return a new promise that is completed when the promise from the function completes
+   *          type of the result
+   * @param function
+   *          the function to supply with the result of this future
+   *
+   * @return a new {@link PnkyPromise future}
+   */
+  <O> PnkyPromise<O> alwaysTransform(final ExceptionalBiFunction<? super V, Throwable, O> function);
+
+  /**
+   * Creates a new {@link PnkyPromise future} that completes via a supplied function after this
+   * future completes, executing the function on the thread that completes this future. The returned
+   * future completes with the result of executing the supplied function, except when the function
+   * throws an exception. In this case, the returned future completes exceptionally with the thrown
+   * exception.
+   *
+   * @param <O>
+   *          type of the result
+   * @param function
+   *          the function to supply with the result of this future
+   * @param executor
+   *          the executor used to execute the supplied function and complete the returned future
+   *
+   * @return a new {@link PnkyPromise future}
+   */
+  <O> PnkyPromise<O> alwaysTransform(final ExceptionalBiFunction<? super V, Throwable, O> function,
+      final Executor executor);
+
+  /**
+   * Creates a new {@link PnkyPromise future} that completes via the future returned by a supplied
+   * function after this future completes, executing the function on the thread that completes this
+   * future. The returned future completes with the result of the future returned by the supplied
+   * function, except when the function throws an exception. In this case, the returned future
+   * completes exceptionally with the thrown exception. The completion of the returned future is
+   * performed on the thread that completes the future returned by the supplied function.
+   *
+   * @param <O>
+   *          type of the result
+   * @param function
+   *          the function to supply with the result of this future
+   *
+   * @return a new {@link PnkyPromise future}
    */
   <O> PnkyPromise<O> alwaysCompose(
-      ExceptionalBiFunction<? super V, Throwable, PnkyPromise<O>> handler);
+      final ExceptionalBiFunction<? super V, Throwable, PnkyPromise<O>> function);
 
   /**
-   * Provide a function that will return a new promise on success or recover with a new promise on
-   * failure, executing the function on the provided executor. The function will receive arguments
-   * for both values. If the promise has failed, the {@code Throwable} will be a non-null value. The
-   * returned promise will be completed only when the promise returned from the function is
-   * complete. A failed promise will be propagated if the function throws an exception.
+   * Creates a new {@link PnkyPromise future} that completes via the future returned by a supplied
+   * function after this future completes, executing the function on the supplied executor. The
+   * returned future completes with the result of the future returned by the supplied function,
+   * except when the function throws an exception. In this case, the returned future completes
+   * exceptionally with the thrown exception. The completion of the returned future is performed on
+   * the thread that completes the future returned by the supplied function.
    *
    * @param <O>
-   *          type of transformed result from the returned promise
-   * @param handler
-   *          function to use to transform a successful or failed result on completion
+   *          type of the result
+   * @param function
+   *          the function to supply with the result of this future
    * @param executor
-   *          the executor to use for asynchronous processing of the function
-   * @return a new promise that is completed when the promise from the function completes
+   *          the executor used to execute the supplied function
+   *
+   * @return a new {@link PnkyPromise future}
    */
   <O> PnkyPromise<O> alwaysCompose(
-      ExceptionalBiFunction<? super V, Throwable, PnkyPromise<O>> handler,
-      Executor executor);
+      final ExceptionalBiFunction<? super V, Throwable, PnkyPromise<O>> function,
+      final Executor executor);
 
   /**
-   * Provide an operation to perform with a successful result. If this promise has failed, that
-   * failure will be propagated and the given operation will not be invoked. Since this operation
-   * does not return a result, the existing result will be propagated (either success or failure)
-   * unless the operation throws an exception in which case a failed promise will be propagated with
-   * that error.
+   * Creates a new {@link PnkyPromise future} that performs an operation when this future completes
+   * successfully, executing the operation on the thread that completes this future. The returned
+   * future completes, after executing the operation in the case of a successful completion, with
+   * the same completion state as this future, except when the operation throws an exception. In
+   * this case, the returned future completes exceptionally with the thrown exception.
    *
    * @param onSuccess
-   *          operation to perform with the successful result
-   * @return a new promise
+   *          operation to supply with the result of this future when this future completes
+   *          successfully
+   *
+   * @return a new {@link PnkyPromise future}
    */
-  PnkyPromise<V> thenAccept(ExceptionalConsumer<? super V> onSuccess);
+  PnkyPromise<V> thenAccept(final ExceptionalConsumer<? super V> onSuccess);
 
   /**
-   * Provide an operation to perform with a successful result, executing the opertation on the
-   * provided executor. If this promise has failed, that failure will be propagated and the given
-   * operation will not be invoked. Since this operation does not return a result, the existing
-   * result will be propagated unless the operation throws an exception in which case a failed
-   * promise will be propagated with that error.
+   * Creates a new {@link PnkyPromise future} that performs an operation when this future completes
+   * successfully, executing the operation on the supplied executor. The returned future completes,
+   * after executing the operation in the case of a successful completion of this future, with the
+   * same completion state as this future, except when the operation throws an exception. In this
+   * case, the returned future completes exceptionally with the thrown exception.
    *
    * @param onSuccess
-   *          operation to perform with the successful result
+   *          operation to supply with the result of this future when this future completes
+   *          successfully
    * @param executor
-   *          the executor to use for asynchronous processing of the operation
-   * @return a new promise
+   *          the executor used to execute the supplied operation and complete the returned future
+   *
+   * @return a new {@link PnkyPromise future}
    */
-  PnkyPromise<V> thenAccept(ExceptionalConsumer<? super V> onSuccess, Executor executor);
+  PnkyPromise<V> thenAccept(final ExceptionalConsumer<? super V> onSuccess, final Executor executor);
 
   /**
-   * Provide a function to transform the given result on success. If this promise has failed, that
-   * failure will be propagated and the given function will not be invoked. A failed promise will be
-   * propagated if the function throws an exception.
+   * Creates a new {@link PnkyPromise future} that completes via a supplied function when this
+   * future completes successfully, executing the function on the thread that completes this future.
+   * The returned future completes with the result of executing the supplied function in the case of
+   * a successful completion of this future, except when the function throws an exception. In this
+   * case, the returned future completes exceptionally with the thrown exception. If this future
+   * completes exceptionally, the returned future completes exceptionally with the same cause as
+   * this future.
    *
    * @param <O>
-   *          type of transformed result
+   *          type of the result
    * @param onSuccess
-   *          function used to transform the successful result on completion
-   * @return a new promise
+   *          the function to supply with the result of this future when this future completes
+   *          successfully
+   *
+   * @return a new {@link PnkyPromise future}
    */
-  <O> PnkyPromise<O> thenTransform(ExceptionalFunction<? super V, O> onSuccess);
+  <O> PnkyPromise<O> thenTransform(final ExceptionalFunction<? super V, O> onSuccess);
 
   /**
-   * Provide a function to transform the given result on success, executing the function on the
-   * provided executor. If this promise has failed, that failure will be propagated and the given
-   * function will not be invoked. A failed promise will be propagated if the function throws an
-   * exception.
+   * Creates a new {@link PnkyPromise future} that completes via a supplied function when this
+   * future completes successfully, executing the function on the supplied executor. The returned
+   * future completes with the result of executing the supplied function in the case of a successful
+   * completion of this future, except when the function throws an exception. In this case, the
+   * returned future completes exceptionally with the thrown exception. If this future completes
+   * exceptionally, the returned future completes exceptionally with the same cause as this future.
    *
    * @param <O>
-   *          type of transformed result
+   *          type of the result
    * @param onSuccess
-   *          function used to transform the successful result on completion
+   *          the function to supply with the result of this future when this future completes
+   *          successfully
    * @param executor
-   *          the executor to use for asynchronous processing of the function
-   * @return a new promise
+   *          the executor used to execute the supplied operation and complete the returned future
+   *
+   * @return a new {@link PnkyPromise future}
    */
-  <O> PnkyPromise<O> thenTransform(ExceptionalFunction<? super V, O> onSuccess, Executor executor);
+  <O> PnkyPromise<O> thenTransform(final ExceptionalFunction<? super V, O> onSuccess,
+      final Executor executor);
 
   /**
-   * Provide a function that will return a new promise on success. If this promise has failed, that
-   * failure will be propagated and the given function will not be invoked. The returned promise
-   * will be completed only when the promise returned from the function is complete or if it is
-   * propagating the failure. A failed promise will be propagated if the function throws an
-   * exception.
+   * Creates a new {@link PnkyPromise future} that completes via the future returned by a supplied
+   * function after this future completes successfully, executing the function on the thread that
+   * completes this future. The returned future completes with the result of the future returned by
+   * the supplied function in the case of a successful completion of this future, except when the
+   * function throws an exception. In this case, the returned future completes exceptionally with
+   * the thrown exception. The completion of the returned future is performed on the thread that
+   * completes the future returned by the supplied function. If this future completes exceptionally,
+   * the returned future completes exceptionally with the same cause as this future.
    *
    * @param <O>
-   *          type of transformed result from the returned promise
-   * @param onSuccess
-   *          function to use to transform the successful result on completion
-   * @return a new promise that is completed when the promise from the function completes
+   *          type of the result
+   * @param function
+   *          the function to supply with the result of this future
+   *
+   * @return a new {@link PnkyPromise future}
    */
-  <O> PnkyPromise<O> thenCompose(ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess);
+  <O> PnkyPromise<O> thenCompose(final ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess);
 
   /**
-   * Provide a function that will return a new promise on success, executing the function on the
-   * provided executor. If this promise has failed, that failure will be propagated and the given
-   * function will not be invoked. The returned promise will be completed only when the promise
-   * returned from the function is complete or if it is propagating the failure. A failed promise
-   * will be propagated if the function throws an exception.
+   * Creates a new {@link PnkyPromise future} that completes via the future returned by a supplied
+   * function after this future completes successfully, executing the function on the supplied
+   * executor. The returned future completes with the result of the future returned by the supplied
+   * function in the case of a successful completion of this future, except when the function throws
+   * an exception. In this case, the returned future completes exceptionally with the thrown
+   * exception. The completion of the returned future is performed on the thread that completes the
+   * future returned by the supplied function. If this future completes exceptionally, the returned
+   * future completes exceptionally with the same cause as this future.
    *
    * @param <O>
-   *          type of transformed result from the returned promise
+   *          type of the result
+   * @param function
+   *          the function to supply with the result of this future
+   * @param executor
+   *          the executor used to execute the supplied function
+   *
+   * @return a new {@link PnkyPromise future}
+   */
+  <O> PnkyPromise<O> thenCompose(final ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess,
+      final Executor executor);
+
+  /**
+   * Creates a new {@link PnkyPromise future} that performs an operation when this future completes
+   * exceptionally, executing the operation on the thread that completes this future. The returned
+   * future completes, after executing the operation in the case of an exceptional completion of
+   * this future, with the same completion state as this future, except when the operation throws an
+   * exception. In this case, the returned future completes exceptionally with the thrown exception.
+   *
+   * @param onFailure
+   *          operation to supply with the cause of the completion of this future when this future
+   *          completes exceptionally
+   *
+   * @return a new {@link PnkyPromise future}
+   */
+  PnkyPromise<V> onFailure(final ExceptionalConsumer<Throwable> onFailure);
+
+  /**
+   * Creates a new {@link PnkyPromise future} that performs an operation when this future completes
+   * exceptionally, executing the operation on the supplied executor. The returned future completes,
+   * after executing the operation in the case of an exceptional completion of this future, with the
+   * same completion state as this future, except when the operation throws an exception. In this
+   * case, the returned future completes exceptionally with the thrown exception.
+   *
+   * @param onFailure
+   *          operation to supply with the cause of the completion of this future when this future
+   *          completes exceptionally
+   * @param executor
+   *          the executor used to execute the supplied operation and complete the returned future
+   *
+   * @return a new {@link PnkyPromise future}
+   */
+  PnkyPromise<V> onFailure(final ExceptionalConsumer<Throwable> onFailure, final Executor executor);
+
+  /**
+   * Creates a new {@link PnkyPromise future} that completes via a supplied function when this
+   * future completes exceptionally, executing the function on the thread that completes this
+   * future. The returned future completes with the result of executing the supplied function in the
+   * case of an exceptional completion of this future, except when the function throws an exception.
+   * In this case, the returned future completes exceptionally with the thrown exception. If this
+   * future completes successfully, the returned future completes successfully with the same result
+   * as this future.
+   * <p>
+   * This operation provides a mechanism to recover from a failure by supplying an alternate valid
+   * result.
+   *
    * @param onSuccess
-   *          function to use to transform the successful result on completion
+   *          the function to supply with the result of this future when this future completes
+   *          successfully
+   *
+   * @return a new {@link PnkyPromise future}
+   */
+  PnkyPromise<V> withFallback(final ExceptionalFunction<Throwable, V> onFailure);
+
+  /**
+   * Creates a new {@link PnkyPromise future} that completes via a supplied function when this
+   * future completes exceptionally, executing the function on the supplied executor. The returned
+   * future completes with the result of executing the supplied function in the case of an
+   * exceptional completion of this future, except when the function throws an exception. In this
+   * case, the returned future completes exceptionally with the thrown exception. If this future
+   * completes successfully, the returned future completes successfully with the same result as this
+   * future.
+   * <p>
+   * This operation provides a mechanism to recover from a failure by supplying an alternate valid
+   * result.
+   *
+   * @param onSuccess
+   *          the function to supply with the result of this future when this future completes
+   *          successfully
+   *
+   * @return a new {@link PnkyPromise future}
+   */
+  PnkyPromise<V> withFallback(final ExceptionalFunction<Throwable, V> onFailure,
+      final Executor executor);
+
+  /**
+   * Creates a new {@link PnkyPromise future} that completes via the future returned by a supplied
+   * function after this future completes exceptionally, executing the function on the thread that
+   * completes this future. The returned future completes with the result of the future returned by
+   * the supplied function in the case of an exceptional completion of this future, except when the
+   * function throws an exception. In this case, the returned future completes exceptionally with
+   * the thrown exception. The completion of the returned future is performed on the thread that
+   * completes the future returned by the supplied function. If this future completes successfully,
+   * the returned future completes successfully with the same result as this future.
+   * <p>
+   * This operation provides a mechanism to recover from a failure by supplying an alternate valid
+   * result.
+   *
+   * @param function
+   *          the function to supply with the result of this future
+   *
+   * @return a new {@link PnkyPromise future}
+   */
+  PnkyPromise<V> composeFallback(final ExceptionalFunction<Throwable, PnkyPromise<V>> onFailure);
+
+  /**
+   * Creates a new {@link PnkyPromise future} that completes via the future returned by a supplied
+   * function after this future completes exceptionally, executing the function on the supplied
+   * executor. The returned future completes with the result of the future returned by the supplied
+   * function in the case of an exceptional completion of this future, except when the function
+   * throws an exception. In this case, the returned future completes exceptionally with the thrown
+   * exception. The completion of the returned future is performed on the thread that completes the
+   * future returned by the supplied function. If this future completes successfully, the returned
+   * future completes successfully with the same result as this future.
+   * <p>
+   * This operation provides a mechanism to recover from a failure by supplying an alternate valid
+   * result.
+   *
+   * @param function
+   *          the function to supply with the result of this future
    * @param executor
-   *          the executor to use for asynchronous processing of the function
-   * @return a new promise that is completed when the promise from the function completes
-   */
-  <O> PnkyPromise<O> thenCompose(ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess,
-      Executor executor);
-
-  /**
-   * Provide an operation to perform on a failed result. If this promise has completed successfully,
-   * that result will be propagated and the given operation will not be invoked. Since this
-   * operation does not return a result, the existing result will be propagated (either success or
-   * failure) unless the operation throws an exception in which case a failed promise will be
-   * propagated with that error.
+   *          the executor used to execute the supplied function
    *
-   * @param onFailure
-   *          operation to perform with the failed result
-   * @return a new promise
-   */
-  PnkyPromise<V> onFailure(ExceptionalConsumer<Throwable> onFailure);
-
-  /**
-   * Provide an operation to perform on a failed result, executing the operation on the provided
-   * executor. If this promise has completed successfully, that result will be propagated and the
-   * given operation will not be invoked. Since this operation does not return a result, the
-   * existing result will be propagated (either success or failure) unless the operation throws an
-   * exception in which case a failed promise will be propagated with that error.
-   *
-   * @param onFailure
-   *          operation to perform with the failed result
-   * @param executor
-   *          the executor to use for asynchronous processing of the operation
-   * @return a new promise
-   */
-  PnkyPromise<V> onFailure(ExceptionalConsumer<Throwable> onFailure, Executor executor);
-
-  /**
-   * Provide a function to recover from a failure with a valid result. If this promise has completed
-   * successfully, that result will be propagated and the given operation will not be invoked. A
-   * failed promise will be propagated if the function throws an exception.
-   *
-   * @param onFailure
-   *          function used to recover from a failed condition with a valid result
-   * @return a new promise
-   */
-  PnkyPromise<V> withFallback(ExceptionalFunction<Throwable, V> onFailure);
-
-  /**
-   * Provide a function to recover from a failure with a valid result, executing the function on the
-   * provided executor. If this promise has completed successfully, that result will be propagated
-   * and the given operation will not be invoked. A failed promise will be propagated if the
-   * function throws an exception.
-   *
-   * @param onFailure
-   *          function used to recover from a failed condition with a valid result
-   * @param executor
-   *          the executor to use for asynchronous processing of the function
-   * @return a new promise
-   */
-  PnkyPromise<V> withFallback(ExceptionalFunction<Throwable, V> onFailure,
-      Executor executor);
-
-  /**
-   * Provide a function to recover from a failure with a new promise that will return a valid
-   * result. If this promise has completed successfully, that result will be propagated and the
-   * given operation will not be invoked. The returned promise will be completed only when the
-   * promise returned from the function is complete or if it is propagating the successful result. A
-   * failed promise will be propagated if the function throws an exception.
-   *
-   * @param onFailure
-   *          function to use to recover from a failed condition with a new promise
-   * @return a new promise that is completed when the promise from the function completes
-   */
-  PnkyPromise<V> composeFallback(ExceptionalFunction<Throwable, PnkyPromise<V>> onFailure);
-
-  /**
-   * Provide a function to recover from a failure with a new promise that will return a valid
-   * result, executing the function on the provided executor. If this promise has completed
-   * successfully, that result will be propagated and the given operation will not be invoked. The
-   * returned promise will be completed only when the promise returned from the function is complete
-   * or if it is propagating the successful result. A failed promise will be propagated if the
-   * function throws an exception.
-   *
-   * @param onFailure
-   *          function to use to recover from a failed condition with a new promise
-   * @param executor
-   *          the executor to use for asynchronous processing of the function
-   * @return a new promise that is completed when the promise from the function completes
+   * @return a new {@link PnkyPromise future}
    */
   PnkyPromise<V> composeFallback(
-      ExceptionalFunction<Throwable, PnkyPromise<V>> onFailure,
-      Executor executor);
+      final ExceptionalFunction<Throwable, PnkyPromise<V>> onFailure,
+      final Executor executor);
 }
