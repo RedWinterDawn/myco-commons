@@ -37,13 +37,13 @@ public class DefaultMetricsManagerTest
       // Expected
     }
 
-    manager.init().get(50, TimeUnit.MILLISECONDS);
+    manager.init().get(100, TimeUnit.MILLISECONDS);
 
     assertEquals(LifecycleStage.INITIALIZED, manager.getLifecycleStage());
 
     manager.segment().getCounter("blah");
 
-    manager.destroy().get(50, TimeUnit.MILLISECONDS);
+    manager.destroy().get(100, TimeUnit.MILLISECONDS);
 
     assertEquals(LifecycleStage.DESTROYED, manager.getLifecycleStage());
 
