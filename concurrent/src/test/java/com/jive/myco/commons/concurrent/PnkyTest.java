@@ -3,9 +3,15 @@ package com.jive.myco.commons.concurrent;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.util.concurrent.MoreExecutors;
@@ -15,6 +21,23 @@ import com.google.common.util.concurrent.MoreExecutors;
  */
 public class PnkyTest
 {
+  private ExecutorService executor;
+
+  @Before
+  public void setup()
+  {
+    // TODO should use a test executor here that can validate that the executor was used.
+
+    executor = Executors.newSingleThreadExecutor();
+
+  }
+
+  @After
+  public void teadown()
+  {
+    executor.shutdownNow();
+  }
+
   @Test
   public void testAlwaysPropagateBiConsumerSuccess() throws Exception
   {
@@ -190,4 +213,109 @@ public class PnkyTest
 
     assertEquals(0, badThings.get());
   }
+
+  @Test
+  public void testAcceptExceptionally() throws Exception
+  {
+    final PnkyPromise<Integer> future = Pnky.immediatelyComplete(-1);
+
+    final AtomicInteger value = new AtomicInteger();
+
+    future.thenAccept(value::set).get();
+
+    assertEquals(-1, value.get());
+
+    value.set(0);
+
+    future.thenAccept(value::set).get();
+
+    assertEquals(-1, value.get());
+
+    value.set(0);
+
+    future.thenAccept(value::set, executor).get();
+
+    assertEquals(-1, value.get());
+
+    value.set(0);
+
+    try
+    {
+      future
+          .thenAccept((result) ->
+          {
+            throw new TestException();
+          })
+          .get();
+
+      fail();
+    }
+    catch (final ExecutionException e)
+    {
+      assertEquals(TestException.class, e.getCause().getClass());
+    }
+
+    try
+    {
+      future
+          .thenAccept((result) ->
+          {
+            throw new TestException();
+          }, ForkJoinPool.commonPool())
+          .get();
+
+      fail();
+    }
+    catch (final ExecutionException e)
+    {
+      assertEquals(TestException.class, e.getCause().getClass());
+    }
+
+    try
+    {
+      future
+          .thenAccept((result) ->
+          {
+            throw new TestException();
+          }, executor)
+          .get();
+
+      fail();
+    }
+    catch (final ExecutionException e)
+    {
+      assertEquals(TestException.class, e.getCause().getClass());
+    }
+  }
+
+  @Test
+  public void testAccept() throws Exception
+  {
+    final PnkyPromise<Integer> future = Pnky.immediatelyComplete(-1);
+
+    final AtomicInteger value = new AtomicInteger();
+
+    future
+        .thenAccept(value::set)
+        .get();
+
+    assertEquals(-1, value.get());
+
+    value.set(0);
+
+    future
+        .thenAccept(value::set)
+        .get();
+
+    assertEquals(-1, value.get());
+
+    value.set(0);
+
+    future
+        .thenAccept(value::set, executor)
+        .get();
+
+    assertEquals(-1, value.get());
+  }
+
 }
