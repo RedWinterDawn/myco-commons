@@ -192,7 +192,11 @@ public abstract class AbstractLifecycled implements Lifecycled
    * @param callback
    *          callback to invoke when initialization is complete
    */
-  protected abstract void initInternal(Callback<Void> callback);
+  protected void initInternal(Callback<Void> callback)
+  {
+    throw new UnsupportedOperationException(
+        "You must implement either 'void initInternal(Callback)' or 'PnkyPromise initInternal()'");
+  }
 
   /**
    * Destroy this {@link Lifecycled} instance. This will be run on the {@link #lifecycleQueue} so
@@ -206,7 +210,11 @@ public abstract class AbstractLifecycled implements Lifecycled
    * @param callback
    *          callback to invoke when initialization is complete
    */
-  protected abstract void destroyInternal(Callback<Void> callback);
+  protected void destroyInternal(Callback<Void> callback)
+  {
+    throw new UnsupportedOperationException(
+        "You must implement either 'void destroyInternal(Callback)' or 'PnkyPromise destroyInternal()'");
+  }
 
   /**
    * Override this method to perform additional cleanup after a call to {@link #init} has failed.

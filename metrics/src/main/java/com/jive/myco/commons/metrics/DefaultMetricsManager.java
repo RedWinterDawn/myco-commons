@@ -166,18 +166,6 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
   }
 
   @Override
-  protected void initInternal(final Callback<Void> callback)
-  {
-    initInternal().alwaysAccept(callback::onSuccess, callback::onFailure);
-  }
-
-  @Override
-  protected void destroyInternal(final Callback<Void> callback)
-  {
-    destroyInternal().alwaysAccept(callback::onSuccess, callback::onFailure);
-  }
-
-  @Override
   protected PnkyPromise<Void> destroyInternal()
   {
     for (final Closeable reporter : reporters)
