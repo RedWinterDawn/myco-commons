@@ -16,7 +16,6 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.RatioGauge.Ratio;
 import com.codahale.metrics.Timer;
-import com.jive.myco.commons.callbacks.CallbackFuture;
 import com.jive.myco.commons.hawtdispatch.DefaultDispatchQueueBuilder;
 import com.jive.myco.commons.lifecycle.LifecycleStage;
 
@@ -38,17 +37,13 @@ public class DefaultMetricsManagerTest
       // Expected
     }
 
-    CallbackFuture<Void> callback = new CallbackFuture<>();
-    manager.init(callback);
-    callback.get(50, TimeUnit.MILLISECONDS);
+    manager.init().get(50, TimeUnit.MILLISECONDS);
 
     assertEquals(LifecycleStage.INITIALIZED, manager.getLifecycleStage());
 
     manager.segment().getCounter("blah");
 
-    callback = new CallbackFuture<>();
-    manager.destroy(callback);
-    callback.get(50, TimeUnit.MILLISECONDS);
+    manager.destroy().get(50, TimeUnit.MILLISECONDS);
 
     assertEquals(LifecycleStage.DESTROYED, manager.getLifecycleStage());
 
@@ -69,9 +64,7 @@ public class DefaultMetricsManagerTest
     final MetricsManager manager =
         createMetricsManager(MetricsManagerConfiguration.builder().build());
 
-    CallbackFuture<Void> callback = new CallbackFuture<>();
-    manager.init(callback);
-    callback.get(50, TimeUnit.MILLISECONDS);
+    manager.init().get(100, TimeUnit.MILLISECONDS);
 
     assertEquals(LifecycleStage.INITIALIZED, manager.getLifecycleStage());
 
@@ -224,9 +217,7 @@ public class DefaultMetricsManagerTest
     assertNotSame(baseMeter, baseContext.getMeter("meter"));
     assertNotSame(baseMeter2, baseContext.getMeter("meter", "2"));
 
-    callback = new CallbackFuture<>();
-    manager.destroy(callback);
-    callback.get(50, TimeUnit.MILLISECONDS);
+    manager.destroy().get(50, TimeUnit.MILLISECONDS);
 
     assertEquals(LifecycleStage.DESTROYED, manager.getLifecycleStage());
   }
@@ -237,9 +228,7 @@ public class DefaultMetricsManagerTest
     final MetricsManager manager =
         createMetricsManager(MetricsManagerConfiguration.builder().build());
 
-    final CallbackFuture<Void> callback = new CallbackFuture<>();
-    manager.init(callback);
-    callback.get(50, TimeUnit.MILLISECONDS);
+    manager.init().get(50, TimeUnit.MILLISECONDS);
 
     assertEquals(LifecycleStage.INITIALIZED, manager.getLifecycleStage());
 
