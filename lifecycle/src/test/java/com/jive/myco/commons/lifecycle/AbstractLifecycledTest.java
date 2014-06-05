@@ -16,7 +16,7 @@ import org.junit.Test;
 import org.mockito.Matchers;
 
 import com.jive.myco.commons.concurrent.PnkyPromise;
-import com.jive.myco.commons.hawtdispatch.SameThreadTestQueueBuilder;
+import com.jive.myco.commons.hawtdispatch.DefaultDispatchQueueBuilder;
 
 /**
  * @author Brandon Pedersen &lt;bpedersen@getjive.com&gt;
@@ -24,24 +24,10 @@ import com.jive.myco.commons.hawtdispatch.SameThreadTestQueueBuilder;
 @Slf4j
 public class AbstractLifecycledTest
 {
-  private DispatchQueue testQueue = SameThreadTestQueueBuilder.getTestQueue("lifecycle");
+  private DispatchQueue testQueue = spy(DefaultDispatchQueueBuilder.getDefaultBuilder().build());
 
   @Test
   public void testStageSetAfterSuccess() throws Exception
-  {
-    simpleInitTest();
-    verify(testQueue).execute(Matchers.any(Runnable.class));
-  }
-
-  @Test
-  public void testDontQueueIfAlreadyOnQueue() throws Exception
-  {
-    when(testQueue.isExecuting()).thenReturn(true);
-    simpleInitTest();
-    verify(testQueue, never()).execute(Matchers.any(Runnable.class));
-  }
-
-  private void simpleInitTest() throws Exception
   {
     Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
@@ -62,6 +48,7 @@ public class AbstractLifecycledTest
 
     assertEquals(LifecycleStage.INITIALIZED, testInstance.getLifecycleStage());
     assertFalse(testQueue.isSuspended());
+    verify(testQueue).execute(Matchers.any(Runnable.class));
   }
 
   @Test
@@ -276,7 +263,7 @@ public class AbstractLifecycledTest
 
     try
     {
-      testInstance.init().get(50, TimeUnit.MILLISECONDS);
+      testInstance.init().get(200, TimeUnit.MILLISECONDS);
       fail();
     }
     catch (ExecutionException e)

@@ -12,7 +12,6 @@ import org.fusesource.hawtdispatch.DispatchQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.util.concurrent.MoreExecutors;
 import com.jive.myco.commons.callbacks.Callback;
 import com.jive.myco.commons.callbacks.PnkyCallback;
 import com.jive.myco.commons.concurrent.Pnky;
@@ -75,7 +74,7 @@ public abstract class AbstractLifecycled implements Lifecycled
         return Pnky.immediatelyFailed(new IllegalStateException(String.format(
             "Cannot initialize in [%s] state", lifecycleStage)));
       }
-    }, lifecycleQueue.isExecuting() ? MoreExecutors.sameThreadExecutor() : lifecycleQueue);
+    }, lifecycleQueue);
   }
 
   private PnkyPromise<Void> initFailure(final Throwable initError)
@@ -100,7 +99,9 @@ public abstract class AbstractLifecycled implements Lifecycled
             log.error("Error occurred during handling of failed init", error);
           }
 
-          return destroy();
+          PnkyPromise<Void> destroy = destroy();
+          lifecycleQueue.resume();
+          return destroy;
         })
         .alwaysCompose((res, destroyError) ->
         {
@@ -111,8 +112,7 @@ public abstract class AbstractLifecycled implements Lifecycled
           }
 
           return Pnky.<Void> immediatelyFailed(initError);
-        })
-        .alwaysAccept((result, error) -> lifecycleQueue.resume());
+        });
   }
 
   @Override
@@ -158,7 +158,7 @@ public abstract class AbstractLifecycled implements Lifecycled
       {
         return immediatelyFailed(new IllegalStateException());
       }
-    }, lifecycleQueue.isExecuting() ? MoreExecutors.sameThreadExecutor() : lifecycleQueue);
+    }, lifecycleQueue);
   }
 
   @Override
