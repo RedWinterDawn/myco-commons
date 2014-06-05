@@ -14,7 +14,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
@@ -42,7 +41,6 @@ import com.codahale.metrics.jvm.ThreadStatesGaugeSet;
 import com.google.common.base.Joiner;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
-import com.jive.myco.commons.callbacks.Callback;
 import com.jive.myco.commons.concurrent.PnkyPromise;
 import com.jive.myco.commons.hawtdispatch.DefaultDispatchQueueBuilder;
 import com.jive.myco.commons.hawtdispatch.DispatchQueueBuilder;
@@ -74,9 +72,8 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
 
   private DefaultMetricsManagerContext baseContext;
 
-  @Setter
   @NonNull
-  private MetricsManagerConfiguration metricsManagerConfiguration;
+  private final MetricsManagerConfiguration metricsManagerConfiguration;
 
   public DefaultMetricsManager()
   {

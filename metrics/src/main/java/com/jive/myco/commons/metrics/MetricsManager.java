@@ -11,14 +11,6 @@ import com.jive.myco.commons.lifecycle.Lifecycled;
 public interface MetricsManager extends Lifecycled
 {
   /**
-   * Sets the configuration to use when initializing the manager.
-   * 
-   * @param configuration
-   *          the configuration to use.
-   */
-  void setMetricsManagerConfiguration(final MetricsManagerConfiguration configuration);
-
-  /**
    * Removes a metric from the registry.
    *
    * @param metric the metric to remove from the registry
