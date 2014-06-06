@@ -48,7 +48,7 @@ public class PnkyExamples
         .runAsync(() -> {}, executor)
         .thenCompose((input) ->
         {
-          Pnky<Void> future = Pnky.create();
+          final Pnky<Void> future = Pnky.create();
 
           try
           {
@@ -136,8 +136,8 @@ public class PnkyExamples
    * Shows how to use {@link PnkyPromise} to execute an asynchronous process while suspending a
    * {@link DispatchQueue}.
    *
-   * A HawtDispatch PnkyPromise is often used to protect resource state without the need for
-   * locks or synchronization. A common pattern is to protect state by starting a process on a
+   * A HawtDispatch DispatchQueue is often used to protect resource state without the need for locks
+   * or synchronization. A common pattern is to protect state by starting a process on a
    * DispatchQueue, suspending the queue before launching additional asynchronous processes, and
    * then resuming the queue when the additional processes complete.
    *

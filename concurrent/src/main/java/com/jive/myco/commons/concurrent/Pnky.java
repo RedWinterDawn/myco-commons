@@ -3,11 +3,13 @@ package com.jive.myco.commons.concurrent;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.NonNull;
 
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.AbstractFuture;
@@ -31,17 +33,38 @@ import com.jive.myco.commons.function.ExceptionalSupplier;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
 {
+  /**
+   * Returns a new incomplete instance that may be completed at a later time.
+   *
+   * @return a new instance
+   */
   public static <V> Pnky<V> create()
   {
     return new Pnky<>();
   }
 
-  public boolean resolve(V value)
+  /**
+   * Completes the promise successfully with {@code value}.
+   *
+   * @param value
+   *          the value used to complete the promise
+   *
+   * @return true if this call completed the promise
+   */
+  public boolean resolve(final V value)
   {
     return super.set(value);
   }
 
-  public boolean reject(@Nonnull Throwable error)
+  /**
+   * Completes the promise exceptionally with {@code error}.
+   *
+   * @param error
+   *          the error used to exceptionally complete the promise
+   *
+   * @return true if this call completed the promise
+   */
+  public boolean reject(@Nonnull final Throwable error)
   {
     return super.setException(error);
   }
@@ -57,7 +80,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   public PnkyPromise<V> alwaysAccept(final ExceptionalConsumer<? super V> onSuccess,
       final ExceptionalConsumer<Throwable> onFailure, final Executor executor)
   {
-    Pnky<V> pnky = create();
+    final Pnky<V> pnky = create();
 
     Futures.addCallback(this, new FutureCallback<V>()
     {
@@ -69,7 +92,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
           onSuccess.accept(result);
           pnky.resolve(result);
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
           pnky.reject(e);
         }
@@ -84,7 +107,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
           onFailure.accept(t);
           pnky.reject(t);
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
           pnky.reject(e);
         }
@@ -105,7 +128,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   public <O> PnkyPromise<O> alwaysTransform(final ExceptionalFunction<? super V, O> onSuccess,
       final ExceptionalFunction<Throwable, O> onFailure, final Executor executor)
   {
-    Pnky<O> pnky = create();
+    final Pnky<O> pnky = create();
 
     Futures.addCallback(this, new FutureCallback<V>()
     {
@@ -114,10 +137,10 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
       {
         try
         {
-          O newValue = onSuccess.apply(result);
+          final O newValue = onSuccess.apply(result);
           pnky.resolve(newValue);
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
           pnky.reject(e);
         }
@@ -129,10 +152,10 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
         // TODO: handle cancellation
         try
         {
-          O newValue = onFailure.apply(t);
+          final O newValue = onFailure.apply(t);
           pnky.resolve(newValue);
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
           pnky.reject(e);
         }
@@ -143,17 +166,19 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   }
 
   @Override
-  public <O> PnkyPromise<O> alwaysCompose(final ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess,
+  public <O> PnkyPromise<O> alwaysCompose(
+      final ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess,
       final ExceptionalFunction<Throwable, PnkyPromise<O>> onFailure)
   {
     return alwaysCompose(onSuccess, onFailure, MoreExecutors.sameThreadExecutor());
   }
 
   @Override
-  public <O> PnkyPromise<O> alwaysCompose(final ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess,
+  public <O> PnkyPromise<O> alwaysCompose(
+      final ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess,
       final ExceptionalFunction<Throwable, PnkyPromise<O>> onFailure, final Executor executor)
   {
-    Pnky<O> pnky = create();
+    final Pnky<O> pnky = create();
 
     Futures.addCallback(this, new FutureCallback<V>()
     {
@@ -174,7 +199,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
             }
           });
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
           pnky.reject(e);
         }
@@ -186,7 +211,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
         // TODO: handle cancellation
         try
         {
-          PnkyPromise<O> newPromise = onFailure.apply(t);
+          final PnkyPromise<O> newPromise = onFailure.apply(t);
           newPromise.alwaysAccept((newValue, error) ->
           {
             if (error != null)
@@ -199,7 +224,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
             }
           });
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
           pnky.reject(e);
         }
@@ -219,7 +244,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   public PnkyPromise<V> alwaysAccept(final ExceptionalBiConsumer<? super V, Throwable> handler,
       final Executor executor)
   {
-    Pnky<V> pnky = create();
+    final Pnky<V> pnky = create();
 
     Futures.addCallback(this, new FutureCallback<V>()
     {
@@ -231,7 +256,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
           handler.accept(result, null);
           pnky.resolve(result);
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
           pnky.reject(e);
         }
@@ -246,7 +271,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
           handler.accept(null, t);
           pnky.reject(t);
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
           pnky.reject(e);
         }
@@ -257,16 +282,18 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   }
 
   @Override
-  public <O> PnkyPromise<O> alwaysTransform(final ExceptionalBiFunction<? super V, Throwable, O> handler)
+  public <O> PnkyPromise<O> alwaysTransform(
+      final ExceptionalBiFunction<? super V, Throwable, O> handler)
   {
     return alwaysTransform(handler, MoreExecutors.sameThreadExecutor());
   }
 
   @Override
-  public <O> PnkyPromise<O> alwaysTransform(final ExceptionalBiFunction<? super V, Throwable, O> handler,
+  public <O> PnkyPromise<O> alwaysTransform(
+      final ExceptionalBiFunction<? super V, Throwable, O> handler,
       final Executor executor)
   {
-    Pnky<O> pnky = create();
+    final Pnky<O> pnky = create();
 
     Futures.addCallback(this, new FutureCallback<V>()
     {
@@ -275,10 +302,10 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
       {
         try
         {
-          O newValue = handler.apply(result, null);
+          final O newValue = handler.apply(result, null);
           pnky.resolve(newValue);
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
           pnky.reject(e);
         }
@@ -290,10 +317,10 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
         // TODO: handle cancellation
         try
         {
-          O newValue = handler.apply(null, t);
+          final O newValue = handler.apply(null, t);
           pnky.resolve(newValue);
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
           pnky.reject(e);
         }
@@ -315,7 +342,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
       final ExceptionalBiFunction<? super V, Throwable, PnkyPromise<O>> handler,
       final Executor executor)
   {
-    Pnky<O> pnky = create();
+    final Pnky<O> pnky = create();
 
     Futures.addCallback(this, new FutureCallback<V>()
     {
@@ -336,7 +363,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
             }
           });
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
           pnky.reject(e);
         }
@@ -348,7 +375,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
         // TODO: handle cancellation
         try
         {
-          PnkyPromise<O> newPromise = handler.apply(null, t);
+          final PnkyPromise<O> newPromise = handler.apply(null, t);
           newPromise.alwaysAccept((newValue, error) ->
           {
             if (error != null)
@@ -361,7 +388,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
             }
           });
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
           pnky.reject(e);
         }
@@ -378,9 +405,10 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   }
 
   @Override
-  public PnkyPromise<V> thenAccept(final ExceptionalConsumer<? super V> onSuccess, final Executor executor)
+  public PnkyPromise<V> thenAccept(final ExceptionalConsumer<? super V> onSuccess,
+      final Executor executor)
   {
-    Pnky<V> pnky = create();
+    final Pnky<V> pnky = create();
 
     Futures.addCallback(this, new FutureCallback<V>()
     {
@@ -392,7 +420,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
           onSuccess.accept(result);
           pnky.resolve(result);
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
           pnky.reject(e);
         }
@@ -418,7 +446,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   public <O> PnkyPromise<O> thenTransform(final ExceptionalFunction<? super V, O> onSuccess,
       final Executor executor)
   {
-    Pnky<O> pnky = create();
+    final Pnky<O> pnky = create();
 
     Futures.addCallback(this, new FutureCallback<V>()
     {
@@ -427,10 +455,10 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
       {
         try
         {
-          O newValue = onSuccess.apply(result);
+          final O newValue = onSuccess.apply(result);
           pnky.resolve(newValue);
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
           pnky.reject(e);
         }
@@ -447,16 +475,18 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   }
 
   @Override
-  public <O> PnkyPromise<O> thenCompose(final ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess)
+  public <O> PnkyPromise<O> thenCompose(
+      final ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess)
   {
     return thenCompose(onSuccess, MoreExecutors.sameThreadExecutor());
   }
 
   @Override
-  public <O> PnkyPromise<O> thenCompose(final ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess,
+  public <O> PnkyPromise<O> thenCompose(
+      final ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess,
       final Executor executor)
   {
-    Pnky<O> pnky = create();
+    final Pnky<O> pnky = create();
 
     Futures.addCallback(this, new FutureCallback<V>()
     {
@@ -477,7 +507,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
             }
           });
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
           pnky.reject(e);
         }
@@ -503,7 +533,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   public PnkyPromise<V> onFailure(final ExceptionalConsumer<Throwable> onFailure,
       final Executor executor)
   {
-    Pnky<V> pnky = create();
+    final Pnky<V> pnky = create();
 
     Futures.addCallback(this, new FutureCallback<V>()
     {
@@ -521,7 +551,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
           onFailure.accept(t);
           pnky.reject(t);
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
           pnky.reject(e);
         }
@@ -541,7 +571,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   public PnkyPromise<V> withFallback(final ExceptionalFunction<Throwable, V> onFailure,
       final Executor executor)
   {
-    Pnky<V> pnky = create();
+    final Pnky<V> pnky = create();
 
     Futures.addCallback(this, new FutureCallback<V>()
     {
@@ -556,10 +586,10 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
       {
         try
         {
-          V newValue = onFailure.apply(t);
+          final V newValue = onFailure.apply(t);
           pnky.resolve(newValue);
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
           pnky.reject(e);
         }
@@ -580,7 +610,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   public PnkyPromise<V> composeFallback(
       final ExceptionalFunction<Throwable, PnkyPromise<V>> onFailure, final Executor executor)
   {
-    Pnky<V> pnky = create();
+    final Pnky<V> pnky = create();
 
     Futures.addCallback(this, new FutureCallback<V>()
     {
@@ -607,7 +637,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
             }
           });
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
           pnky.reject(e);
         }
@@ -622,28 +652,31 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   // =======================
 
   /**
-   * Execute an action on the provided {@link Executor} and provide a promise indicating when the
-   * action is complete or has failed.
+   * Creates a new {@link PnkyPromise future} that completes when the supplied operation completes,
+   * executing the operation on the supplied executor. If the operation completes normally, the
+   * returned future completes successfully. If the operation throws an exception, the returned
+   * future completes exceptionally with the thrown exception.
    *
-   * @param runnable
-   *          the action to perform
+   * @param operation
+   *          the operation to perform
    * @param executor
    *          the executor to process the action on
-   * @return a new promise that will be completed after the runnable has executed
+   *
+   * @return a new {@link PnkyPromise future}
    */
-  public static PnkyPromise<Void> runAsync(ExceptionalRunnable runnable,
-      Executor executor)
+  public static PnkyPromise<Void> runAsync(final ExceptionalRunnable operation,
+      final Executor executor)
   {
-    Pnky<Void> pnky = Pnky.create();
+    final Pnky<Void> pnky = Pnky.create();
 
     executor.execute(() ->
     {
       try
       {
-        runnable.run();
+        operation.run();
         pnky.resolve(null);
       }
-      catch (Exception e)
+      catch (final Exception e)
       {
         pnky.reject(e);
       }
@@ -653,31 +686,31 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   }
 
   /**
-   * Execute a task that will provide an initial result when it is executed and provide a promise
-   * that will be resolved with that value on success.
+   * Creates a new {@link PnkyPromise future} that completes when the supplied operation completes,
+   * executing the operation on the supplied executor. If the operation completes normally, the
+   * returned future completes successfully with the result of the operation. If the operation
+   * throws an exception, the returned future completes exceptionally with the thrown exception.
    *
-   * @param <V>
-   *          the type of value returned from the supplier
-   * @param supplier
-   *          function to invoke to provide an initial value
+   * @param operation
+   *          the operation to perform
    * @param executor
-   *          the executor to process the action on
-   * @return a new promise that will be completed with the result of the supplier after it has
-   *         executed
+   *          the executor to process the operation on
+   *
+   * @return a new {@link PnkyPromise future}
    */
-  public static <V> PnkyPromise<V> supplyAsync(final ExceptionalSupplier<V> supplier,
+  public static <V> PnkyPromise<V> supplyAsync(final ExceptionalSupplier<V> operation,
       final Executor executor)
   {
-    Pnky<V> pnky = Pnky.create();
+    final Pnky<V> pnky = Pnky.create();
 
     executor.execute(() ->
     {
       try
       {
-        V value = supplier.get();
+        final V value = operation.get();
         pnky.resolve(value);
       }
-      catch (Exception e)
+      catch (final Exception e)
       {
         pnky.reject(e);
       }
@@ -687,28 +720,29 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   }
 
   /**
-   * Execute a task that will provide an initial result when it is executed and provide a promise
-   * that will be resolved with that value on success.
+   * Creates a new {@link PnkyPromise future} that completes when the future returned by the
+   * supplied operation completes, executing the operation on the supplied executor. If the
+   * operation completes normally, the returned future completes with the result of the future
+   * returned by the function. If the operation throws an exception, the returned future completes
+   * exceptionally with the thrown exception.
    *
-   * @param <V>
-   *          the type of value returned from the supplier
-   * @param supplier
-   *          function to invoke to provide an initial value
+   * @param operation
+   *          the operation to perform
    * @param executor
-   *          the executor to process the action on
-   * @return a new promise that will be completed with the result of the supplier after it has
-   *         executed
+   *          the executor to process the operation on
+   *
+   * @return a new {@link PnkyPromise future}
    */
-  public static <V> PnkyPromise<V> composeAsync(final ExceptionalSupplier<PnkyPromise<V>> supplier,
+  public static <V> PnkyPromise<V> composeAsync(final ExceptionalSupplier<PnkyPromise<V>> operation,
       final Executor executor)
   {
-    Pnky<V> pnky = Pnky.create();
+    final Pnky<V> pnky = Pnky.create();
 
     executor.execute(() ->
     {
       try
       {
-        supplier.get().alwaysAccept((result, error) ->
+        operation.get().alwaysAccept((result, error) ->
         {
           if (error != null)
           {
@@ -720,7 +754,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
           }
         });
       }
-      catch (Exception e)
+      catch (final Exception e)
       {
         pnky.reject(e);
       }
@@ -730,51 +764,59 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   }
 
   /**
-   * Create a promise that is already completed with the provided value when it is returned.
+   * Creates a new {@link PnkyPromise future} that is successfully completed with the supplied
+   * value.
    *
    * @param <V>
-   *          the type of promise value
+   *          the type of future
    * @param value
-   *          the value to complete the promise with
-   * @return a completed promise
+   *          the value used to complete the future
+   *
+   * @return a new successfully completed {@link PnkyPromise future}
    */
   public static <V> PnkyPromise<V> immediatelyComplete(final V value)
   {
-    Pnky<V> pnky = create();
+    final Pnky<V> pnky = create();
     pnky.resolve(value);
     return pnky;
   }
 
   /**
-   * Create a promise that is failed with the provided error when it is returned.
+   * Creates a new {@link PnkyPromise future} that is exceptionally completed with the supplied
+   * error.
    *
    * @param <V>
-   *          the type of promise
+   *          the type of future
    * @param e
-   *          the error to fail the promise with
-   * @return a failed promise
+   *          the cause used to complete the future exceptionally
+   *
+   * @return a new exceptionally completed {@link PnkyPromise future}
    */
-  public static <V> PnkyPromise<V> immediatelyFailed(final Throwable e)
+  public static <V> PnkyPromise<V> immediatelyFailed(@NonNull final Throwable e)
   {
-    Pnky<V> pnky = create();
+    final Pnky<V> pnky = create();
     pnky.reject(e);
     return pnky;
   }
 
   /**
-   * Create a promise that is completed when all of the provided promises are complete.
+   * Creates a new {@link PnkyPromise future} that completes successfully with the results of the
+   * supplied futures that completed successfully, if and only if all of the supplied futures
+   * complete successfully. The returned future completes exceptionally if any of the provided
+   * futures complete exceptionally.
    *
    * @param <V>
    *          the type of value for all promises
    * @param promises
-   *          the set of promises to watch for completion
-   * @return a promise that is completed when all provided promises are complete or failed when any
-   *         of the promises fail
+   *          the promises to watch for completion
+   *
+   * @return a new {@link PnkyPromise future}
    */
-  public static <V> PnkyPromise<List<V>> all(Iterable<? extends PnkyPromise<? extends V>> promises)
+  public static <V> PnkyPromise<List<V>> all(
+      final Iterable<? extends PnkyPromise<? extends V>> promises)
   {
-    Pnky<List<V>> pnky = Pnky.create();
-    ListenableFuture<List<V>> result = Futures.allAsList(promises);
+    final Pnky<List<V>> pnky = Pnky.create();
+    final ListenableFuture<List<V>> result = Futures.allAsList(promises);
 
     Futures.addCallback(result, new FutureCallback<List<V>>()
     {
@@ -795,19 +837,23 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   }
 
   /**
-   * Create a promise that is completed with the results of all successfully completed promises.
+   * Creates a new {@link PnkyPromise future} that completes successfully with the results of the
+   * supplied futures that completed successfully if one or more of the supplied futures completes
+   * successfully. The returned future completes exceptionally if all of the provided futures
+   * complete exceptionally.
    *
    * @param <V>
    *          the type of value for all promises
    * @param promises
-   *          the set of promises to watch for completion
-   * @return a promise that is completed when all provided promises are complete any any are
-   *         successful, or failed if all provided promises fail
+   *          the promises to watch for completion
+   *
+   * @return a new {@link PnkyPromise future}
    */
-  public static <V> PnkyPromise<List<V>> any(Iterable<? extends PnkyPromise<? extends V>> promises)
+  public static <V> PnkyPromise<List<V>> any(
+      final Iterable<? extends PnkyPromise<? extends V>> promises)
   {
-    Pnky<List<V>> pnky = Pnky.create();
-    ListenableFuture<List<V>> result = Futures.successfulAsList(promises);
+    final Pnky<List<V>> pnky = Pnky.create();
+    final ListenableFuture<List<V>> result = Futures.successfulAsList(promises);
 
     Futures.addCallback(result, new FutureCallback<List<V>>()
     {
@@ -828,23 +874,25 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   }
 
   /**
-   * Create a promise that is completed when the first of any of the provided promises complete
-   * successfully.
+   * Creates a new {@link PnkyPromise future} that completes successfully with the result of the
+   * first supplied future that completes successfully if any of the supplied futures complete
+   * successfully. The returned future completes exceptionally if all of the provided futures
+   * complete exceptionally.
    *
    * @param <V>
    *          the type of value for all promises
    * @param promises
-   *          the set of promises to watch for completion
-   * @return a promise that is completed when the first successfully completed promise is done or
-   *         failed if all of the promises fail
+   *          the promises to watch for completion
+   *
+   * @return a new {@link PnkyPromise future}
    */
-  public static <V> PnkyPromise<V> first(Iterable<? extends PnkyPromise<? extends V>> promises)
+  public static <V> PnkyPromise<V> first(final Iterable<? extends PnkyPromise<? extends V>> promises)
   {
-    Pnky<V> pnky = Pnky.create();
+    final Pnky<V> pnky = Pnky.create();
 
     final AtomicInteger remaining = new AtomicInteger(Iterables.size(promises));
 
-    for (PnkyPromise<? extends V> promise : promises)
+    for (final PnkyPromise<? extends V> promise : promises)
     {
       promise.alwaysAccept((result, error) ->
       {
