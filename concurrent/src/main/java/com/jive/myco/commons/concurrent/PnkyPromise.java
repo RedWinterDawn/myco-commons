@@ -461,7 +461,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *
    * @param <O>
    *          type of the result
-   * @param function
+   * @param onSuccess
    *          the function to supply with the result of this future
    *
    * @return a new {@link PnkyPromise future}
@@ -480,7 +480,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *
    * @param <O>
    *          type of the result
-   * @param function
+   * @param onSuccess
    *          the function to supply with the result of this future
    * @param executor
    *          the executor used to execute the supplied function
@@ -534,7 +534,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    * This operation provides a mechanism to recover from a failure by supplying an alternate valid
    * result.
    *
-   * @param onSuccess
+   * @param onFailure
    *          the function to supply with the result of this future when this future completes
    *          successfully
    *
@@ -554,7 +554,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    * This operation provides a mechanism to recover from a failure by supplying an alternate valid
    * result.
    *
-   * @param onSuccess
+   * @param onFailure
    *          the function to supply with the result of this future when this future completes
    *          successfully
    *
@@ -576,7 +576,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    * This operation provides a mechanism to recover from a failure by supplying an alternate valid
    * result.
    *
-   * @param function
+   * @param onFailure
    *          the function to supply with the result of this future
    *
    * @return a new {@link PnkyPromise future}
@@ -596,7 +596,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    * This operation provides a mechanism to recover from a failure by supplying an alternate valid
    * result.
    *
-   * @param function
+   * @param onFailure
    *          the function to supply with the result of this future
    * @param executor
    *          the executor used to execute the supplied function
