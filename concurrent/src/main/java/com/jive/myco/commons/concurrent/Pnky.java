@@ -9,6 +9,7 @@ import javax.annotation.Nullable;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.NonNull;
 
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.AbstractFuture;
@@ -651,7 +652,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   // =======================
 
   /**
-   * Creates a new {@link PnkyPromise future} the completes when the supplied operation completes,
+   * Creates a new {@link PnkyPromise future} that completes when the supplied operation completes,
    * executing the operation on the supplied executor. If the operation completes normally, the
    * returned future completes successfully. If the operation throws an exception, the returned
    * future completes exceptionally with the thrown exception.
@@ -685,7 +686,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   }
 
   /**
-   * Creates a new {@link PnkyPromise future} the completes when the supplied operation completes,
+   * Creates a new {@link PnkyPromise future} that completes when the supplied operation completes,
    * executing the operation on the supplied executor. If the operation completes normally, the
    * returned future completes successfully with the result of the operation. If the operation
    * throws an exception, the returned future completes exceptionally with the thrown exception.
@@ -719,25 +720,11 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   }
 
   /**
-   * Execute a task that will provide an initial result when it is executed and provide a promise
-   * that will be resolved with that value on success.
-   *
-   * @param <V>
-   *          the type of value returned from the supplier
-   * @param supplier
-   *          function to invoke to provide an initial value
-   * @param executor
-   *          the executor to process the action on
-   * @return a new promise that will be completed with the result of the supplier after it has
-   *         executed
-   */
-
-  /**
-   * Creates a new {@link PnkyPromise future} the completes when the future returned by the supplied
-   * function completes, executing the function on the supplied executor. If the operation completes
-   * normally, the returned future completes successfully with the result of the future returned by
-   * the function. If the operation throws an exception, the returned future completes exceptionally
-   * with the thrown exception.
+   * Creates a new {@link PnkyPromise future} that completes when the future returned by the
+   * supplied operation completes, executing the operation on the supplied executor. If the
+   * operation completes normally, the returned future completes with the result of the future
+   * returned by the function. If the operation throws an exception, the returned future completes
+   * exceptionally with the thrown exception.
    *
    * @param operation
    *          the operation to perform
@@ -746,7 +733,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
    *
    * @return a new {@link PnkyPromise future}
    */
-  public static <V> PnkyPromise<V> composeAsync(final ExceptionalSupplier<PnkyPromise<V>> supplier,
+  public static <V> PnkyPromise<V> composeAsync(final ExceptionalSupplier<PnkyPromise<V>> operation,
       final Executor executor)
   {
     final Pnky<V> pnky = Pnky.create();
@@ -755,7 +742,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
     {
       try
       {
-        supplier.get().alwaysAccept((result, error) ->
+        operation.get().alwaysAccept((result, error) ->
         {
           if (error != null)
           {
@@ -777,7 +764,8 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   }
 
   /**
-   * Creates a new {@link PnkyPromise future} the is successfully completed with the supplied value.
+   * Creates a new {@link PnkyPromise future} that is successfully completed with the supplied
+   * value.
    *
    * @param <V>
    *          the type of future
@@ -794,17 +782,17 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   }
 
   /**
-   * Creates a new {@link PnkyPromise future} the is exceptionally completed with the supplied
+   * Creates a new {@link PnkyPromise future} that is exceptionally completed with the supplied
    * error.
    *
    * @param <V>
    *          the type of future
    * @param e
-   *          the value used to complete the future
+   *          the cause used to complete the future exceptionally
    *
    * @return a new exceptionally completed {@link PnkyPromise future}
    */
-  public static <V> PnkyPromise<V> immediatelyFailed(final Throwable e)
+  public static <V> PnkyPromise<V> immediatelyFailed(@NonNull final Throwable e)
   {
     final Pnky<V> pnky = create();
     pnky.reject(e);
@@ -813,9 +801,9 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
 
   /**
    * Creates a new {@link PnkyPromise future} that completes successfully with the results of the
-   * supplied futures that completed successfully if all of the supplied futures complete
-   * successfully. The returned future completes exceptionally if any of the provided futures
-   * complete exceptionally.
+   * supplied futures that completed successfully, if and only if all of the supplied futures
+   * complete successfully. The returned future completes exceptionally if any of the provided
+   * futures complete exceptionally.
    *
    * @param <V>
    *          the type of value for all promises
