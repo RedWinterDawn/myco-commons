@@ -1,5 +1,6 @@
 package com.jive.myco.commons.retry;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -54,6 +55,7 @@ public class RetryManager
   {
     retryCounter = 0;
     lastDelay = 0;
+    causes.clear();
   }
 
   /**
@@ -77,6 +79,10 @@ public class RetryManager
     if (retryPolicy.getMaximumRetries() >= 0)
     {
       causes.add(cause);
+      if (causes.size() > 10)
+      {
+        causes.remove(0);
+      }
     }
 
     if (willRetry())
@@ -88,7 +94,9 @@ public class RetryManager
     else
     {
       retryCounter = 0;
-      retryStrategy.onRetriesExhausted(causes);
+      lastDelay = 0;
+      retryStrategy.onRetriesExhausted(new ArrayList<Throwable>(causes));
+      causes.clear();
     }
   }
 
