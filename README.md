@@ -20,10 +20,10 @@ Stuff that does things on different projects.
 
 ##### 0.0.5
 * Upgrading from 0.0.4
-  * The deprecated `CallbackListenableFuture` class has been removed. You can do a quick change and just replace `CallbackListenableFuture` with `CallbackFuture`, or you can transition away from callbacks and to the `PnkyPromise` method of asynchronous tasks.
-  * `Lifecycled.init(Callback)` and `Lifecycled.destroy(Callback)` have been deprecated in favor of a new future/promises model. You are encouraged to transition to using `AbstractLifecycled` and implementing the `PnkyPromise init/destroyInternal` lifecycle methods as opposed to the callback versions. They will be removed as soon as the next release.
+  * The deprecated `CallbackListenableFuture` class has been removed. Usagers of this class can use the drop in replacement, `CallbackFuture`, or can transition away from callbacks to the `PnkyPromise` future/promise API.
+  * `Lifecycled.init(Callback)` and `Lifecycled.destroy(Callback)` have been deprecated in favor of a new future/promises model. Users are encouraged to transition to using `AbstractLifecycled` and implementing the `PnkyPromise init/destroyInternal` lifecycle methods as opposed to the callback versions. They will be removed in a future release.
 * Change Log
-  * NS - Create new promises/futures async framework, including a module with exceptional function types analogous to `java.util.function` classes.
+  * NS - Created new promises/futures async framework, including a module with exceptional function types analogous to `java.util.function` classes and removed deprecated async classes.
   * NS - Updated the Default Metrics Manager to use `AbstractLifecycled`
 
 #### 0.0.4

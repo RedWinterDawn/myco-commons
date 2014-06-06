@@ -15,8 +15,10 @@ public class PnkyExamples
   private DispatchQueue dispatchQueue;
 
   /**
-   * Shows how to use {@link PnkyPromise} to execute a step that throws an exception that
-   * should be used to complete the future directly.
+   * Shows how to use {@link PnkyPromise} to execute a step that throws an exception that can be
+   * used to complete the future exceptionally.
+   * <p>
+   * This approach is the most verbose.
    */
   public PnkyPromise<Void> newExceptionalProcessExampleMethod()
   {
@@ -39,51 +41,26 @@ public class PnkyExamples
   }
 
   /**
-   * Shows an alternate example of how to use {@link PnkyPromise} to execute a step that
-   * throws an exception that should be used to complete the future with an error directly.
+   * Shows an alternate, and more concise, example of how to use {@link PnkyPromise} to execute a
+   * step that throws an exception that can be used to complete the future exceptionally.
    */
   public PnkyPromise<Void> newExceptionalProcessExampleAlternateMethod()
   {
-    return Pnky
-        .runAsync(() -> {}, executor)
-        .thenCompose((input) ->
-        {
-          final Pnky<Void> future = Pnky.create();
-
-          try
-          {
-            doSomethingExceptional();
-            future.resolve(null);
-          }
-          catch (final Exception e)
-          {
-            future.reject(e);
-          }
-
-          return future;
-        });
+    return Pnky.runAsync(() -> doSomethingExceptional(), executor);
   }
 
   /**
-   * Represents some action that throws an exception.
+   * Shows an alternate, and even more concise, example of how to use {@link PnkyPromise} to execute
+   * a step that throws an exception that can be used to complete the future exceptionally.
    */
-  public void doSomethingExceptional() throws Exception
-  {
-  }
-
-  /**
-   * Shows how to use {@link PnkyPromise} to execute a step that throws an exception that
-   * should be used to complete the future either with success or error depending on the outcome
-   * of the exceptional method.
-   */
-  public PnkyPromise<Void> exceptionalPromiseThatJustCallsAMethodToRun()
+  public PnkyPromise<Void> newExceptionalProcessExampleAlternateMethod2()
   {
     return Pnky.runAsync(this::doSomethingExceptional, executor);
   }
 
   /**
-   * Shoes how to use {@link PnkyPromise} to execute a step, in-line mid process, that throws
-   * an exception that should be used to complete the future directly.
+   * Shows how to use {@link PnkyPromise} to execute a step, in-line mid process, that throws an
+   * exception that should be handled manually to complete the future.
    */
   public PnkyPromise<Void> inlineExceptionalProcessCompleteDirectlyExampleMethod()
   {
@@ -109,16 +86,11 @@ public class PnkyExamples
         });
   }
 
-  public PnkyPromise<Integer> doSomethingUsingPromise()
-  {
-    return Pnky.supplyAsync(() -> 1, executor);
-  }
-
   /**
-   * Shoes how to use {@link PnkyPromise} to execute a step, in-line mid process, that throws
-   * an exception that should be used to complete the future via transform.
+   * Shoes how to use {@link PnkyPromise} to execute transformational and compositional steps,
+   * in-line mid process, with a fallback step to handle exceptional completion.
    */
-  public PnkyPromise<Void> inlineExceptionalProcessExampleTransformMethod()
+  public PnkyPromise<String> inlineProcessExampleTransformMethod()
   {
     return doSomethingUsingPromise()
         .thenTransform((result) ->
@@ -126,68 +98,61 @@ public class PnkyExamples
           if (result == 1)
           {
             doSomethingExceptional();
-          }
 
-          return null;
-        });
+            return 0;
+          }
+          else
+          {
+            return result;
+          }
+        })
+        .thenCompose((value) -> doSomethingElseUsingPromise(value, 2))
+        .composeFallback((cause) -> Pnky.immediatelyFailed(new IllegalStateException(cause)));
   }
 
   /**
    * Shows how to use {@link PnkyPromise} to execute an asynchronous process while suspending a
    * {@link DispatchQueue}.
-   *
+   * <p>
    * A HawtDispatch DispatchQueue is often used to protect resource state without the need for locks
    * or synchronization. A common pattern is to protect state by starting a process on a
    * DispatchQueue, suspending the queue before launching additional asynchronous processes, and
    * then resuming the queue when the additional processes complete.
-   *
+   * </p>
    * The following examples demonstrate how to suspend a DispatchQueue while performing additional
    * asynchronous operations using only PnkyPromise.
    */
   public PnkyPromise<String> queueSuspendExampleMethod()
-  {
-    final Pnky<String> future = Pnky.create();
-
-    dispatchQueue.execute(() ->
-    {
-      dispatchQueue.suspend();
-
-      doSomethingUsingPromise()
-          .thenCompose((value) -> doSomethingElseUsingPromise(value, 2))
-          .alwaysAccept((result, error) ->
-          {
-            dispatchQueue.resume();
-
-            if (error != null)
-            {
-              future.reject(error);
-            }
-            else
-            {
-              future.resolve(result);
-            }
-          });
-    });
-
-    return future;
-  }
-
-  /**
-   * Shows an alternate example of how to use {@link PnkyPromise} to execute an asynchronous process
-   * while suspending a {@link DispatchQueue}, while creating the initial promise on an executor
-   * initially and then trans
-   */
-  public PnkyPromise<String> completableFuturesQueueSuspendExampleMethod()
   {
     return Pnky
         .composeAsync(() ->
         {
           dispatchQueue.suspend();
 
-          return doSomethingUsingPromise()
-              .thenCompose((value) -> doSomethingElseUsingPromise(value, 2))
-              .alwaysAccept((result, cause) -> dispatchQueue.resume());
+          try
+          {
+            return doSomethingUsingPromise()
+                .thenCompose((value) -> doSomethingElseUsingPromise(value, 2))
+                .alwaysAccept((result, cause) -> dispatchQueue.resume());
+          }
+          catch (final Exception e)
+          {
+            dispatchQueue.resume();
+            throw e;
+          }
         }, dispatchQueue);
+  }
+
+  /**
+   * Represents some action that throws an exception.
+   */
+  public void doSomethingExceptional() throws Exception
+  {
+  }
+
+  public PnkyPromise<Integer> doSomethingUsingPromise()
+  {
+    return Pnky.supplyAsync(() -> 1, executor);
   }
 
   public PnkyPromise<String> doSomethingElseUsingPromise(final Integer value, final int radix)

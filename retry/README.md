@@ -1,5 +1,5 @@
-Myco Commons Retry
-===================================
+# Myco Commons Retry
+
 
 ## Retry Manager, Policy, and Strategy
 These classes are responsible for, you guessed it, retrying things. The retry manager can be used to sechedule delayed retries and handle failures of a process.  We'll start with the [RetryPolicy](core/src/main/java/com/jive/myco/core/retry/RetryPolicy.java). The retry policy is responsible for controlling how retreies are attempted and the delay period between retries. The [RetryManager](core/src/main/java/com/jive/myco/core/retry/RetryManager.java) requires one when it is created.
