@@ -10,7 +10,7 @@
 
   <groupId>com.jive.myco.commons</groupId>
   <artifactId>root</artifactId>
-  <version>0.0.5-SNAPSHOT</version>
+  <version>0.0.5</version>
 
   <packaging>pom</packaging>
 
@@ -23,6 +23,7 @@
   <scm>
     <connection>scm:git:ssh://git@github.com/jive/com.jive.myco.commons.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/jive/com.jive.myco.commons.git</developerConnection>
+    <tag>0.0.5</tag>
   </scm>
 
   <modules>
