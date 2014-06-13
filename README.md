@@ -18,6 +18,13 @@ Stuff that does things on different projects.
 
 ## <a name="changes"></a>Change Log
 
+##### 0.0.6
+* Upgrading from 0.0.5
+  * No changes required.
+  * `MetricsManager.segment()` may now be invoked before the metrics manager has been initialized in order to facilitate deriving contexts during construction.
+* Change Log
+  * NS - Updated `DefaultMetricsManager` to support segmenting before initialization
+
 ##### 0.0.5
 * Upgrading from 0.0.4
   * The deprecated `CallbackListenableFuture` class has been removed. Usagers of this class can use the drop in replacement, `CallbackFuture`, or can transition away from callbacks to the `PnkyPromise` future/promise API.

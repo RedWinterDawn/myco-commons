@@ -70,7 +70,7 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
 
   private final MetricRegistry registry;
 
-  private DefaultMetricsManagerContext baseContext;
+  private final DefaultMetricsManagerContext baseContext;
 
   @NonNull
   private final MetricsManagerConfiguration metricsManagerConfiguration;
@@ -94,6 +94,7 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
     super(dispatchQueueBuilder.segment("metrics", id, "lifecycle").build());
     this.registry = metricRegistry;
     this.metricsManagerConfiguration = metricsManagerConfiguration;
+    baseContext = new DefaultMetricsManagerContext(null);
   }
 
   @Override
@@ -156,8 +157,6 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
       graphiteReporter.start(metricsManagerConfiguration.getGraphiteReporterPeriod(),
           TimeUnit.MILLISECONDS);
     }
-
-    baseContext = new DefaultMetricsManagerContext(null);
 
     return immediatelyComplete(null);
   }
