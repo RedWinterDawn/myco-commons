@@ -354,4 +354,32 @@ public class PnkyTest
     assertTrue(invoked.await(10, TimeUnit.MILLISECONDS));
   }
 
+  @Test
+  public void testAllInOrder() throws Exception
+  {
+    final Pnky<Integer> first = Pnky.create();
+    final Pnky<Integer> second = Pnky.create();
+    final CountDownLatch finished = new CountDownLatch(1);
+    final AtomicReference<List<Integer>> results = new AtomicReference<>();
+    Pnky.all(Arrays.asList(first, second))
+        .thenAccept((result) ->
+        {
+          results.set(result);
+          finished.countDown();
+        });
+
+    second.resolve(2);
+
+    assertNull(results.get());
+
+    first.resolve(1);
+
+    assertTrue(finished.await(10, TimeUnit.MILLISECONDS));
+
+    assertNotNull(results.get());
+    assertEquals(2, results.get().size());
+    assertEquals(1, (int) results.get().get(0));
+    assertEquals(2, (int) results.get().get(1));
+  }
+
 }
