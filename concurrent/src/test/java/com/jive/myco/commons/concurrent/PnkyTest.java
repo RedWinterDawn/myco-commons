@@ -5,10 +5,12 @@ import static org.junit.Assert.*;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -17,6 +19,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 
 /**
@@ -340,6 +343,15 @@ public class PnkyTest
     toFinish.resolve(1);
 
     assertThat(throwable.get(), instanceOf(NumberFormatException.class));
+  }
+
+  @Test
+  public void testWaitForAllEmpty() throws Exception
+  {
+    final CountDownLatch invoked = new CountDownLatch(1);
+    Pnky.waitForAll(Lists.newArrayList()).alwaysAccept((result, error) -> invoked.countDown());
+
+    assertTrue(invoked.await(10, TimeUnit.MILLISECONDS));
   }
 
 }

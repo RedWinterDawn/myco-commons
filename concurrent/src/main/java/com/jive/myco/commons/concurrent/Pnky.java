@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -857,6 +858,13 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
     final Pnky<List<V>> pnky = Pnky.create();
 
     final int numberOfPromises = Iterables.size(promises);
+
+    // Special case, no promises to wait for
+    if (numberOfPromises == 0)
+    {
+      return Pnky.immediatelyComplete(Lists.newArrayList());
+    }
+
     final AtomicInteger remaining = new AtomicInteger(numberOfPromises);
     @SuppressWarnings("unchecked")
     final V[] results = (V[]) new Object[numberOfPromises];
