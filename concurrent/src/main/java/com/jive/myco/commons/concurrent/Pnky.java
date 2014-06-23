@@ -805,7 +805,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   /**
    * Creates a new {@link PnkyPromise future} that completes successfully with the results of the
    * supplied futures that completed successfully, if and only if all of the supplied futures
-   * complete successfully. The returned future completes exceptionally immediately if any of the
+   * complete successfully. The returned future completes exceptionally as soon as any of the
    * provided futures complete exceptionally.
    *
    * @param <V>
@@ -815,7 +815,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
    *
    * @return a new {@link PnkyPromise future}
    */
-  public static <V> PnkyPromise<List<V>> all(
+  public static <V> PnkyPromise<List<V>> allFailingFast(
       final Iterable<? extends PnkyPromise<? extends V>> promises)
   {
     final Pnky<List<V>> pnky = Pnky.create();
@@ -843,8 +843,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
    * Creates a new {@link PnkyPromise future} that completes successfully with the results of the
    * supplied futures that completed successfully, if and only if all of the supplied futures
    * complete successfully. The returned future completes exceptionally if any of the provided
-   * futures complete exceptionally, but unlike {@link #all} will wait for all futures to be
-   * complete (successful or not) before resolving the returned future.
+   * futures complete exceptionally, but only when all futures have been completed.
    *
    * @param <V>
    *          the type of value for all promises
@@ -852,7 +851,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
    *          the set of promises to wait on
    * @return a new {@link PnkyPromise future}
    */
-  public static <V> PnkyPromise<List<V>> waitForAll(
+  public static <V> PnkyPromise<List<V>> all(
       final Iterable<? extends PnkyPromise<? extends V>> promises)
   {
     final Pnky<List<V>> pnky = Pnky.create();

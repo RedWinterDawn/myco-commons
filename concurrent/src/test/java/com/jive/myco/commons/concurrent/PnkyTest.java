@@ -325,14 +325,14 @@ public class PnkyTest
   }
 
   @Test
-  public void testWaitForAll() throws Exception
+  public void testAllWaitsForAll() throws Exception
   {
     final Pnky<Integer> toFinish = Pnky.create();
     final List<PnkyPromise<Integer>> promises = Arrays.asList(
         Pnky.<Integer> immediatelyFailed(new NumberFormatException()), toFinish);
 
     final AtomicReference<Throwable> throwable = new AtomicReference<>();
-    Pnky.waitForAll(promises).alwaysAccept((result, error) ->
+    Pnky.all(promises).alwaysAccept((result, error) ->
     {
       assertNull(result);
       throwable.set(error);
@@ -346,10 +346,10 @@ public class PnkyTest
   }
 
   @Test
-  public void testWaitForAllEmpty() throws Exception
+  public void testAllWithEmptySetOfPromises() throws Exception
   {
     final CountDownLatch invoked = new CountDownLatch(1);
-    Pnky.waitForAll(Lists.newArrayList()).alwaysAccept((result, error) -> invoked.countDown());
+    Pnky.all(Lists.newArrayList()).alwaysAccept((result, error) -> invoked.countDown());
 
     assertTrue(invoked.await(10, TimeUnit.MILLISECONDS));
   }
