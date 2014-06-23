@@ -3,12 +3,15 @@ package com.jive.myco.commons.concurrent;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.After;
 import org.junit.Before;
@@ -41,10 +44,10 @@ public class PnkyTest
   @Test
   public void testAlwaysPropagateBiConsumerSuccess() throws Exception
   {
-    AtomicInteger badThings = new AtomicInteger();
+    final AtomicInteger badThings = new AtomicInteger();
 
     // Only on this test just to verify same thread behavior
-    AtomicBoolean invoked = new AtomicBoolean();
+    final AtomicBoolean invoked = new AtomicBoolean();
 
     Pnky.supplyAsync(() -> 1, MoreExecutors.sameThreadExecutor())
         .alwaysAccept((result, error) ->
@@ -63,7 +66,7 @@ public class PnkyTest
   @Test
   public void testAlwaysPropagateError() throws Exception
   {
-    AtomicInteger badThings = new AtomicInteger();
+    final AtomicInteger badThings = new AtomicInteger();
 
     Pnky
         .supplyAsync(() ->
@@ -101,7 +104,7 @@ public class PnkyTest
   @Test
   public void testAlwaysTransformFailure() throws Exception
   {
-    AtomicInteger badThings = new AtomicInteger();
+    final AtomicInteger badThings = new AtomicInteger();
 
     Pnky
         .supplyAsync(() ->
@@ -149,7 +152,7 @@ public class PnkyTest
   @Test
   public void testAlwaysComposeFailure() throws Exception
   {
-    AtomicInteger badThings = new AtomicInteger();
+    final AtomicInteger badThings = new AtomicInteger();
 
     Pnky
         .supplyAsync(() ->
@@ -187,7 +190,7 @@ public class PnkyTest
   @Test
   public void testPropagateIndividually() throws Exception
   {
-    AtomicInteger badThings = new AtomicInteger();
+    final AtomicInteger badThings = new AtomicInteger();
 
     Pnky
         .supplyAsync(() ->
@@ -316,6 +319,27 @@ public class PnkyTest
         .get();
 
     assertEquals(-1, value.get());
+  }
+
+  @Test
+  public void testWaitForAll() throws Exception
+  {
+    final Pnky<Integer> toFinish = Pnky.create();
+    final List<PnkyPromise<Integer>> promises = Arrays.asList(
+        Pnky.<Integer> immediatelyFailed(new NumberFormatException()), toFinish);
+
+    final AtomicReference<Throwable> throwable = new AtomicReference<>();
+    Pnky.waitForAll(promises).alwaysAccept((result, error) ->
+    {
+      assertNull(result);
+      throwable.set(error);
+    });
+
+    assertNull(throwable.get());
+
+    toFinish.resolve(1);
+
+    assertThat(throwable.get(), instanceOf(NumberFormatException.class));
   }
 
 }

@@ -1,8 +1,10 @@
 package com.jive.myco.commons.concurrent;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -802,8 +804,8 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   /**
    * Creates a new {@link PnkyPromise future} that completes successfully with the results of the
    * supplied futures that completed successfully, if and only if all of the supplied futures
-   * complete successfully. The returned future completes exceptionally if any of the provided
-   * futures complete exceptionally.
+   * complete successfully. The returned future completes exceptionally immediately if any of the
+   * provided futures complete exceptionally.
    *
    * @param <V>
    *          the type of value for all promises
@@ -832,6 +834,58 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
         pnky.reject(t);
       }
     });
+
+    return pnky;
+  }
+
+  /**
+   * Creates a new {@link PnkyPromise future} that completes successfully with the results of the
+   * supplied futures that completed successfully, if and only if all of the supplied futures
+   * complete successfully. The returned future completes exceptionally if any of the provided
+   * futures complete exceptionally, but unlike {@link #all} will wait for all futures to be
+   * complete (successful or not) before resolving the returned future.
+   *
+   * @param <V>
+   *          the type of value for all promises
+   * @param promises
+   *          the set of promises to wait on
+   * @return a new {@link PnkyPromise future}
+   */
+  public static <V> PnkyPromise<List<V>> waitForAll(
+      final Iterable<? extends PnkyPromise<? extends V>> promises)
+  {
+    final Pnky<List<V>> pnky = Pnky.create();
+
+    final int numberOfPromises = Iterables.size(promises);
+    final AtomicInteger remaining = new AtomicInteger(numberOfPromises);
+    @SuppressWarnings("unchecked")
+    final V[] results = (V[]) new Object[numberOfPromises];
+    final AtomicReference<Throwable> exception = new AtomicReference<>();
+
+    int i = 0;
+    for (final PnkyPromise<? extends V> promise : promises)
+    {
+      final int promiseNumber = i++;
+
+      promise.alwaysAccept((result, error) ->
+      {
+        results[promiseNumber] = result;
+        exception.compareAndSet(null, error);
+
+        if (remaining.decrementAndGet() == 0)
+        {
+          final Throwable errorResult = exception.get();
+          if (errorResult != null)
+          {
+            pnky.reject(errorResult);
+          }
+          else
+          {
+            pnky.resolve(Arrays.asList(results));
+          }
+        }
+      });
+    }
 
     return pnky;
   }
