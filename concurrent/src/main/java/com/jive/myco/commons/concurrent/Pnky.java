@@ -1,7 +1,9 @@
 package com.jive.myco.commons.concurrent;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nonnull;
@@ -12,6 +14,7 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -802,8 +805,8 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   /**
    * Creates a new {@link PnkyPromise future} that completes successfully with the results of the
    * supplied futures that completed successfully, if and only if all of the supplied futures
-   * complete successfully. The returned future completes exceptionally if any of the provided
-   * futures complete exceptionally.
+   * complete successfully. The returned future completes exceptionally as soon as any of the
+   * provided futures complete exceptionally.
    *
    * @param <V>
    *          the type of value for all promises
@@ -812,7 +815,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
    *
    * @return a new {@link PnkyPromise future}
    */
-  public static <V> PnkyPromise<List<V>> all(
+  public static <V> PnkyPromise<List<V>> allFailingFast(
       final Iterable<? extends PnkyPromise<? extends V>> promises)
   {
     final Pnky<List<V>> pnky = Pnky.create();
@@ -832,6 +835,78 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
         pnky.reject(t);
       }
     });
+
+    return pnky;
+  }
+
+  /**
+   * Creates a new {@link PnkyPromise future} that completes successfully with the results of the
+   * supplied futures that completed successfully, if and only if all of the supplied futures
+   * complete successfully. The returned future completes exceptionally with a
+   * {@link CombinedException} if any of the provided futures complete exceptionally, but only when
+   * all futures have been completed.
+   * <p>
+   * The returned future will be resolved with the values in the order that the future's were passed
+   * to this method (not in completion order).
+   * </p>
+   * <p>
+   * The {@link CombinedException} will contain a {@link CombinedException#getCauses() list} of
+   * exceptions mapped to the order of the promises that were passed to this method. A {@code null}
+   * value means that corresponding future was completed successfully.
+   * </p>
+   *
+   * @param <V>
+   *          the type of value for all promises
+   * @param promises
+   *          the set of promises to wait on
+   * @return a new {@link PnkyPromise future}
+   */
+  public static <V> PnkyPromise<List<V>> all(
+      final Iterable<? extends PnkyPromise<? extends V>> promises)
+  {
+    final Pnky<List<V>> pnky = Pnky.create();
+
+    final int numberOfPromises = Iterables.size(promises);
+
+    // Special case, no promises to wait for
+    if (numberOfPromises == 0)
+    {
+      return Pnky.immediatelyComplete(Lists.newArrayList());
+    }
+
+    final AtomicInteger remaining = new AtomicInteger(numberOfPromises);
+    @SuppressWarnings("unchecked")
+    final V[] results = (V[]) new Object[numberOfPromises];
+    final Throwable[] errors = new Throwable[numberOfPromises];
+    final AtomicBoolean failed = new AtomicBoolean();
+
+    int i = 0;
+    for (final PnkyPromise<? extends V> promise : promises)
+    {
+      final int promiseNumber = i++;
+
+      promise.alwaysAccept((result, error) ->
+      {
+        results[promiseNumber] = result;
+        errors[promiseNumber] = error;
+        if (error != null)
+        {
+          failed.set(true);
+        }
+
+        if (remaining.decrementAndGet() == 0)
+        {
+          if (failed.get())
+          {
+            pnky.reject(new CombinedException(Arrays.asList(errors)));
+          }
+          else
+          {
+            pnky.resolve(Arrays.asList(results));
+          }
+        }
+      });
+    }
 
     return pnky;
   }

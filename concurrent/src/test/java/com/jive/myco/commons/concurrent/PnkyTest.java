@@ -3,17 +3,23 @@ package com.jive.myco.commons.concurrent;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 
 /**
@@ -41,10 +47,10 @@ public class PnkyTest
   @Test
   public void testAlwaysPropagateBiConsumerSuccess() throws Exception
   {
-    AtomicInteger badThings = new AtomicInteger();
+    final AtomicInteger badThings = new AtomicInteger();
 
     // Only on this test just to verify same thread behavior
-    AtomicBoolean invoked = new AtomicBoolean();
+    final AtomicBoolean invoked = new AtomicBoolean();
 
     Pnky.supplyAsync(() -> 1, MoreExecutors.sameThreadExecutor())
         .alwaysAccept((result, error) ->
@@ -63,7 +69,7 @@ public class PnkyTest
   @Test
   public void testAlwaysPropagateError() throws Exception
   {
-    AtomicInteger badThings = new AtomicInteger();
+    final AtomicInteger badThings = new AtomicInteger();
 
     Pnky
         .supplyAsync(() ->
@@ -101,7 +107,7 @@ public class PnkyTest
   @Test
   public void testAlwaysTransformFailure() throws Exception
   {
-    AtomicInteger badThings = new AtomicInteger();
+    final AtomicInteger badThings = new AtomicInteger();
 
     Pnky
         .supplyAsync(() ->
@@ -149,7 +155,7 @@ public class PnkyTest
   @Test
   public void testAlwaysComposeFailure() throws Exception
   {
-    AtomicInteger badThings = new AtomicInteger();
+    final AtomicInteger badThings = new AtomicInteger();
 
     Pnky
         .supplyAsync(() ->
@@ -187,7 +193,7 @@ public class PnkyTest
   @Test
   public void testPropagateIndividually() throws Exception
   {
-    AtomicInteger badThings = new AtomicInteger();
+    final AtomicInteger badThings = new AtomicInteger();
 
     Pnky
         .supplyAsync(() ->
@@ -316,6 +322,77 @@ public class PnkyTest
         .get();
 
     assertEquals(-1, value.get());
+  }
+
+  @Test
+  public void testAllWaitsForAll() throws Exception
+  {
+    final Pnky<Integer> toFinish = Pnky.create();
+    final List<PnkyPromise<Integer>> promises = Arrays.asList(
+        Pnky.<Integer> immediatelyFailed(new NumberFormatException()), toFinish);
+
+    final AtomicReference<Throwable> throwable = new AtomicReference<>();
+    Pnky.all(promises).alwaysAccept((result, error) ->
+    {
+      assertNull(result);
+      throwable.set(error);
+    });
+
+    assertNull(throwable.get());
+
+    toFinish.resolve(1);
+
+    assertThat(throwable.get(), instanceOf(CombinedException.class));
+    assertThat(((CombinedException) throwable.get()).getCauses().get(0),
+        instanceOf(NumberFormatException.class));
+  }
+
+  @Test
+  public void testAllWithEmptySetOfPromises() throws Exception
+  {
+    final CountDownLatch invoked = new CountDownLatch(1);
+    Pnky.all(Lists.newArrayList()).alwaysAccept((result, error) -> invoked.countDown());
+
+    assertTrue(invoked.await(10, TimeUnit.MILLISECONDS));
+  }
+
+  @Test
+  public void testAllInOrder() throws Exception
+  {
+    final Pnky<Integer> first = Pnky.create();
+    final Pnky<Integer> second = Pnky.create();
+    final CountDownLatch finished = new CountDownLatch(1);
+    final AtomicReference<List<Integer>> results = new AtomicReference<>();
+    Pnky.all(Arrays.asList(first, second))
+        .thenAccept((result) ->
+        {
+          results.set(result);
+          finished.countDown();
+        });
+
+    second.resolve(2);
+
+    assertNull(results.get());
+
+    first.resolve(1);
+
+    assertTrue(finished.await(10, TimeUnit.MILLISECONDS));
+
+    assertNotNull(results.get());
+    assertEquals(2, results.get().size());
+    assertEquals(1, (int) results.get().get(0));
+    assertEquals(2, (int) results.get().get(1));
+  }
+
+  @Test
+  public void testAllFailingFast() throws Exception
+  {
+    final AtomicReference<Throwable> result = new AtomicReference<>();
+    Pnky.allFailingFast(
+        Arrays.asList(Pnky.immediatelyFailed(new NumberFormatException()), Pnky.create()))
+        .onFailure(result::set);
+
+    assertThat(result.get(), instanceOf(NumberFormatException.class));
   }
 
 }
