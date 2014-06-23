@@ -343,7 +343,7 @@ public class PnkyTest
     toFinish.resolve(1);
 
     assertThat(throwable.get(), instanceOf(CombinedException.class));
-    assertThat(((CombinedException)throwable.get()).getCauses().get(0),
+    assertThat(((CombinedException) throwable.get()).getCauses().get(0),
         instanceOf(NumberFormatException.class));
   }
 
@@ -382,6 +382,17 @@ public class PnkyTest
     assertEquals(2, results.get().size());
     assertEquals(1, (int) results.get().get(0));
     assertEquals(2, (int) results.get().get(1));
+  }
+
+  @Test
+  public void testAllFailingFast() throws Exception
+  {
+    final AtomicReference<Throwable> result = new AtomicReference<>();
+    Pnky.allFailingFast(
+        Arrays.asList(Pnky.immediatelyFailed(new NumberFormatException()), Pnky.create()))
+        .onFailure(result::set);
+
+    assertThat(result.get(), instanceOf(NumberFormatException.class));
   }
 
 }
