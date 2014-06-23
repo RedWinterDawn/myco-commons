@@ -342,7 +342,9 @@ public class PnkyTest
 
     toFinish.resolve(1);
 
-    assertThat(throwable.get(), instanceOf(NumberFormatException.class));
+    assertThat(throwable.get(), instanceOf(CombinedException.class));
+    assertThat(((CombinedException)throwable.get()).getCauses().get(0),
+        instanceOf(NumberFormatException.class));
   }
 
   @Test
