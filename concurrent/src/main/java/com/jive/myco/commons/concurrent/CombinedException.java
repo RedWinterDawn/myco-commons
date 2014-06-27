@@ -12,6 +12,8 @@ import lombok.Getter;
  */
 public class CombinedException extends Exception
 {
+  private static final long serialVersionUID = -1359656636853321262L;
+
   @Getter
   private final List<? extends Throwable> causes;
 
