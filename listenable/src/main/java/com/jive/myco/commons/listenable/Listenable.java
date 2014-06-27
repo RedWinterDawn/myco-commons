@@ -11,28 +11,32 @@ import java.util.concurrent.Executor;
 public interface Listenable<T>
 {
   /**
-   * Add the given listener. The listener will be executed in the containing instance's thread.
+   * Add the given listener. The listener will be executed in a thread managed by this instance.
+   * Calling this method with a listener that has already been added will update the listener's
+   * associated executor.
    *
    * @param listener
    *          listener to add
    */
-  public void addListener(T listener);
+  public void addListener(final T listener);
 
   /**
-   * Add the given listener. The listener will be executed using the given executor
+   * Add the given listener. The listener will be executed via the supplied {@code executor}.
+   * Calling this method with a listener that has already been added will update the listener's
+   * associated executor.
    *
    * @param listener
    *          listener to add
    * @param executor
-   *          executor to run listener in
+   *          executor to run the listener in
    */
-  public void addListener(T listener, Executor executor);
+  public void addListener(final T listener, final Executor executor);
 
   /**
-   * Remove the given listener
+   * Remove the given listener. If the listener has not been added, this method has no effect.
    *
    * @param listener
    *          listener to remove
    */
-  public void removeListener(Object listener);
+  public void removeListener(final Object listener);
 }

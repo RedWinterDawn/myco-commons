@@ -17,7 +17,7 @@ import org.mockito.stubbing.Answer;
 /**
  * @author Brandon Pedersen &lt;bpedersen@getjive.com&gt;
  */
-public class DefaultListenableTest
+public class DefaultListenableContainerTest
 {
   private DefaultListenableContainer<Listener> listenable;
 
@@ -63,10 +63,12 @@ public class DefaultListenableTest
   }
 
   @Test
-  public void testOnlyAddedOnce() throws Exception
+  public void testOnlyAddedOnceButChangesExecutor() throws Exception
   {
     final Listener listener1 = new Listener();
     final Executor executor1 = getMockExecutor();
+
+    listenable.addListener(listener1);
     listenable.addListener(listener1, executor1);
     listenable.addListener(listener1, executor1);
     listenable.addListener(listener1, executor1);
@@ -75,6 +77,17 @@ public class DefaultListenableTest
 
     assertEquals(1, listener1.timesRun);
     verify(executor1, times(1)).execute(any(Runnable.class));
+
+    listenable.addListener(listener1, new ListenerInvoker());
+    listenable.addListener(listener1, executor1, new ListenerInvoker());
+
+    assertEquals(1, listener1.timesRun);
+    verify(executor1, times(1)).execute(any(Runnable.class));
+
+    listenable.forEach(new ListenerInvoker());
+
+    assertEquals(2, listener1.timesRun);
+    verify(executor1, times(2)).execute(any(Runnable.class));
   }
 
   @Test
@@ -109,6 +122,88 @@ public class DefaultListenableTest
     {
       assertEquals(1, listener.timesRun);
     }
+  }
+
+  @Test
+  public void testAddWithActionSameThreadExecutorDefault() throws Exception
+  {
+    final List<Listener> listeners = new ArrayList<>();
+    for (int i = 0; i < 1000; i++)
+    {
+      final Listener listener = new Listener();
+      listeners.add(listener);
+      listenable.addListener(listener, new ListenerInvoker());
+      assertEquals(1, listener.timesRun);
+    }
+
+    listenable.forEach(new ListenerInvoker());
+
+    for (final Listener listener : listeners)
+    {
+      assertEquals(2, listener.timesRun);
+    }
+  }
+
+  @Test
+  public void testAddWithActionCorrectExecutor() throws Exception
+  {
+    final Listener listener1 = new Listener();
+    final Executor executor1 = getMockExecutor();
+
+    final Listener listener2 = new Listener();
+    final Executor executor2 = getMockExecutor();
+
+    listenable.addListener(listener1, executor1, new ListenerInvoker());
+    listenable.addListener(listener2, executor2, new ListenerInvoker());
+
+    assertEquals(1, listener1.timesRun);
+    assertEquals(1, listener2.timesRun);
+
+    verify(executor1, times(1)).execute(any(Runnable.class));
+    verify(executor2, times(1)).execute(any(Runnable.class));
+
+    listenable.forEach(new ListenerInvoker());
+
+    assertEquals(2, listener1.timesRun);
+    assertEquals(2, listener2.timesRun);
+
+    verify(executor1, times(2)).execute(any(Runnable.class));
+    verify(executor2, times(2)).execute(any(Runnable.class));
+  }
+
+  @Test
+  public void testListenerThrowsException() throws Exception
+  {
+    final Listener listener1 = new Listener()
+    {
+      @Override
+      public void invoke()
+      {
+        super.invoke();
+        throw new RuntimeException();
+      }
+    };
+
+    final Listener listener2 = new Listener()
+    {
+      @Override
+      public void invoke()
+      {
+        super.invoke();
+        throw new RuntimeException();
+      }
+    };
+
+    listenable.addListener(listener1);
+    listenable.addListener(listener2, new ListenerInvoker());
+
+    assertEquals(0, listener1.timesRun);
+    assertEquals(1, listener2.timesRun);
+
+    listenable.forEach(new ListenerInvoker());
+
+    assertEquals(1, listener1.timesRun);
+    assertEquals(2, listener2.timesRun);
   }
 
   private static class Listener
