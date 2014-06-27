@@ -18,7 +18,7 @@ public interface Listenable<T>
    * @param listener
    *          listener to add
    */
-  public void addListener(final T listener);
+  void addListener(final T listener);
 
   /**
    * Add the given listener. The listener will be executed via the supplied {@code executor}.
@@ -30,7 +30,7 @@ public interface Listenable<T>
    * @param executor
    *          executor to run the listener in
    */
-  public void addListener(final T listener, final Executor executor);
+  void addListener(final T listener, final Executor executor);
 
   /**
    * Remove the given listener. If the listener has not been added, this method has no effect.
@@ -38,5 +38,5 @@ public interface Listenable<T>
    * @param listener
    *          listener to remove
    */
-  public void removeListener(final Object listener);
+  void removeListener(final Object listener);
 }

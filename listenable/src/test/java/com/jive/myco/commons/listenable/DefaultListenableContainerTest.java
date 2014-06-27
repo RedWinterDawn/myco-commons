@@ -78,8 +78,8 @@ public class DefaultListenableContainerTest
     assertEquals(1, listener1.timesRun);
     verify(executor1, times(1)).execute(any(Runnable.class));
 
-    listenable.addListener(listener1, new ListenerInvoker());
-    listenable.addListener(listener1, executor1, new ListenerInvoker());
+    listenable.addListenerWithInitialAction(listener1, new ListenerInvoker());
+    listenable.addListenerWithInitialAction(listener1, executor1, new ListenerInvoker());
 
     assertEquals(1, listener1.timesRun);
     verify(executor1, times(1)).execute(any(Runnable.class));
@@ -132,7 +132,7 @@ public class DefaultListenableContainerTest
     {
       final Listener listener = new Listener();
       listeners.add(listener);
-      listenable.addListener(listener, new ListenerInvoker());
+      listenable.addListenerWithInitialAction(listener, new ListenerInvoker());
       assertEquals(1, listener.timesRun);
     }
 
@@ -153,8 +153,8 @@ public class DefaultListenableContainerTest
     final Listener listener2 = new Listener();
     final Executor executor2 = getMockExecutor();
 
-    listenable.addListener(listener1, executor1, new ListenerInvoker());
-    listenable.addListener(listener2, executor2, new ListenerInvoker());
+    listenable.addListenerWithInitialAction(listener1, executor1, new ListenerInvoker());
+    listenable.addListenerWithInitialAction(listener2, executor2, new ListenerInvoker());
 
     assertEquals(1, listener1.timesRun);
     assertEquals(1, listener2.timesRun);
@@ -195,7 +195,7 @@ public class DefaultListenableContainerTest
     };
 
     listenable.addListener(listener1);
-    listenable.addListener(listener2, new ListenerInvoker());
+    listenable.addListenerWithInitialAction(listener2, new ListenerInvoker());
 
     assertEquals(0, listener1.timesRun);
     assertEquals(1, listener2.timesRun);
