@@ -19,19 +19,35 @@ public class DefaultListenableContainer<T> implements ListenableContainer<T>
   private final Map<T, Executor> listeners = Maps.newConcurrentMap();
 
   @Override
-  public void addListener(T listener)
+  public void addListener(final T listener)
   {
     addListener(listener, MoreExecutors.sameThreadExecutor());
   }
 
   @Override
-  public void addListener(@NonNull T listener, @NonNull Executor executor)
+  public void addListenerWithInitialAction(final T listener, final Consumer<? super T> action)
+  {
+    addListenerWithInitialAction(listener, MoreExecutors.sameThreadExecutor(), action);
+  }
+
+  @Override
+  public void addListener(@NonNull final T listener, @NonNull final Executor executor)
   {
     listeners.put(listener, executor);
   }
 
   @Override
-  public void removeListener(Object listener)
+  public void addListenerWithInitialAction(final T listener, final Executor executor,
+      final Consumer<? super T> action)
+  {
+    if (listeners.put(listener, executor) == null)
+    {
+      doAction(listener, executor, action);
+    }
+  }
+
+  @Override
+  public void removeListener(final Object listener)
   {
     listeners.remove(listener);
   }
@@ -42,21 +58,7 @@ public class DefaultListenableContainer<T> implements ListenableContainer<T>
     for (final Map.Entry<T, Executor> entry : listeners.entrySet())
     {
       final T listener = entry.getKey();
-      entry.getValue().execute(new Runnable()
-      {
-        @Override
-        public void run()
-        {
-          try
-          {
-            action.accept(listener);
-          }
-          catch (Exception e)
-          {
-            log.error("Listener [{}] had an error", listener, e);
-          }
-        }
-      });
+      doAction(listener, entry.getValue(), action);
     }
   }
 
@@ -64,5 +66,20 @@ public class DefaultListenableContainer<T> implements ListenableContainer<T>
   public void clear()
   {
     listeners.clear();
+  }
+
+  private void doAction(final T listener, final Executor executor, final Consumer<? super T> action)
+  {
+    executor.execute(() ->
+    {
+      try
+      {
+        action.accept(listener);
+      }
+      catch (final Exception e)
+      {
+        log.error("Listener [{}] had an error", listener, e);
+      }
+    });
   }
 }
