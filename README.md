@@ -18,6 +18,15 @@ Stuff that does things on different projects.
 
 ## <a name="changes"></a>Change Log
 
+#### 0.0.7
+* Upgrading from 0.0.6
+  * `Pnky.all()` now uses a custom `CombinedException` class that will provide access to all exceptions that occurred during the operation rather than rejecting with just the first exception to occur.
+* Change Log
+  * NS - Modify behavior of `Pnky.all()` to wait for all promises to be complete before resolving the future
+         and use a custom exception to gather all errors that occurred.
+  * NS - Add ability for `ListenableContainer` to perform an action as soon as the listener is added
+  * NS - Add helper function on `ExceptionalFunction` for transforming to a typed `null` value
+
 ##### 0.0.6
 * Upgrading from 0.0.5
   * No changes required.
