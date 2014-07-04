@@ -5,7 +5,7 @@
   <parent>
     <groupId>com.jive.myco</groupId>
     <artifactId>parent</artifactId>
-    <version>18</version>
+    <version>21</version>
   </parent>
 
   <groupId>com.jive.myco.commons</groupId>
@@ -15,10 +15,6 @@
   <packaging>pom</packaging>
 
   <name>Myco :: Commons :: Root</name>
-
-  <properties>
-    <deps.hawtdispatch.version>1.20</deps.hawtdispatch.version>
-  </properties>
 
   <scm>
     <connection>scm:git:ssh://git@github.com/jive/com.jive.myco.commons.git</connection>
@@ -40,16 +36,6 @@
     <module>testing</module>
     <module>versions</module>
   </modules>
-
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>org.fusesource.hawtdispatch</groupId>
-        <artifactId>hawtdispatch</artifactId>
-        <version>${deps.hawtdispatch.version}</version>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
 
   <dependencies>
     <dependency>
