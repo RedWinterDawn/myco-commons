@@ -16,9 +16,17 @@ public interface ExceptionalFunction<T, R>
 
   static final ExceptionalFunction<?, ?> IDENTITY = (x) -> x;
 
+  static final ExceptionalFunction<?, ?> TO_NULL = (x) -> null;
+
   @SuppressWarnings("unchecked")
   static <T> ExceptionalFunction<T, T> identity()
   {
     return (ExceptionalFunction<T, T>) IDENTITY;
+  }
+
+  @SuppressWarnings("unchecked")
+  static <T, R> ExceptionalFunction<T, R> toNull()
+  {
+    return (ExceptionalFunction<T, R>) TO_NULL;
   }
 }
