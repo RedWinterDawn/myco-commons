@@ -986,4 +986,36 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
 
     return pnky;
   }
+
+  /**
+   * Create a new {@link PnkyPromise future} that completes successfully with the result from the
+   * provided {@code future} when it is complete. The returned future will complete exceptionally if
+   * the provided {@code future} threw an exception.
+   *
+   * @param future
+   *          the listenable future to wrap
+   * @return a new {@link PnkyPromise future}
+   */
+  public static <V> PnkyPromise<V> from(final ListenableFuture<? extends V> future)
+  {
+    final Pnky<V> pnky = Pnky.create();
+
+    Futures.addCallback(future, new FutureCallback<V>()
+    {
+
+      @Override
+      public void onSuccess(V result)
+      {
+        pnky.resolve(result);
+      }
+
+      @Override
+      public void onFailure(Throwable t)
+      {
+        pnky.reject(t);
+      }
+    });
+
+    return pnky;
+  }
 }

@@ -23,6 +23,7 @@ Stuff that does things on different projects.
   * No changes required.
 * Change Log
   * NS - Upgraded to latest Myco Parent.
+  * NS - Add ability to create a `PnkyPromise` from a `ListenableFuture`
 
 #### 0.0.7
 * Upgrading from 0.0.6

@@ -1,10 +1,12 @@
 package com.jive.myco.commons.concurrent;
 
+import static com.jayway.awaitility.Awaitility.*;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -15,11 +17,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import lombok.Cleanup;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 
 /**
@@ -393,6 +399,78 @@ public class PnkyTest
         .onFailure(result::set);
 
     assertThat(result.get(), instanceOf(NumberFormatException.class));
+  }
+
+  @Test
+  public void testWrapListenableFutureSuccess() throws Exception
+  {
+    @Cleanup("shutdownNow")
+    ListeningExecutorService executorService =
+        MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
+
+    final AtomicBoolean started = new AtomicBoolean();
+    final CountDownLatch latch = new CountDownLatch(1);
+
+    ListenableFuture<Boolean> future = executorService.submit(() ->
+    {
+      started.set(true);
+      return latch.await(5, TimeUnit.SECONDS);
+    });
+
+    PnkyPromise<Boolean> pnky = Pnky.from(future);
+
+    assertFalse(pnky.isDone());
+
+    await().untilTrue(started);
+
+    latch.countDown();
+
+    await().until(pnky::isDone);
+    assertTrue(pnky.get());
+  }
+
+  @Test
+  public void testWrapListenableFutureFailure() throws Exception
+  {
+    @Cleanup("shutdownNow")
+    ListeningExecutorService executorService =
+        MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
+
+    final AtomicBoolean started = new AtomicBoolean();
+    final CountDownLatch latch = new CountDownLatch(1);
+
+    ListenableFuture<Boolean> future = executorService.submit((Callable<Boolean>) () ->
+    {
+      started.set(true);
+      if (latch.await(5, TimeUnit.SECONDS))
+      {
+        throw new NumberFormatException();
+      }
+      else
+      {
+        throw new Exception();
+      }
+    });
+
+    PnkyPromise<Boolean> pnky = Pnky.from(future);
+
+    assertFalse(pnky.isDone());
+
+    await().untilTrue(started);
+
+    latch.countDown();
+
+    await().until(pnky::isDone);
+
+    try
+    {
+      pnky.get(5, TimeUnit.SECONDS);
+      fail();
+    }
+    catch (ExecutionException e)
+    {
+      assertThat(e.getCause(), instanceOf(NumberFormatException.class));
+    }
   }
 
 }
