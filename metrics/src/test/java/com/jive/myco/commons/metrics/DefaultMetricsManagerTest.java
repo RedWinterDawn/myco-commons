@@ -1,12 +1,29 @@
 package com.jive.myco.commons.metrics;
 
 import static org.junit.Assert.*;
+import static org.mockito.Matchers.*;
+import static org.mockito.Mockito.*;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import javax.net.SocketFactory;
 
 import org.fusesource.hawtdispatch.internal.DispatcherConfig;
 import org.junit.Test;
+import org.python.core.PyFile;
+import org.python.core.PyList;
+import org.python.modules.cPickle;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
@@ -257,6 +274,109 @@ public class DefaultMetricsManagerTest
 
     assertEquals(Double.valueOf(Double.NaN), baseRatio.getValue());
     assertNull(baseGauge.getValue());
+  }
+
+  @Test
+  public void testGraphiteFilterUnchangedCounters() throws Exception
+  {
+    final SocketFactory socketFactory = mock(SocketFactory.class);
+    final Socket socket = mock(Socket.class);
+    final InputStream inputStream = mock(InputStream.class);
+    final OutputStream outputStream = mock(OutputStream.class);
+
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final InetSocketAddress inetSocketAddress = new InetSocketAddress("localhost", 12354);
+
+    when(socketFactory.createSocket(inetSocketAddress.getAddress(), inetSocketAddress.getPort()))
+        .thenReturn(socket);
+
+    when(socket.getInputStream()).thenReturn(inputStream);
+    when(socket.getOutputStream()).thenReturn(outputStream);
+
+    doAnswer(
+        (invocation) ->
+        {
+          baos.write((Integer) invocation.getArguments()[0]);
+          return null;
+        })
+        .when(outputStream).write(anyByte());
+
+    doAnswer(
+        (invocation) ->
+        {
+          baos.write((byte[]) invocation.getArguments()[0]);
+          return null;
+        })
+        .when(outputStream).write(any(byte[].class));
+
+    final CountDownLatch readLatch = new CountDownLatch(1);
+    when(inputStream.read()).thenAnswer((invocation) ->
+    {
+      readLatch.await();
+      return -1;
+    });
+
+    final MetricsManager manager = new DefaultMetricsManager(
+        "test",
+        new DefaultDispatchQueueBuilder("test", DispatcherConfig.getDefaultDispatcher()),
+        new MetricRegistry(),
+        MetricsManagerConfiguration.builder()
+            .graphiteReporterAddress(inetSocketAddress)
+            .graphiteReporterSocketFactory(socketFactory)
+            .graphiteReporterEnabled(true)
+            .build());
+
+    manager.init().get();
+
+    final Counter changing = manager.segment().getCounter("changing");
+    Counter unchanging = manager.segment().getCounter("unchanging");
+
+    Thread.sleep(2500);
+
+    changing.inc();
+
+    Thread.sleep(2500);
+
+    changing.inc();
+
+    Thread.sleep(2500);
+
+    manager.removeMetric(unchanging);
+
+    Thread.sleep(2500);
+
+    unchanging = manager.segment().getCounter("unchanging");
+
+    Thread.sleep(2500);
+
+    manager.destroy().get();
+
+    final byte[] bytes = baos.toByteArray();
+    final List<PyList> tuples = new LinkedList<>();
+    final ByteBuffer buffer = ByteBuffer.wrap(bytes);
+    int batchStartingOffset = 0;
+
+    while (batchStartingOffset < bytes.length)
+    {
+      buffer.position(batchStartingOffset);
+      final int batchPayloadLength = buffer.getInt();
+      final int batchPayloadStartingOffset = batchStartingOffset + 4;
+      final int batchTotalLength = batchPayloadLength + 4;
+
+      tuples.add((PyList) cPickle.load(
+          new PyFile(
+              new ByteArrayInputStream(bytes, batchPayloadStartingOffset, batchPayloadLength))));
+
+      batchStartingOffset += batchTotalLength;
+    }
+
+    // Step 0: Looking for both metrics to show up
+    // Step 1: Looking for changing metric to go to 1 and unchanging to not appear
+    // Step 2: Looking for both metrics to not appear
+    // Step 3: Looking for changing metric to go to 2 and unchanging to not appear
+    // Step 4: Looking for both metrics to not appear
+    // Step 5: Looking for unchanging to reappear
+    // Step 6: Winner
   }
 
   private MetricsManager createMetricsManager(
