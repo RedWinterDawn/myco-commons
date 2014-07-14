@@ -11,6 +11,8 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -23,6 +25,7 @@ import org.fusesource.hawtdispatch.internal.DispatcherConfig;
 import org.junit.Test;
 import org.python.core.PyFile;
 import org.python.core.PyList;
+import org.python.core.PyTuple;
 import org.python.modules.cPickle;
 
 import com.codahale.metrics.Counter;
@@ -33,6 +36,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.RatioGauge.Ratio;
 import com.codahale.metrics.Timer;
+import com.google.common.collect.Lists;
 import com.jive.myco.commons.hawtdispatch.DefaultDispatchQueueBuilder;
 import com.jive.myco.commons.lifecycle.LifecycleStage;
 
@@ -271,7 +275,6 @@ public class DefaultMetricsManagerTest
           }
         }, "gauge");
 
-
     assertEquals(Double.valueOf(Double.NaN), baseRatio.getValue());
     assertNull(baseGauge.getValue());
   }
@@ -370,13 +373,72 @@ public class DefaultMetricsManagerTest
       batchStartingOffset += batchTotalLength;
     }
 
-    // Step 0: Looking for both metrics to show up
-    // Step 1: Looking for changing metric to go to 1 and unchanging to not appear
-    // Step 2: Looking for both metrics to not appear
-    // Step 3: Looking for changing metric to go to 2 and unchanging to not appear
-    // Step 4: Looking for both metrics to not appear
-    // Step 5: Looking for unchanging to reappear
+    // Changing
+    // Step 0: Looking for changing with value of 0
+    // Step 1: Looking for changing to not appear
+    // Step 2: Looking for changing metric to go to 1
+    // Step 3: Looking for changing metric to not appear
+    // Step 4: Looking for changing metric to go to 2
+    // Step 5: Looking for changing metric to not appear
     // Step 6: Winner
+
+    ArrayList<String> setChangingList = new ArrayList<String>(Arrays.asList("0", "1", "2"));
+    ArrayList<String> changingList = Lists.newArrayList();
+
+    int count = 0;
+    String text = "com.jive.metrics.changing.count";
+    for (PyList py : tuples)
+    {
+      for (Object item : py)
+      {
+        PyTuple outerTuple = (PyTuple) item;
+        String result = (String) outerTuple.get(0);
+        if (result.equals(text))
+        {
+          PyTuple innerTuple = (PyTuple) outerTuple.get(1);
+          String num = (String) innerTuple.get(1);
+          changingList.add(num);
+          count--;
+        }
+      }
+      count++;
+    }
+
+    assertEquals(changingList, setChangingList);
+    assertTrue(count == (tuples.size() - changingList.size()));
+
+    // Unchanging
+    // Step 0: Looking for unchanging with value of 0
+    // Step 1: Looking for unchanging to not appear
+    // Step 2: Looking for unchanging with value of 0
+    // Step 3: Looking for unchanging to not appear
+    // Step 4: Winner
+
+    ArrayList<String> setUnchangingList = new ArrayList<String>(Arrays.asList("0", "0"));
+    ArrayList<String> unchangingList = Lists.newArrayList();
+
+    count = 0;
+    text = "com.jive.metrics.unchanging.count";
+    for (PyList py : tuples)
+    {
+      for (Object item : py)
+      {
+        PyTuple outerTuple = (PyTuple) item;
+        String result = (String) outerTuple.get(0);
+        if (result.equals(text))
+        {
+          PyTuple innerTuple = (PyTuple) outerTuple.get(1);
+          String num = (String) innerTuple.get(1);
+          unchangingList.add(num);
+          count--;
+        }
+      }
+      count++;
+    }
+
+    assertEquals(unchangingList, setUnchangingList);
+    assertTrue(count == (tuples.size() - unchangingList.size()));
+
   }
 
   private MetricsManager createMetricsManager(
