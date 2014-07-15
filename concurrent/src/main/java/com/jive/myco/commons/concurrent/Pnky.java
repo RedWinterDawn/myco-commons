@@ -990,7 +990,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   /**
    * Create a new {@link PnkyPromise future} that completes successfully with the result from the
    * provided {@code future} when it is complete. The returned future will complete exceptionally if
-   * the provided {@code future} threw an exception.
+   * the provided {@code future} completes exceptionally.
    *
    * @param future
    *          the listenable future to wrap
@@ -1004,13 +1004,13 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
     {
 
       @Override
-      public void onSuccess(V result)
+      public void onSuccess(final V result)
       {
         pnky.resolve(result);
       }
 
       @Override
-      public void onFailure(Throwable t)
+      public void onFailure(final Throwable t)
       {
         pnky.reject(t);
       }
