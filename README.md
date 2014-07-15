@@ -24,6 +24,7 @@ Stuff that does things on different projects.
 * Change Log
   * NS - Upgraded to latest Myco Parent.
   * US4536 - Added custom Graphite reporter client, ability to use Pickle encoding, long lived Carbon sockets for the Graphite reporter, optional filtering of unchanged metrics in Graphite reports, and batch transmissions of Graphite reports.
+  * NS - Add ability to create a `PnkyPromise` from a `ListenableFuture`
 
 #### 0.0.7
 * Upgrading from 0.0.6
