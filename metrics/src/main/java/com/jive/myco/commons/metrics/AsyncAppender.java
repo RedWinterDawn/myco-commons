@@ -284,59 +284,9 @@ public abstract class AsyncAppender<E>
   protected abstract void handleEvent(final E event) throws InterruptedException;
 
   /**
-   * Logs {@code message} at the {@code TRACE} level, replacing tokens with the values supplied via
-   * {@code args} as in {@link Logger#trace(String, Object...)}.
-   *
-   * @param message
-   *          the message template to log
-   * @param args
-   *          the args supplied to the template
+   * Returns the logger to use for log events.
    */
-  protected abstract void trace(final String message, final Object... args);
-
-  /**
-   * Logs {@code message} at the {@code DEBUG} level, replacing tokens with the values supplied via
-   * {@code args} as in {@link Logger#debug(String, Object...)}.
-   *
-   * @param message
-   *          the message template to log
-   * @param args
-   *          the args supplied to the template
-   */
-  protected abstract void debug(final String message, final Object... args);
-
-  /**
-   * Logs {@code message} at the {@code INFO} level, replacing tokens with the values supplied via
-   * {@code args} as in {@link Logger#info(String, Object...)}.
-   *
-   * @param message
-   *          the message template to log
-   * @param args
-   *          the args supplied to the template
-   */
-  protected abstract void info(final String message, final Object... args);
-
-  /**
-   * Logs {@code message} at the {@code WARN} level, replacing tokens with the values supplied via
-   * {@code args} as in {@link Logger#debug(String, Object...)}.
-   *
-   * @param message
-   *          the message template to log
-   * @param args
-   *          the args supplied to the template
-   */
-  protected abstract void warn(final String message, final Object... args);
-
-  /**
-   * Logs {@code message} at the {@code ERROR} level, replacing tokens with the values supplied via
-   * {@code args} as in {@link Logger#debug(String, Object...)}.
-   *
-   * @param message
-   *          the message template to log
-   * @param args
-   *          the args supplied to the template
-   */
-  protected abstract void error(final String message, final Object... args);
+  protected abstract Logger getLogger();
 
   private void handleEventInternal(final E event)
   {
@@ -360,7 +310,7 @@ public abstract class AsyncAppender<E>
       }
       catch (final Exception e)
       {
-        error("[{}]: Error handling event.", getId(), e);
+        getLogger().error("[{}]: Error handling event.", getId(), e);
         handled = !retryHandleEvent;
 
         if (!handled)
@@ -371,7 +321,8 @@ public abstract class AsyncAppender<E>
           {
             if (retryHandleEventDelay > 0)
             {
-              debug("[{}]: Retrying handle event in [{}] ms.", getId(), retryHandleEventDelay);
+              getLogger().debug("[{}]: Retrying handle event in [{}] ms.", getId(),
+                  retryHandleEventDelay);
               try
               {
                 Thread.sleep(retryHandleEventDelay);
@@ -383,7 +334,7 @@ public abstract class AsyncAppender<E>
             }
             else
             {
-              debug("[{}]: Retrying handle event immediately.", getId());
+              getLogger().debug("[{}]: Retrying handle event immediately.", getId());
             }
           }
           else

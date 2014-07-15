@@ -24,6 +24,8 @@ import lombok.NonNull;
 import lombok.experimental.Builder;
 import lombok.extern.slf4j.Slf4j;
 
+import org.slf4j.Logger;
+
 /**
  * A custom Graphite client instance for Metrics.
  * <p>
@@ -71,6 +73,7 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
   private final long batchTimeoutTime;
   private final boolean pickle;
 
+  private final Object lifecycleLock = new Object();
   private final Appender appender;
   private final List<ReportEvent> aggregateEvents;
 
@@ -132,44 +135,47 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
    */
   public void init()
   {
-    if (!run)
+    synchronized (lifecycleLock)
     {
-      appender.init();
+      if (!run)
+      {
+        appender.init();
 
-      executorService = new ScheduledThreadPoolExecutor(2,
-          // NOT using Guava builder here because we would like to keep as many dependencies out
-          // of this class as possible.
-          new ThreadFactory()
-          {
-            private final AtomicInteger counter = new AtomicInteger();
-
-            private final ThreadGroup group = (System.getSecurityManager() != null)
-                ? System.getSecurityManager().getThreadGroup() : Thread.currentThread()
-                    .getThreadGroup();
-            private final String nameTemplate = "graphite-" + id + "-worker-%d"
-                + GRAPHITE_COUNTER.getAndIncrement();
-
-            @Override
-            public Thread newThread(final Runnable r)
+        executorService = new ScheduledThreadPoolExecutor(2,
+            // NOT using Guava builder here because we would like to keep as many dependencies out
+            // of this class as possible.
+            new ThreadFactory()
             {
-              final Thread t = new Thread(group, r,
-                  String.format(nameTemplate, counter.getAndIncrement()), 0);
+              private final AtomicInteger counter = new AtomicInteger();
 
-              if (t.isDaemon())
+              private final ThreadGroup group = (System.getSecurityManager() != null)
+                  ? System.getSecurityManager().getThreadGroup() : Thread.currentThread()
+                      .getThreadGroup();
+              private final String nameTemplate = "graphite-" + id + "-worker-%d"
+                  + GRAPHITE_COUNTER.getAndIncrement();
+
+              @Override
+              public Thread newThread(final Runnable r)
               {
-                t.setDaemon(false);
+                final Thread t = new Thread(group, r,
+                    String.format(nameTemplate, counter.getAndIncrement()), 0);
+
+                if (t.isDaemon())
+                {
+                  t.setDaemon(false);
+                }
+
+                if (t.getPriority() != Thread.NORM_PRIORITY)
+                {
+                  t.setPriority(Thread.NORM_PRIORITY);
+                }
+
+                return t;
               }
+            });
 
-              if (t.getPriority() != Thread.NORM_PRIORITY)
-              {
-                t.setPriority(Thread.NORM_PRIORITY);
-              }
-
-              return t;
-            }
-          });
-
-      run = true;
+        run = true;
+      }
     }
   }
 
@@ -178,15 +184,18 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
    */
   public void destroy() throws InterruptedException
   {
-    appender.destroy();
-
-    run = false;
-    if (executorService != null)
+    synchronized (lifecycleLock)
     {
-      executorService.shutdownNow();
-    }
+      appender.destroy();
 
-    closeSocket(socket);
+      run = false;
+      if (executorService != null)
+      {
+        executorService.shutdownNow();
+      }
+
+      closeSocket(socket);
+    }
   }
 
   @Override
@@ -249,16 +258,14 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
       {
         aggregateEvents.add(event);
 
-        log.debug("[{}]: Added event [{}] to batch.",
-            id,
-            event);
+        log.debug("[{}]: Added event [{}] to batch.", id, event);
 
         // If null, this is the first event in a new batch so schedule the timeout task.
         if (batchTimeoutTaskFuture == null)
         {
           batchTimeoutTaskFuture =
-              executorService.schedule(
-                  () ->
+              executorService
+                  .schedule(() ->
                   {
                     try
                     {
@@ -267,8 +274,8 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
                     catch (final Exception e)
                     {
                       // Ignore it
-                }
-              },
+                    }
+                  },
                   batchTimeoutTime, TimeUnit.MILLISECONDS);
 
           log.debug("[{}]: Scheduled batch timeout for new batch.", id);
@@ -684,7 +691,7 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
   {
     private final Graphite graphite;
 
-    @Builder()
+    @Builder
     public Appender(final String id, final int queueSize, final boolean discarding,
         final Integer discardThreshold,
         final boolean blockOnFull, final boolean retryHandleEvent,
@@ -706,45 +713,9 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
     }
 
     @Override
-    protected void handleDiscardedEvent(final ReportEvent event)
+    protected Logger getLogger()
     {
-      log.warn("[{}]: Discarding event [{}].", graphite.id, event);
-    }
-
-    @Override
-    protected void handleRejectedEvent(final ReportEvent event)
-    {
-      log.warn("[{}]: Rejected event [{}].", graphite.id, event);
-    }
-
-    @Override
-    protected void trace(final String message, final Object... args)
-    {
-      log.trace(message, args);
-    }
-
-    @Override
-    protected void debug(final String message, final Object... args)
-    {
-      log.debug(message, args);
-    }
-
-    @Override
-    protected void info(final String message, final Object... args)
-    {
-      log.info(message, args);
-    }
-
-    @Override
-    protected void warn(final String message, final Object... args)
-    {
-      log.warn(message, args);
-    }
-
-    @Override
-    protected void error(final String message, final Object... args)
-    {
-      log.error(message, args);
+      return log;
     }
   }
 }
