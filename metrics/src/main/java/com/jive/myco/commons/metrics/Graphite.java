@@ -130,7 +130,7 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
    * Initializes the internal book keeping resources for this instance. Must be called prior to
    * calling {@link #send(String, String, long)}.
    */
-  public synchronized void init()
+  public void init()
   {
     if (!run)
     {
@@ -176,7 +176,7 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
   /**
    * Destroys the internal book keeping resources for this instance.
    */
-  public synchronized void destroy() throws InterruptedException
+  public void destroy() throws InterruptedException
   {
     appender.destroy();
 

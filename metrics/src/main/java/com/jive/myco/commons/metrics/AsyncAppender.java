@@ -25,7 +25,6 @@ import org.slf4j.Logger;
  */
 public abstract class AsyncAppender<E>
 {
-  public static final int DEFAULT_QUEUE_SIZE = 256;
   public static final long DEFAULT_HANDLE_EVENT_RETRY_DELAY = 500L;
   public static final int DEFAULT_HANDLE_EVENT_RETRY_COUNT = -1;
   public static final long DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = 1000L;
@@ -63,7 +62,7 @@ public abstract class AsyncAppender<E>
     this.discardThreshold = Optional
         .ofNullable(discardThreshold)
         // Default to 80% full
-        .orElseGet(() -> queueSize / 5);
+        .orElseGet(() -> queueSize - (queueSize / 5));
 
     this.blockOnFull = blockOnFull;
     this.retryHandleEvent = retryHandleEvent;
