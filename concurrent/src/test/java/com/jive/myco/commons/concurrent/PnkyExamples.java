@@ -148,6 +148,7 @@ public class PnkyExamples
    */
   public void doSomethingExceptional() throws Exception
   {
+    // No-op
   }
 
   public PnkyPromise<Integer> doSomethingUsingPromise()

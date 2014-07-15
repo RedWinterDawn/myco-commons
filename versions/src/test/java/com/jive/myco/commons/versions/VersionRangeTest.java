@@ -4,8 +4,6 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 
-import com.jive.myco.commons.versions.VersionRange;
-
 /**
  * @author Brandon Pedersen &lt;bpedersen@getjive.com&gt;
  */
@@ -14,7 +12,7 @@ public class VersionRangeTest
   @Test
   public void testExactVersion() throws Exception
   {
-    VersionRange range = new VersionRange("1.0.0");
+    final VersionRange range = new VersionRange("1.0.0");
     assertTrue(range.isInRange("1.0.0"));
     assertFalse(range.isInRange("1.0.1"));
     assertFalse(range.isInRange("0.9.9"));
@@ -39,7 +37,7 @@ public class VersionRangeTest
   @Test
   public void testNoMin() throws Exception
   {
-    VersionRange range = new VersionRange("[,1.20.100]");
+    final VersionRange range = new VersionRange("[,1.20.100]");
 
     assertTrue(range.isInRange("1.0.0"));
     assertTrue(range.isInRange("1.20.100"));
@@ -59,7 +57,7 @@ public class VersionRangeTest
   @Test
   public void testNoMax() throws Exception
   {
-    VersionRange range = new VersionRange("(25,)");
+    final VersionRange range = new VersionRange("(25,)");
 
     assertFalse(range.isInRange("10"));
     assertFalse(range.isInRange("0"));
@@ -81,8 +79,9 @@ public class VersionRangeTest
       new VersionRange("(10,100");
       fail();
     }
-    catch (IllegalArgumentException e)
+    catch (final IllegalArgumentException e)
     {
+      // Expected
     }
 
     try
@@ -90,8 +89,9 @@ public class VersionRangeTest
       new VersionRange("10,100)");
       fail();
     }
-    catch (IllegalArgumentException e)
+    catch (final IllegalArgumentException e)
     {
+      // Expected
     }
 
     try
@@ -99,8 +99,9 @@ public class VersionRangeTest
       new VersionRange("[10,100");
       fail();
     }
-    catch (IllegalArgumentException e)
+    catch (final IllegalArgumentException e)
     {
+      // Expected
     }
 
     try
@@ -108,8 +109,9 @@ public class VersionRangeTest
       new VersionRange("10,100]");
       fail();
     }
-    catch (IllegalArgumentException e)
+    catch (final IllegalArgumentException e)
     {
+      // Expected
     }
   }
 
@@ -153,8 +155,9 @@ public class VersionRangeTest
       new VersionRange("(a,b)");
       fail();
     }
-    catch (IllegalArgumentException e)
+    catch (final IllegalArgumentException e)
     {
+      // Expected
     }
 
     try
@@ -162,8 +165,9 @@ public class VersionRangeTest
       new VersionRange("ssd");
       fail();
     }
-    catch (IllegalArgumentException e)
+    catch (final IllegalArgumentException e)
     {
+      // Expected
     }
   }
 }
