@@ -2,6 +2,8 @@ package com.jive.myco.commons.metrics;
 
 import java.net.InetSocketAddress;
 
+import javax.net.SocketFactory;
+
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.experimental.Builder;
@@ -12,7 +14,6 @@ import lombok.experimental.Builder;
  * @author David Valeri
  */
 @Getter
-@Builder
 public class MetricsManagerConfiguration
 {
   /**
@@ -61,6 +62,31 @@ public class MetricsManagerConfiguration
    */
   private final InetSocketAddress graphiteReporterAddress;
 
+  /**
+   * The size of the internal queue used to hold metric reports before they are transmitted.
+   * Defaults to 2000.
+   */
+  private final int graphiteReporterQueueSize;
+
+  /**
+   * Flag indicating if counters with unchanged values are transmitted with each report or if they
+   * are filtered out of the report until they change again. Defaults to {@code false}.
+   */
+  private final boolean graphiteReporterFilterUnchangedCounters;
+
+  /**
+   * The socket factory used to create connections within the Graphite reporter. Defaults to
+   * {@link SocketFactory#getDefault()}.
+   */
+  private final SocketFactory graphiteReporterSocketFactory;
+
+  /**
+   * Flag indicating if the Graphite reporter should use Pickle encoding when reporting. Defaults to
+   * {@code false}.
+   */
+  private final boolean graphiteReporterPickle;
+
+  @Builder
   private MetricsManagerConfiguration(final boolean slf4jReporterEnabled,
       final long slf4jReporterPeriod,
       @NonNull final String slf4jReporterLoggerName,
@@ -69,7 +95,11 @@ public class MetricsManagerConfiguration
       final boolean graphiteReporterEnabled,
       final long graphiteReporterPeriod,
       @NonNull final String graphiteReporterPrefix,
-      final InetSocketAddress graphiteReporterAddress)
+      final InetSocketAddress graphiteReporterAddress,
+      final int graphiteReporterQueueSize,
+      final boolean graphiteReporterFilterUnchangedCounters,
+      final SocketFactory graphiteReporterSocketFactory,
+      final boolean graphiteReporterPickle)
   {
     if (graphiteReporterEnabled && graphiteReporterAddress == null)
     {
@@ -86,6 +116,10 @@ public class MetricsManagerConfiguration
     this.graphiteReporterPeriod = graphiteReporterPeriod;
     this.graphiteReporterPrefix = graphiteReporterPrefix;
     this.graphiteReporterAddress = graphiteReporterAddress;
+    this.graphiteReporterQueueSize = graphiteReporterQueueSize;
+    this.graphiteReporterFilterUnchangedCounters = graphiteReporterFilterUnchangedCounters;
+    this.graphiteReporterSocketFactory = graphiteReporterSocketFactory;
+    this.graphiteReporterPickle = graphiteReporterPickle;
   }
 
   public static final class MetricsManagerConfigurationBuilder
@@ -130,5 +164,29 @@ public class MetricsManagerConfiguration
      * "com.jive.metrics".
      */
     private String graphiteReporterPrefix = "com.jive.metrics";
+
+    /**
+     * The size of the internal queue used to hold metric reports before they are transmitted.
+     * Defaults to 2000.
+     */
+    private int graphiteReporterQueueSize = 2000;
+
+    /**
+     * Flag indicating if counters with unchanged values are transmitted with each report or if they
+     * are filtered out of the report until they change again. Defaults to {@code true}.
+     */
+    private boolean graphiteReporterFilterUnchangedCounters = false;
+
+    /**
+     * The socket factory used to create connections within the Graphite reporter. Defaults to
+     * {@link SocketFactory#getDefault()}.
+     */
+    private SocketFactory graphiteReporterSocketFactory = SocketFactory.getDefault();
+
+    /**
+     * Flag indicating if the Graphite reporter should use Pickle encoding when reporting. Defaults
+     * to {@code false}.
+     */
+    private boolean graphiteReporterPickle;
   }
 }

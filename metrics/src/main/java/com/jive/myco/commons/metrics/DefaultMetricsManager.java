@@ -26,12 +26,13 @@ import com.codahale.metrics.Histogram;
 import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.Metric;
+import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.MetricRegistryListener;
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.RatioGauge.Ratio;
 import com.codahale.metrics.Slf4jReporter;
 import com.codahale.metrics.Timer;
-import com.codahale.metrics.graphite.Graphite;
 import com.codahale.metrics.graphite.GraphiteReporter;
 import com.codahale.metrics.jvm.BufferPoolMetricSet;
 import com.codahale.metrics.jvm.FileDescriptorRatioGauge;
@@ -41,6 +42,7 @@ import com.codahale.metrics.jvm.ThreadStatesGaugeSet;
 import com.google.common.base.Joiner;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
+import com.jive.myco.commons.concurrent.Pnky;
 import com.jive.myco.commons.concurrent.PnkyPromise;
 import com.jive.myco.commons.hawtdispatch.DefaultDispatchQueueBuilder;
 import com.jive.myco.commons.hawtdispatch.DispatchQueueBuilder;
@@ -68,12 +70,18 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
    */
   private final Set<Metric> metrics = Sets.newSetFromMap(new MapMaker().weakKeys().makeMap());
 
+  private final String id;
+
   private final MetricRegistry registry;
 
   private final DefaultMetricsManagerContext baseContext;
 
   @NonNull
   private final MetricsManagerConfiguration metricsManagerConfiguration;
+
+  private MetricFilter graphiteMetricFilter;
+
+  private Graphite graphite;
 
   public DefaultMetricsManager()
   {
@@ -92,6 +100,7 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
       @NonNull final MetricsManagerConfiguration metricsManagerConfiguration)
   {
     super(dispatchQueueBuilder.segment("metrics", id, "lifecycle").build());
+    this.id = id;
     this.registry = metricRegistry;
     this.metricsManagerConfiguration = metricsManagerConfiguration;
     baseContext = new DefaultMetricsManagerContext(null);
@@ -143,13 +152,33 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
 
     if (metricsManagerConfiguration.isGraphiteReporterEnabled())
     {
-      final Graphite graphite =
-          new Graphite(metricsManagerConfiguration.getGraphiteReporterAddress());
+      graphite = Graphite.builder()
+          .id(id)
+          .address(metricsManagerConfiguration.getGraphiteReporterAddress())
+          .queueSize(metricsManagerConfiguration.getGraphiteReporterQueueSize())
+          .socketFactory(metricsManagerConfiguration.getGraphiteReporterSocketFactory())
+          .pickle(metricsManagerConfiguration.isGraphiteReporterPickle())
+          .build();
+
+      // Technically synchronized; however, there is no chance of it being contended at
+      // this time since we just created it.
+      graphite.init();
+
+      if (metricsManagerConfiguration.isGraphiteReporterFilterUnchangedCounters())
+      {
+        graphiteMetricFilter = new UnchangedCounterFilter();
+        registry.addListener((MetricRegistryListener) graphiteMetricFilter);
+      }
+      else
+      {
+        graphiteMetricFilter = MetricFilter.ALL;
+      }
 
       final GraphiteReporter graphiteReporter = GraphiteReporter.forRegistry(registry)
           .prefixedWith(metricsManagerConfiguration.getGraphiteReporterPrefix())
           .convertRatesTo(TimeUnit.SECONDS)
           .convertDurationsTo(TimeUnit.MILLISECONDS)
+          .filter(graphiteMetricFilter)
           .build(graphite);
 
       reporters.add(graphiteReporter);
@@ -176,11 +205,42 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
       }
     }
 
-    registry.removeMatching((name, metric) -> metrics.contains(metric));
+    if (graphiteMetricFilter != null && graphiteMetricFilter instanceof MetricRegistryListener)
+    {
+      registry.removeListener((MetricRegistryListener) graphiteMetricFilter);
+    }
 
-    metrics.clear();
+    final Pnky<Void> future = Pnky.create();
 
-    return immediatelyComplete(null);
+    if (graphite != null)
+    {
+      // Hack to destroy the Graphite instance, which is a blocking operation.
+      final Thread t = new Thread(() ->
+      {
+        try
+        {
+          graphite.destroy();
+          future.resolve(null);
+        }
+        catch (final Exception e)
+        {
+          future.reject(e);
+        }
+      });
+
+      t.start();
+    }
+    else
+    {
+      future.resolve(null);
+    }
+
+    return future
+        .thenAccept((result) ->
+        {
+          registry.removeMatching((name, metric) -> metrics.contains(metric));
+          metrics.clear();
+        });
   }
 
   @Override

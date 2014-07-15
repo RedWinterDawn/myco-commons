@@ -819,9 +819,9 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
       final Iterable<? extends PnkyPromise<? extends V>> promises)
   {
     final Pnky<List<V>> pnky = Pnky.create();
-    final ListenableFuture<List<V>> result = Futures.allAsList(promises);
+    final ListenableFuture<List<V>> futureResults = Futures.allAsList(promises);
 
-    Futures.addCallback(result, new FutureCallback<List<V>>()
+    Futures.addCallback(futureResults, new FutureCallback<List<V>>()
     {
       @Override
       public void onSuccess(@Nullable final List<V> result)
@@ -928,9 +928,9 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
       final Iterable<? extends PnkyPromise<? extends V>> promises)
   {
     final Pnky<List<V>> pnky = Pnky.create();
-    final ListenableFuture<List<V>> result = Futures.successfulAsList(promises);
+    final ListenableFuture<List<V>> futureResults = Futures.successfulAsList(promises);
 
-    Futures.addCallback(result, new FutureCallback<List<V>>()
+    Futures.addCallback(futureResults, new FutureCallback<List<V>>()
     {
       @Override
       public void onSuccess(@Nullable final List<V> result)
