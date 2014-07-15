@@ -327,6 +327,8 @@ public class DefaultMetricsManagerTest
             .graphiteReporterAddress(inetSocketAddress)
             .graphiteReporterSocketFactory(socketFactory)
             .graphiteReporterEnabled(true)
+            .graphiteReporterPickle(true)
+            .graphiteReporterFilterUnchangedCounters(true)
             .build());
 
     manager.init().get();
@@ -354,6 +356,7 @@ public class DefaultMetricsManagerTest
 
     manager.destroy().get();
 
+    // Validate the output
     final byte[] bytes = baos.toByteArray();
     final List<PyList> tuples = new LinkedList<>();
     final ByteBuffer buffer = ByteBuffer.wrap(bytes);
@@ -382,21 +385,20 @@ public class DefaultMetricsManagerTest
     // Step 5: Looking for changing metric to not appear
     // Step 6: Winner
 
-    ArrayList<String> setChangingList = new ArrayList<String>(Arrays.asList("0", "1", "2"));
-    ArrayList<String> changingList = Lists.newArrayList();
+    final ArrayList<String> changingList = Lists.newArrayList();
 
     int count = 0;
     String text = "com.jive.metrics.changing.count";
-    for (PyList py : tuples)
+    for (final PyList py : tuples)
     {
-      for (Object item : py)
+      for (final Object item : py)
       {
-        PyTuple outerTuple = (PyTuple) item;
-        String result = (String) outerTuple.get(0);
+        final PyTuple outerTuple = (PyTuple) item;
+        final String result = (String) outerTuple.get(0);
         if (result.equals(text))
         {
-          PyTuple innerTuple = (PyTuple) outerTuple.get(1);
-          String num = (String) innerTuple.get(1);
+          final PyTuple innerTuple = (PyTuple) outerTuple.get(1);
+          final String num = (String) innerTuple.get(1);
           changingList.add(num);
           count--;
         }
@@ -404,7 +406,7 @@ public class DefaultMetricsManagerTest
       count++;
     }
 
-    assertEquals(changingList, setChangingList);
+    assertEquals(changingList, Arrays.asList("0", "1", "2"));
     assertTrue(count == (tuples.size() - changingList.size()));
 
     // Unchanging
@@ -414,21 +416,20 @@ public class DefaultMetricsManagerTest
     // Step 3: Looking for unchanging to not appear
     // Step 4: Winner
 
-    ArrayList<String> setUnchangingList = new ArrayList<String>(Arrays.asList("0", "0"));
-    ArrayList<String> unchangingList = Lists.newArrayList();
+    final ArrayList<String> unchangingList = Lists.newArrayList();
 
     count = 0;
     text = "com.jive.metrics.unchanging.count";
-    for (PyList py : tuples)
+    for (final PyList py : tuples)
     {
-      for (Object item : py)
+      for (final Object item : py)
       {
-        PyTuple outerTuple = (PyTuple) item;
-        String result = (String) outerTuple.get(0);
+        final PyTuple outerTuple = (PyTuple) item;
+        final String result = (String) outerTuple.get(0);
         if (result.equals(text))
         {
-          PyTuple innerTuple = (PyTuple) outerTuple.get(1);
-          String num = (String) innerTuple.get(1);
+          final PyTuple innerTuple = (PyTuple) outerTuple.get(1);
+          final String num = (String) innerTuple.get(1);
           unchangingList.add(num);
           count--;
         }
@@ -436,7 +437,7 @@ public class DefaultMetricsManagerTest
       count++;
     }
 
-    assertEquals(unchangingList, setUnchangingList);
+    assertEquals(unchangingList, Arrays.asList("0", "0"));
     assertTrue(count == (tuples.size() - unchangingList.size()));
 
   }

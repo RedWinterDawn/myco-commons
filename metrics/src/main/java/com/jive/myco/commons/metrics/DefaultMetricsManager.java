@@ -157,6 +157,7 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
           .address(metricsManagerConfiguration.getGraphiteReporterAddress())
           .queueSize(metricsManagerConfiguration.getGraphiteReporterQueueSize())
           .socketFactory(metricsManagerConfiguration.getGraphiteReporterSocketFactory())
+          .pickle(metricsManagerConfiguration.isGraphiteReporterPickle())
           .build();
 
       // Technically synchronized; however, there is no chance of it being contended at

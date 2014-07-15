@@ -52,7 +52,7 @@ public class GraphiteTest
   public void testBatchTimeout() throws Exception
   {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    final Graphite graphite = createStandardGraphite(baos);
+    final Graphite graphite = createStandardGraphite(baos, true);
 
     try
     {
@@ -110,7 +110,7 @@ public class GraphiteTest
   public void testBatchFull() throws Exception
   {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    final Graphite graphite = createStandardGraphite(baos);
+    final Graphite graphite = createStandardGraphite(baos, true);
 
     try
     {
@@ -226,6 +226,7 @@ public class GraphiteTest
         .id("test")
         .address(inetSocketAddress)
         .socketFactory(socketFactory)
+        .pickle(true)
         .build();
 
     try
@@ -332,6 +333,7 @@ public class GraphiteTest
         .socketFactory(socketFactory)
         .queueSize(50)
         .batchTimeoutTime(5000L)
+        .pickle(true)
         .build();
 
     try
@@ -389,7 +391,71 @@ public class GraphiteTest
     }
   }
 
+  @Test
+  public void testTextEncoding() throws Exception
+  {
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final Graphite graphite = createStandardGraphite(baos);
+
+    try
+    {
+      graphite.init();
+
+      graphite.send("blah", "1.0", 12345L);
+      graphite.send("foo", "2.0", 123456L);
+      graphite.send("bar", "3.0", 1234567L);
+
+      await().until(() ->
+      {
+        try
+        {
+          verify(outputStream, times(1)).flush();
+        }
+        catch (final Exception e)
+        {
+          throw new RuntimeException(e);
+        }
+      });
+
+      final byte[] bytes = baos.toByteArray();
+
+      final String[] metrics = new String(bytes, "UTF-8").split("\n");
+
+      assertEquals(3, metrics.length);
+
+      final String[] metric = metrics[0].split(" ");
+      final String[] metric2 = metrics[1].split(" ");
+      final String[] metric3 = metrics[2].split(" ");
+
+      assertEquals("blah", metric[0]);
+      assertEquals("1.0", metric[1]);
+      assertEquals("12345", metric[2]);
+
+      assertEquals("foo", metric2[0]);
+      assertEquals("2.0", metric2[1]);
+      assertEquals("123456", metric2[2]);
+
+      assertEquals("bar", metric3[0]);
+      assertEquals("3.0", metric3[1]);
+      assertEquals("1234567", metric3[2]);
+    }
+    finally
+    {
+      if (graphite != null)
+      {
+        graphite.destroy();
+      }
+    }
+  }
+
   private Graphite createStandardGraphite(final ByteArrayOutputStream baos) throws IOException,
+      InterruptedException
+  {
+    return createStandardGraphite(baos, null);
+  }
+
+  private Graphite createStandardGraphite(final ByteArrayOutputStream baos, final Boolean pickle)
+      throws IOException,
       InterruptedException
   {
     final InetSocketAddress inetSocketAddress = new InetSocketAddress("localhost", 12354);
@@ -434,6 +500,7 @@ public class GraphiteTest
         .id("test")
         .address(inetSocketAddress)
         .socketFactory(socketFactory)
+        .pickle(pickle)
         .build();
     return graphite;
   }

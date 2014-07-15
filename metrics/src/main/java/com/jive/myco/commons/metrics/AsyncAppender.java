@@ -392,7 +392,10 @@ public abstract class AsyncAppender<E>
             handled = true;
           }
 
-          retriesRemaining--;
+          if (retriesRemaining > 0)
+          {
+            retriesRemaining--;
+          }
         }
       }
     }

@@ -6,6 +6,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -27,7 +28,7 @@ import lombok.extern.slf4j.Slf4j;
  * A custom Graphite client instance for Metrics.
  * <p>
  * This client instance retains an open socket between reporting intervals, does not flush on every
- * metric write, and uses the Pickle format for writing metric values.
+ * metric write, and optionally uses the Pickle format for writing metric values.
  *
  * @author David Valeri
  */
@@ -39,6 +40,18 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
   private static final int DEFAULT_QUEUE_SIZE = 1000;
   private static final int DEFAULT_BATCH_SIZE = 50;
   private static final long DEFAULT_BATCH_TIMEOUT_TIME = 500;
+  private static final SocketFactory DEFAULT_SOCKET_FACTORY = SocketFactory.getDefault();
+  private static final boolean DEFAULT_PICKLE = false;
+
+  /**
+   * Charset used when pickle encoding.
+   */
+  private static final Charset ISO_8859_1 = Charset.forName("ISO-8859-1");
+
+  /**
+   * Charset used for text encoding.
+   */
+  private static final Charset UTF_8 = Charset.forName("UTF-8");
 
   // Pickle Op Codes, cause Pyrolite is the suck and we have to Pickle it ourselves.
   private static final byte MARK = '(';
@@ -56,6 +69,7 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
   private final long reconnectionDelay;
   private final int batchSize;
   private final long batchTimeoutTime;
+  private final boolean pickle;
 
   private final Appender appender;
   private final List<ReportEvent> aggregateEvents;
@@ -73,19 +87,20 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
   @Builder
   public Graphite(@NonNull final String id, final InetSocketAddress address,
       final SocketFactory socketFactory, final Integer queueSize, final Long reconnectionDelay,
-      final Integer batchSize, final Long batchTimeoutTime)
+      final Integer batchSize, final Long batchTimeoutTime, final Boolean pickle)
   {
     // Stupid freaking Metrics uses a class and not an interface to define the Graphite client.
     super(address, socketFactory);
     this.id = id;
     this.address = address;
-    this.socketFactory = socketFactory;
+    this.socketFactory = Optional.ofNullable(socketFactory).orElse(DEFAULT_SOCKET_FACTORY);
 
     this.queueSize = Optional.ofNullable(queueSize).orElse(DEFAULT_QUEUE_SIZE);
     this.reconnectionDelay = Optional.ofNullable(reconnectionDelay).orElse(DEFAULT_RECONNECT_DELAY);
     this.batchSize = Optional.ofNullable(batchSize).orElse(DEFAULT_BATCH_SIZE);
     this.batchTimeoutTime =
         Optional.ofNullable(batchTimeoutTime).orElse(DEFAULT_BATCH_TIMEOUT_TIME);
+    this.pickle = Optional.ofNullable(pickle).orElse(DEFAULT_PICKLE);
 
     if (this.batchTimeoutTime <= 0)
     {
@@ -304,155 +319,16 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
 
           if (currentSocket != null)
           {
-            try (final ByteArrayOutputStream baos = new ByteArrayOutputStream())
+            try
             {
-              baos.write(MARK);
-
-              // Start the list
-              // @formatter:off
-              /*
-               I(name='LIST',
-                   code='l',
-                   arg=None,
-                   stack_before=[markobject, stackslice],
-                   stack_after=[pylist],
-                   proto=0,
-                   doc="""Build a list out of the topmost stack slice, after markobject.
-
-                   All the stack entries following the topmost markobject are placed into
-                   a single Python list, which single list object replaces all of the
-                   stack from the topmost markobject onward.  For example,
-
-                   Stack before: ... markobject 1 2 3 'abc'
-                   Stack after:  ... [1, 2, 3, 'abc']
-                  """)
-              */
-              // @formatter:on
-              baos.write(LIST);
-
-              for (final ReportEvent event : aggregateEvents)
+              if (pickle)
               {
-                // Start metric tuple
-                baos.write(MARK);
-
-                // Metric Name
-                // @formatter:off
-                /*
-                  From: http://svn.python.org/projects/python/trunk/Lib/pickletools.py
-                  I(name='STRING',
-                      code='S',
-                      arg=stringnl,
-                      stack_before=[],
-                      stack_after=[pystring],
-                      proto=0,
-                      doc="""Push a Python string object.
-
-                      The argument is a repr-style string, with bracketing quote characters,
-                      and perhaps embedded escapes.  The argument extends until the next
-                      newline character.
-                      """),
-                 */
-                // @formatter:on
-                baos.write(STRING);
-                baos.write('\'');
-                // NOTE: UTF-8 and certain ISOs overlap with ASCII. It is unclear what to do for
-                // encoding if a non-ASCII character is encountered.
-                baos.write(event.getName().getBytes("UTF-8"));
-                baos.write('\'');
-                baos.write('\n');
-
-                // Start metric value and timestamp tuple
-                baos.write(MARK);
-
-                // Metric Timetstamp
-                // @formatter:off
-                /*
-                  From: http://svn.python.org/projects/python/trunk/Lib/pickletools.py
-                  I(name='LONG',
-                      code='L',
-                      arg=decimalnl_long,
-                      stack_before=[],
-                      stack_after=[pylong],
-                      proto=0,
-                      doc="""Push a long integer.
-
-                      The same as INT, except that the literal ends with 'L', and always
-                      unpickles to a Python long.  There doesn't seem a real purpose to the
-                      trailing 'L'.
-
-                      Note that LONG takes time quadratic in the number of digits when
-                      unpickling (this is simply due to the nature of decimal->binary
-                      conversion).  Proto 2 added linear-time (in C; still quadratic-time
-                      in Python) LONG1 and LONG4 opcodes.
-                      """),
-                 */
-                // @formatter:on
-                baos.write(LONG);
-                baos.write(String.valueOf(event.getTimestamp()).getBytes("UTF-8"));
-                baos.write('L');
-                baos.write('\n');
-
-
-                // Metric Value
-                // @formatter:off
-                /*
-                  From: http://svn.python.org/projects/python/trunk/Lib/pickletools.py
-                  I(name='STRING',
-                      code='S',
-                      arg=stringnl,
-                      stack_before=[],
-                      stack_after=[pystring],
-                      proto=0,
-                      doc="""Push a Python string object.
-
-                      The argument is a repr-style string, with bracketing quote characters,
-                      and perhaps embedded escapes.  The argument extends until the next
-                      newline character.
-                      """),
-                 */
-                // @formatter:on
-                baos.write(STRING);
-                baos.write('\'');
-                baos.write(event.getValue().getBytes("UTF-8"));
-                baos.write('\'');
-                baos.write('\n');
-
-                // Close metric value and timestamp tuple
-                baos.write(TUPLE);
-
-                // Close metric tuple
-                baos.write(TUPLE); // outer close
-
-                // @formatter:off
-                /*
-                 From: http://svn.python.org/projects/python/trunk/Lib/pickletools.py
-                 I(name='APPEND',
-                     code='a',
-                     arg=None,
-                     stack_before=[pylist, anyobject],
-                     stack_after=[pylist],
-                     proto=0,
-                     doc="""Append an object to a list.
-
-                     Stack before:  ... pylist anyobject
-                     Stack after:   ... pylist+[anyobject]
-
-                     although pylist is really extended in-place.
-                    """),
-                 */
-                // @formatter:on
-                baos.write(APPEND);
+                writePickledBatch(currentSocket, aggregateEvents);
               }
-
-              baos.write(STOP);
-
-              final OutputStream out = currentSocket.getOutputStream();
-              // Write the length header
-              out.write(ByteBuffer.allocate(4).putInt(baos.size()).array());
-              // Write the payload bytes
-              out.write(baos.toByteArray());
-              // Flush the message to the server
-              out.flush();
+              else
+              {
+                writeTextBatch(currentSocket, aggregateEvents);
+              }
               written = true;
               failures = 0;
             }
@@ -465,6 +341,200 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
           }
         }
       }
+    }
+  }
+
+  /**
+   * Writes a batch of metric events in text format.
+   *
+   * @param currentSocket
+   *          the socket to write to
+   * @param events
+   *          the events to write
+   *
+   * @throws IOException
+   *           if there is an error
+   */
+  private void writeTextBatch(final Socket currentSocket, final List<ReportEvent> events)
+      throws IOException
+  {
+    final OutputStream out = currentSocket.getOutputStream();
+
+    for (final ReportEvent event : events)
+    {
+      out.write(
+          String
+              .format(
+                  "%s %s %s\n",
+                  sanitize(event.getName()),
+                  sanitize(event.getValue()),
+                  Long.toString(event.getTimestamp()))
+              .getBytes(UTF_8));
+    }
+
+    out.flush();
+  }
+
+  /**
+   * Writes a batch of metric events in Pickle format.
+   *
+   * @param currentSocket
+   *          the socket to write to
+   * @param events
+   *          the events to write
+   *
+   * @throws IOException
+   *           if there is an error
+   */
+  private void writePickledBatch(final Socket currentSocket, final List<ReportEvent> events)
+      throws IOException
+  {
+    try (final ByteArrayOutputStream baos = new ByteArrayOutputStream())
+    {
+      baos.write(MARK);
+
+      // Start the list
+      // @formatter:off
+      /*
+       I(name='LIST',
+           code='l',
+           arg=None,
+           stack_before=[markobject, stackslice],
+           stack_after=[pylist],
+           proto=0,
+           doc="""Build a list out of the topmost stack slice, after markobject.
+
+           All the stack entries following the topmost markobject are placed into
+           a single Python list, which single list object replaces all of the
+           stack from the topmost markobject onward.  For example,
+
+           Stack before: ... markobject 1 2 3 'abc'
+           Stack after:  ... [1, 2, 3, 'abc']
+          """)
+      */
+      // @formatter:on
+      baos.write(LIST);
+
+      for (final ReportEvent event : events)
+      {
+        // Start metric tuple
+        baos.write(MARK);
+
+        // Metric Name
+        // @formatter:off
+        /*
+          From: http://svn.python.org/projects/python/trunk/Lib/pickletools.py
+          I(name='STRING',
+              code='S',
+              arg=stringnl,
+              stack_before=[],
+              stack_after=[pystring],
+              proto=0,
+              doc="""Push a Python string object.
+
+              The argument is a repr-style string, with bracketing quote characters,
+              and perhaps embedded escapes.  The argument extends until the next
+              newline character.
+              """),
+         */
+        // @formatter:on
+        baos.write(STRING);
+        baos.write('\'');
+        baos.write(event.getName().getBytes(ISO_8859_1));
+        baos.write('\'');
+        baos.write('\n');
+
+        // Start metric value and timestamp tuple
+        baos.write(MARK);
+
+        // Metric Timetstamp
+        // @formatter:off
+        /*
+          From: http://svn.python.org/projects/python/trunk/Lib/pickletools.py
+          I(name='LONG',
+              code='L',
+              arg=decimalnl_long,
+              stack_before=[],
+              stack_after=[pylong],
+              proto=0,
+              doc="""Push a long integer.
+
+              The same as INT, except that the literal ends with 'L', and always
+              unpickles to a Python long.  There doesn't seem a real purpose to the
+              trailing 'L'.
+
+              Note that LONG takes time quadratic in the number of digits when
+              unpickling (this is simply due to the nature of decimal->binary
+              conversion).  Proto 2 added linear-time (in C; still quadratic-time
+              in Python) LONG1 and LONG4 opcodes.
+              """),
+         */
+        // @formatter:on
+        baos.write(LONG);
+        baos.write(String.valueOf(event.getTimestamp()).getBytes(ISO_8859_1));
+        baos.write('L');
+        baos.write('\n');
+
+        // Metric Value
+        // @formatter:off
+        /*
+          From: http://svn.python.org/projects/python/trunk/Lib/pickletools.py
+          I(name='STRING',
+              code='S',
+              arg=stringnl,
+              stack_before=[],
+              stack_after=[pystring],
+              proto=0,
+              doc="""Push a Python string object.
+
+              The argument is a repr-style string, with bracketing quote characters,
+              and perhaps embedded escapes.  The argument extends until the next
+              newline character.
+              """),
+         */
+        // @formatter:on
+        baos.write(STRING);
+        baos.write('\'');
+        baos.write(event.getValue().getBytes(ISO_8859_1));
+        baos.write('\'');
+        baos.write('\n');
+
+        // Close metric value and timestamp tuple
+        baos.write(TUPLE);
+
+        // Close metric tuple
+        baos.write(TUPLE);
+
+        // @formatter:off
+        /*
+         From: http://svn.python.org/projects/python/trunk/Lib/pickletools.py
+         I(name='APPEND',
+             code='a',
+             arg=None,
+             stack_before=[pylist, anyobject],
+             stack_after=[pylist],
+             proto=0,
+             doc="""Append an object to a list.
+
+             Stack before:  ... pylist anyobject
+             Stack after:   ... pylist+[anyobject]
+
+             although pylist is really extended in-place.
+            """),
+         */
+        // @formatter:on
+        baos.write(APPEND);
+      }
+
+      baos.write(STOP);
+
+      final OutputStream out = currentSocket.getOutputStream();
+      // Write the length header
+      out.write(ByteBuffer.allocate(4).putInt(baos.size()).array());
+      // Write the payload bytes
+      out.write(baos.toByteArray());
+      // Flush the message to the server
+      out.flush();
     }
   }
 

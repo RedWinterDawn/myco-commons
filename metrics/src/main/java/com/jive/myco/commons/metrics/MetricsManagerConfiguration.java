@@ -70,7 +70,7 @@ public class MetricsManagerConfiguration
 
   /**
    * Flag indicating if counters with unchanged values are transmitted with each report or if they
-   * are filtered out of the report until they change again. Defaults to {@code true}.
+   * are filtered out of the report until they change again. Defaults to {@code false}.
    */
   private final boolean graphiteReporterFilterUnchangedCounters;
 
@@ -79,6 +79,12 @@ public class MetricsManagerConfiguration
    * {@link SocketFactory#getDefault()}.
    */
   private final SocketFactory graphiteReporterSocketFactory;
+
+  /**
+   * Flag indicating if the Graphite reporter should use Pickle encoding when reporting. Defaults to
+   * {@code false}.
+   */
+  private final boolean graphiteReporterPickle;
 
   @Builder
   private MetricsManagerConfiguration(final boolean slf4jReporterEnabled,
@@ -92,7 +98,8 @@ public class MetricsManagerConfiguration
       final InetSocketAddress graphiteReporterAddress,
       final int graphiteReporterQueueSize,
       final boolean graphiteReporterFilterUnchangedCounters,
-      final SocketFactory graphiteReporterSocketFactory)
+      final SocketFactory graphiteReporterSocketFactory,
+      final boolean graphiteReporterPickle)
   {
     if (graphiteReporterEnabled && graphiteReporterAddress == null)
     {
@@ -112,6 +119,7 @@ public class MetricsManagerConfiguration
     this.graphiteReporterQueueSize = graphiteReporterQueueSize;
     this.graphiteReporterFilterUnchangedCounters = graphiteReporterFilterUnchangedCounters;
     this.graphiteReporterSocketFactory = graphiteReporterSocketFactory;
+    this.graphiteReporterPickle = graphiteReporterPickle;
   }
 
   public static final class MetricsManagerConfigurationBuilder
@@ -167,12 +175,18 @@ public class MetricsManagerConfiguration
      * Flag indicating if counters with unchanged values are transmitted with each report or if they
      * are filtered out of the report until they change again. Defaults to {@code true}.
      */
-    private boolean graphiteReporterFilterUnchangedCounters = true;
+    private boolean graphiteReporterFilterUnchangedCounters = false;
 
     /**
      * The socket factory used to create connections within the Graphite reporter. Defaults to
      * {@link SocketFactory#getDefault()}.
      */
     private SocketFactory graphiteReporterSocketFactory = SocketFactory.getDefault();
+
+    /**
+     * Flag indicating if the Graphite reporter should use Pickle encoding when reporting. Defaults
+     * to {@code false}.
+     */
+    private boolean graphiteReporterPickle;
   }
 }
