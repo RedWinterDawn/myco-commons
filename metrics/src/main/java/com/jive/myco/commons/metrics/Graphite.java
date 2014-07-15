@@ -37,7 +37,7 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
 {
   private static final long DEFAULT_RECONNECT_DELAY = 5000;
   private static final AtomicInteger GRAPHITE_COUNTER = new AtomicInteger();
-  private static final int DEFAULT_QUEUE_SIZE = 1000;
+  private static final int DEFAULT_QUEUE_SIZE = 2000;
   private static final int DEFAULT_BATCH_SIZE = 50;
   private static final long DEFAULT_BATCH_TIMEOUT_TIME = 500;
   private static final SocketFactory DEFAULT_SOCKET_FACTORY = SocketFactory.getDefault();
