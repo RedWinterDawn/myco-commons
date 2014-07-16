@@ -36,6 +36,8 @@ import org.python.modules.cPickle;
 @RunWith(MockitoJUnitRunner.class)
 public class GraphiteTest
 {
+  private final InetSocketAddress inetSocketAddress = new InetSocketAddress("localhost", 12354);
+
   @Mock
   private SocketFactory socketFactory;
 
@@ -73,6 +75,8 @@ public class GraphiteTest
           throw new RuntimeException(e);
         }
       });
+
+      verify(socket, atLeast(1)).connect(inetSocketAddress, 2);
 
       final byte[] bytes = baos.toByteArray();
 
@@ -133,6 +137,8 @@ public class GraphiteTest
         }
       });
 
+      verify(socket, atLeast(1)).connect(inetSocketAddress, 2);
+
       final byte[] bytes = baos.toByteArray();
       baos.reset();
 
@@ -173,10 +179,8 @@ public class GraphiteTest
   public void testWriteBatchRetry() throws Exception
   {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    final InetSocketAddress inetSocketAddress = new InetSocketAddress("localhost", 12354);
 
-    when(socketFactory.createSocket(inetSocketAddress.getAddress(), inetSocketAddress.getPort()))
-        .thenReturn(socket);
+    when(socketFactory.createSocket()).thenReturn(socket);
 
     when(socket.getInputStream()).thenReturn(inputStream);
     when(socket.getOutputStream()).thenReturn(outputStream);
@@ -249,6 +253,8 @@ public class GraphiteTest
         }
       });
 
+      verify(socket, atLeast(1)).connect(inetSocketAddress, 2);
+
       final byte[] bytes = baos.toByteArray();
 
       final PyList payload =
@@ -285,10 +291,8 @@ public class GraphiteTest
   public void testQueueFull() throws Exception
   {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    final InetSocketAddress inetSocketAddress = new InetSocketAddress("localhost", 12354);
 
-    when(socketFactory.createSocket(inetSocketAddress.getAddress(), inetSocketAddress.getPort()))
-        .thenReturn(socket);
+    when(socketFactory.createSocket()).thenReturn(socket);
 
     when(socket.getInputStream()).thenReturn(inputStream);
     when(socket.getOutputStream()).thenReturn(outputStream);
@@ -363,6 +367,8 @@ public class GraphiteTest
         }
       });
 
+      verify(socket, atLeast(1)).connect(inetSocketAddress, 2);
+
       final byte[] bytes = baos.toByteArray();
       final ByteBuffer buffer = ByteBuffer.wrap(bytes);
       final int length = buffer.getInt();
@@ -417,6 +423,8 @@ public class GraphiteTest
         }
       });
 
+      verify(socket, atLeast(1)).connect(inetSocketAddress, 2);
+
       final byte[] bytes = baos.toByteArray();
 
       final String[] metrics = new String(bytes, "UTF-8").split("\n");
@@ -458,10 +466,7 @@ public class GraphiteTest
       throws IOException,
       InterruptedException
   {
-    final InetSocketAddress inetSocketAddress = new InetSocketAddress("localhost", 12354);
-
-    when(socketFactory.createSocket(inetSocketAddress.getAddress(), inetSocketAddress.getPort()))
-        .thenReturn(socket);
+    when(socketFactory.createSocket()).thenReturn(socket);
 
     when(socket.getInputStream()).thenReturn(inputStream);
     when(socket.getOutputStream()).thenReturn(outputStream);

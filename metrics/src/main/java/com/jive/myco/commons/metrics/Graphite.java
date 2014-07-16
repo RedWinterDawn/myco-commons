@@ -38,7 +38,6 @@ import org.slf4j.Logger;
 public class Graphite extends com.codahale.metrics.graphite.Graphite
 {
   private static final long DEFAULT_RECONNECT_DELAY = 5000;
-  private static final AtomicInteger GRAPHITE_COUNTER = new AtomicInteger();
   private static final int DEFAULT_QUEUE_SIZE = 2000;
   private static final int DEFAULT_BATCH_SIZE = 50;
   private static final long DEFAULT_BATCH_TIMEOUT_TIME = 500;
@@ -151,14 +150,13 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
               private final ThreadGroup group = (System.getSecurityManager() != null)
                   ? System.getSecurityManager().getThreadGroup() : Thread.currentThread()
                       .getThreadGroup();
-              private final String nameTemplate = "graphite-" + id + "-worker-%d"
-                  + GRAPHITE_COUNTER.getAndIncrement();
+              private final String nameTemplate = "graphite-" + id + "-worker-%d";
 
               @Override
               public Thread newThread(final Runnable r)
               {
                 final Thread t = new Thread(group, r,
-                    String.format(nameTemplate, counter.getAndIncrement()), 0);
+                    String.format(nameTemplate, counter.getAndIncrement()));
 
                 if (t.isDaemon())
                 {
@@ -564,7 +562,9 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
       {
         try
         {
-          socket = socketFactory.createSocket(address.getAddress(), address.getPort());
+          socket = socketFactory.createSocket();
+          socket.connect(address, 2);
+
           // Setting this such that the watcher's read operation never times out until the socket
           // is actually dead / closed.
           socket.setSoTimeout(0);
@@ -613,6 +613,8 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
             log.info(
                 "[{}]: Connection failure to: [{}:{}].", id, address.getAddress(),
                 address.getPort(), e);
+
+            closeSocket(socket);
             try
             {
               Thread.sleep(reconnectionDelay);

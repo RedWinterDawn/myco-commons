@@ -290,8 +290,7 @@ public class DefaultMetricsManagerTest
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final InetSocketAddress inetSocketAddress = new InetSocketAddress("localhost", 12354);
 
-    when(socketFactory.createSocket(inetSocketAddress.getAddress(), inetSocketAddress.getPort()))
-        .thenReturn(socket);
+    when(socketFactory.createSocket()).thenReturn(socket);
 
     when(socket.getInputStream()).thenReturn(inputStream);
     when(socket.getOutputStream()).thenReturn(outputStream);
