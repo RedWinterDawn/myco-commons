@@ -22,7 +22,7 @@ Stuff that does things on different projects.
 * Upgrading from 0.0.7
   * No changes required.
 * Change Log
-  * NS - Upgraded to latest Myco Parent
+  * NS - Upgraded to Myco Parent 23
   * NS - Reformatted README.md files
   * US4536 - Added custom Graphite reporter client, ability to use Pickle encoding, long lived 
     Carbon sockets for the Graphite reporter, optional filtering of unchanged metrics in Graphite 
