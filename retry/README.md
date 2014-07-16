@@ -2,7 +2,8 @@
 
 
 ## Retry Manager, Policy, and Strategy
-These classes are responsible for, you guessed it, retrying things. The retry manager can be used to sechedule delayed retries and handle failures of a process.  We'll start with the [RetryPolicy](core/src/main/java/com/jive/myco/core/retry/RetryPolicy.java). The retry policy is responsible for controlling how retreies are attempted and the delay period between retries. The [RetryManager](core/src/main/java/com/jive/myco/core/retry/RetryManager.java) requires one when it is created.
+These classes are responsible for, you guessed it, retrying things. The retry manager can be used 
+to sechedule delayed retries and handle failures of a process.  We'll start with the [RetryPolicy](core/src/main/java/com/jive/myco/core/retry/RetryPolicy.java). The retry policy is responsible for controlling how retreies are attempted and the delay period between retries. The [RetryManager](core/src/main/java/com/jive/myco/core/retry/RetryManager.java) requires one when it is created.
 
 ``` java
 RetryPolicy.builder()
@@ -20,7 +21,13 @@ RetryPolicy.builder()
     .build()
 ```
 
-The [RetryStrategy](core/src/main/java/com/jive/myco/core/retry/RetryStrategy.java) is an interface that must be implemented by the user. Its purpose is to define what you want to retry and how to handle failures.  Typically the retry will schedule a retry task on an executor.  It is important to note that the *scheduleRetry*, *onFailure*, and *onRetriesExhausted* methods of the user defined strategy are invoked by the same thread that invokes *onFailure* on the manager.  For this reason, calling *Thread.sleep()* or *RetryManager.onFailure(...)* from the same thread that executes your stretegy can block the thread and/or lead to infinite recursion.
+The [RetryStrategy](core/src/main/java/com/jive/myco/core/retry/RetryStrategy.java) is an interface 
+that must be implemented by the user. Its purpose is to define what you want to retry and how to 
+handle failures.  Typically the retry will schedule a retry task on an executor.  It is important 
+to note that the *scheduleRetry*, *onFailure*, and *onRetriesExhausted* methods of the user defined 
+strategy are invoked by the same thread that invokes *onFailure* on the manager.  For this reason, 
+calling *Thread.sleep()* or *RetryManager.onFailure(...)* from the same thread that executes your 
+stretegy can block the thread and/or lead to infinite recursion.
 
 ``` java
     private class PersianRetryStrat implements RetryStrategy{
@@ -61,7 +68,11 @@ The [RetryStrategy](core/src/main/java/com/jive/myco/core/retry/RetryStrategy.ja
     }
 ```
 
-And finally we have the [RetryManager](core/src/main/java/com/jive/myco/core/retry/RetryManager.java). The manager is used to track retry attempts, schedule delayed retries, and notify a strategy of ultimate failure after exhausting all retries. The manager maintains internal state and should not be shared across multiple threads without external synchronization.
+And finally we have the
+[RetryManager](core/src/main/java/com/jive/myco/core/retry/RetryManager.java). The manager is used 
+to track retry attempts, schedule delayed retries, and notify a strategy of ultimate failure after 
+exhausting all retries. The manager maintains internal state and should not be shared across 
+multiple threads without external synchronization.
 
 ```java
 RetryManager retryManager = RetryManager.builder().retryPolicy(policy).retryStrategy(strategy).build();

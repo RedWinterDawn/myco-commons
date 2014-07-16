@@ -1,10 +1,14 @@
 # Metrics
 
-This module provides interfaces and implementation classes used to interact with a metrics library, currently Coda Hale Metrics.  This API attempts to ensure uniform metric naming, provide easy lifecycle management of metrics as they are created and destroyed, and manage the boostrap of the underlying metrics library.
+This module provides interfaces and implementation classes used to interact with a metrics library, 
+currently Coda Hale Metrics.  This API attempts to ensure uniform metric naming, provide easy 
+lifecycle management of metrics as they are created and destroyed, and manage the boostrap of the 
+underlying metrics library.
 
 ## Metrics Manager
 
-The example code below demonstrates how to manage the lifecycle of the *MetricsManager* and to leverage *MetricsManagerContext*s to provide uniform naming of metrics within an application.
+The example code below demonstrates how to manage the lifecycle of the *MetricsManager* and to 
+leverage *MetricsManagerContext*s to provide uniform naming of metrics within an application.
 
 
 ```java
