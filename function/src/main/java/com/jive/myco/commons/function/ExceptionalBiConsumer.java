@@ -21,5 +21,5 @@ public interface ExceptionalBiConsumer<T, U>
    * @param u
    *          the second input argument
    */
-  void accept(final T t, final U u);
+  void accept(final T t, final U u) throws Exception;
 }

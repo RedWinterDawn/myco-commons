@@ -23,6 +23,7 @@ Stuff that does things on different projects.
   * No changes required.
 * Change Log
   * NS - Upgraded to Myco Parent 24
+  * NS - Fix exceptional functions to allow throwing exceptions
 
 ### 0.0.8
 * Upgrading from 0.0.7

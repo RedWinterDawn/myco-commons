@@ -25,5 +25,5 @@ public interface ExceptionalBiFunction<T, U, R>
    *
    * @return the function result
    */
-  R apply(final T t, final U u);
+  R apply(final T t, final U u) throws Exception;
 }
