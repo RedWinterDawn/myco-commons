@@ -156,7 +156,8 @@ public abstract class AbstractLifecycled implements Lifecycled
       }
       else
       {
-        return immediatelyFailed(new IllegalStateException());
+        return immediatelyFailed(new IllegalStateException(
+            String.format("Cannot destroy in state [%s]", lifecycleStage)));
       }
     }, lifecycleQueue);
   }
