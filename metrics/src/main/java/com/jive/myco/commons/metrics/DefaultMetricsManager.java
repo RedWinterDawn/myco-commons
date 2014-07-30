@@ -412,7 +412,7 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
 
   private void checkState(final String name, final Metric metric)
   {
-    if (lifecycleStage != LifecycleStage.INITIALIZED)
+    if (getLifecycleStage() != LifecycleStage.INITIALIZED)
     {
       registry.remove(name);
       metrics.remove(metric);
