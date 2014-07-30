@@ -24,6 +24,8 @@ Stuff that does things on different projects.
 * Change Log
   * NS - Upgraded to Myco Parent 24
   * NS - Fix exceptional functions to allow throwing exceptions
+  * NS - Add ability to listen to lifecycle state changes
+  * NS - Add custom singleton executor for executing on the current thread
 
 ### 0.0.8
 * Upgrading from 0.0.7
