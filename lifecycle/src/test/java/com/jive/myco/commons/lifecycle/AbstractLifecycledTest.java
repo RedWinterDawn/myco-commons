@@ -1,10 +1,12 @@
 package com.jive.myco.commons.lifecycle;
 
+import static com.jayway.awaitility.Awaitility.*;
 import static com.jive.myco.commons.concurrent.Pnky.*;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -15,6 +17,7 @@ import org.fusesource.hawtdispatch.DispatchQueue;
 import org.junit.Test;
 import org.mockito.Matchers;
 
+import com.google.common.collect.Lists;
 import com.jive.myco.commons.concurrent.PnkyPromise;
 import com.jive.myco.commons.hawtdispatch.DefaultDispatchQueueBuilder;
 
@@ -24,12 +27,13 @@ import com.jive.myco.commons.hawtdispatch.DefaultDispatchQueueBuilder;
 @Slf4j
 public class AbstractLifecycledTest
 {
-  private DispatchQueue testQueue = spy(DefaultDispatchQueueBuilder.getDefaultBuilder().build());
+  private final DispatchQueue testQueue = spy(DefaultDispatchQueueBuilder.getDefaultBuilder()
+      .build());
 
   @Test
   public void testStageSetAfterSuccess() throws Exception
   {
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    final Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       @Override
       protected PnkyPromise<Void> initInternal()
@@ -48,14 +52,14 @@ public class AbstractLifecycledTest
 
     assertEquals(LifecycleStage.INITIALIZED, testInstance.getLifecycleStage());
     assertFalse(testQueue.isSuspended());
-    verify(testQueue).execute(Matchers.any(Runnable.class));
+    verify(testQueue, atLeastOnce()).execute(Matchers.any(Runnable.class));
   }
 
   @Test
   public void testFailedInitializationViaCallback() throws Exception
   {
     final AtomicBoolean destroyInvoked = new AtomicBoolean();
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    final Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       @Override
       protected PnkyPromise<Void> initInternal()
@@ -76,7 +80,7 @@ public class AbstractLifecycledTest
       testInstance.init().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
-    catch (ExecutionException e)
+    catch (final ExecutionException e)
     {
       assertThat(e.getCause(), instanceOf(IllegalArgumentException.class));
     }
@@ -90,7 +94,7 @@ public class AbstractLifecycledTest
   public void testInitializationFailedViaRuntimeError() throws Exception
   {
     final AtomicBoolean destroyInvoked = new AtomicBoolean();
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    final Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       @Override
       protected PnkyPromise<Void> initInternal()
@@ -111,7 +115,7 @@ public class AbstractLifecycledTest
       testInstance.init().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
-    catch (ExecutionException e)
+    catch (final ExecutionException e)
     {
       assertThat(e.getCause(), instanceOf(NumberFormatException.class));
     }
@@ -126,7 +130,7 @@ public class AbstractLifecycledTest
   {
     final AtomicBoolean destroyInvoked = new AtomicBoolean();
     final AtomicBoolean handlerInvoked = new AtomicBoolean();
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    final Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
 
       @Override
@@ -145,13 +149,13 @@ public class AbstractLifecycledTest
       @Override
       protected PnkyPromise<Void> handleInitFailure()
       {
-        if (lifecycleStage == LifecycleStage.INITIALIZATION_FAILED)
+        if (getLifecycleStage() == LifecycleStage.INITIALIZATION_FAILED)
         {
           handlerInvoked.set(true);
         }
         else
         {
-          log.error("init failure invoked in wrong state: {}", lifecycleStage);
+          log.error("init failure invoked in wrong state: {}", getLifecycleStage());
         }
         return immediatelyComplete(null);
       }
@@ -162,7 +166,7 @@ public class AbstractLifecycledTest
       testInstance.init().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
-    catch (ExecutionException e)
+    catch (final ExecutionException e)
     {
       assertThat(e.getCause(), instanceOf(NumberFormatException.class));
     }
@@ -178,7 +182,7 @@ public class AbstractLifecycledTest
   {
     final AtomicBoolean destroyInvoked = new AtomicBoolean();
     final AtomicBoolean handlerInvoked = new AtomicBoolean();
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    final Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
 
       @Override
@@ -197,13 +201,13 @@ public class AbstractLifecycledTest
       @Override
       protected PnkyPromise<Void> handleInitFailure()
       {
-        if (lifecycleStage == LifecycleStage.INITIALIZATION_FAILED)
+        if (getLifecycleStage() == LifecycleStage.INITIALIZATION_FAILED)
         {
           handlerInvoked.set(true);
         }
         else
         {
-          log.error("init failure invoked in wrong state: {}", lifecycleStage);
+          log.error("init failure invoked in wrong state: {}", getLifecycleStage());
         }
         return immediatelyFailed(new NumberFormatException());
       }
@@ -214,7 +218,7 @@ public class AbstractLifecycledTest
       testInstance.init().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
-    catch (ExecutionException e)
+    catch (final ExecutionException e)
     {
       assertThat(e.getCause(), instanceOf(NumberFormatException.class));
     }
@@ -230,7 +234,7 @@ public class AbstractLifecycledTest
   {
     final AtomicBoolean destroyInvoked = new AtomicBoolean();
     final AtomicBoolean handlerInvoked = new AtomicBoolean();
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    final Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
 
       @Override
@@ -249,13 +253,13 @@ public class AbstractLifecycledTest
       @Override
       protected PnkyPromise<Void> handleInitFailure()
       {
-        if (lifecycleStage == LifecycleStage.INITIALIZATION_FAILED)
+        if (getLifecycleStage() == LifecycleStage.INITIALIZATION_FAILED)
         {
           handlerInvoked.set(true);
         }
         else
         {
-          log.error("init failure invoked in wrong state: {}", lifecycleStage);
+          log.error("init failure invoked in wrong state: {}", getLifecycleStage());
         }
         throw new NumberFormatException();
       }
@@ -266,7 +270,7 @@ public class AbstractLifecycledTest
       testInstance.init().get(200, TimeUnit.MILLISECONDS);
       fail();
     }
-    catch (ExecutionException e)
+    catch (final ExecutionException e)
     {
       assertThat(e.getCause(), instanceOf(NumberFormatException.class));
     }
@@ -280,10 +284,10 @@ public class AbstractLifecycledTest
   @Test
   public void testStageSetAfterDestroy() throws Exception
   {
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    final Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       {
-        lifecycleStage = LifecycleStage.INITIALIZED;
+        setLifecycleStage(LifecycleStage.INITIALIZED);
       }
 
       @Override
@@ -308,10 +312,10 @@ public class AbstractLifecycledTest
   @Test
   public void testFailedDestroyViaCallback() throws Exception
   {
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    final Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       {
-        lifecycleStage = LifecycleStage.INITIALIZED;
+        setLifecycleStage(LifecycleStage.INITIALIZED);
       }
 
       @Override
@@ -332,7 +336,7 @@ public class AbstractLifecycledTest
       testInstance.destroy().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
-    catch (ExecutionException e)
+    catch (final ExecutionException e)
     {
       assertThat(e.getCause(), instanceOf(IllegalArgumentException.class));
     }
@@ -344,10 +348,10 @@ public class AbstractLifecycledTest
   @Test
   public void testDestroyFailedViaRuntimeError() throws Exception
   {
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    final Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       {
-        lifecycleStage = LifecycleStage.INITIALIZED;
+        setLifecycleStage(LifecycleStage.INITIALIZED);
       }
 
       @Override
@@ -368,7 +372,7 @@ public class AbstractLifecycledTest
       testInstance.destroy().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
-    catch (ExecutionException e)
+    catch (final ExecutionException e)
     {
       assertThat(e.getCause(), instanceOf(NumberFormatException.class));
     }
@@ -380,10 +384,10 @@ public class AbstractLifecycledTest
   @Test
   public void testInitInWrongState() throws Exception
   {
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    final Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       {
-        lifecycleStage = LifecycleStage.INITIALIZING;
+        setLifecycleStage(LifecycleStage.INITIALIZING);
       }
 
       @Override
@@ -404,7 +408,7 @@ public class AbstractLifecycledTest
       testInstance.init().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
-    catch (ExecutionException e)
+    catch (final ExecutionException e)
     {
       assertThat(e.getCause(), instanceOf(IllegalStateException.class));
     }
@@ -416,10 +420,10 @@ public class AbstractLifecycledTest
   @Test
   public void testDestroyInWrongState() throws Exception
   {
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    final Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       {
-        lifecycleStage = LifecycleStage.UNINITIALIZED;
+        setLifecycleStage(LifecycleStage.UNINITIALIZED);
       }
 
       @Override
@@ -440,7 +444,7 @@ public class AbstractLifecycledTest
       testInstance.destroy().get(50, TimeUnit.MILLISECONDS);
       fail();
     }
-    catch (ExecutionException e)
+    catch (final ExecutionException e)
     {
       assertThat(e.getCause(), instanceOf(IllegalStateException.class));
     }
@@ -452,10 +456,10 @@ public class AbstractLifecycledTest
   @Test
   public void testInitWhenAlreadyInited() throws Exception
   {
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    final Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       {
-        lifecycleStage = LifecycleStage.INITIALIZED;
+        setLifecycleStage(LifecycleStage.INITIALIZED);
       }
 
       @Override
@@ -480,10 +484,10 @@ public class AbstractLifecycledTest
   @Test
   public void testDestroyWhenAlreadyDestroyed() throws Exception
   {
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    final Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       {
-        lifecycleStage = LifecycleStage.DESTROYED;
+        setLifecycleStage(LifecycleStage.DESTROYED);
       }
 
       @Override
@@ -508,10 +512,10 @@ public class AbstractLifecycledTest
   @Test
   public void testCannotRestart() throws Exception
   {
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    final Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       {
-        lifecycleStage = LifecycleStage.DESTROYED;
+        setLifecycleStage(LifecycleStage.DESTROYED);
       }
 
       @Override
@@ -531,7 +535,7 @@ public class AbstractLifecycledTest
     {
       testInstance.init().get(50, TimeUnit.MILLISECONDS);
     }
-    catch (ExecutionException e)
+    catch (final ExecutionException e)
     {
       assertThat(e.getCause(), instanceOf(IllegalStateException.class));
     }
@@ -543,10 +547,10 @@ public class AbstractLifecycledTest
   @Test
   public void testCanBeRestartedIfRestartable() throws Exception
   {
-    Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    final Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       {
-        lifecycleStage = LifecycleStage.DESTROYED;
+        setLifecycleStage(LifecycleStage.DESTROYED);
       }
 
       @Override
@@ -572,5 +576,144 @@ public class AbstractLifecycledTest
 
     assertEquals(LifecycleStage.INITIALIZED, testInstance.getLifecycleStage());
     assertFalse(testQueue.isSuspended());
+  }
+
+  @Test
+  public void testListenerStages() throws Exception
+  {
+    final ListenableLifecycled testInstance = new AbstractLifecycled(testQueue)
+    {
+      @Override
+      protected PnkyPromise<Void> initInternal()
+      {
+        return immediatelyComplete(null);
+      }
+
+      @Override
+      protected PnkyPromise<Void> destroyInternal()
+      {
+        return immediatelyComplete(null);
+      }
+    };
+
+    final TestListener listener = new TestListener();
+    testInstance.getLifecycleListenable().addListener(listener);
+
+    await().until(() -> assertEquals(LifecycleStage.UNINITIALIZED, listener.state));
+
+    testInstance.init().get(50, TimeUnit.MILLISECONDS);
+
+    await().until(() -> assertEquals(LifecycleStage.INITIALIZED, listener.state));
+
+    testInstance.destroy().get(50, TimeUnit.MILLISECONDS);
+
+    await().until(() -> assertEquals(LifecycleStage.DESTROYED, listener.state));
+
+    assertEquals(Lists.newArrayList(
+        LifecycleStage.UNINITIALIZED,
+        LifecycleStage.INITIALIZING,
+        LifecycleStage.INITIALIZED,
+        LifecycleStage.DESTROYING,
+        LifecycleStage.DESTROYED), listener.transitions);
+  }
+
+  @Test
+  public void testRestartableListenerStages() throws Exception
+  {
+    final ListenableLifecycled testInstance = new AbstractLifecycled(testQueue)
+    {
+      {
+        setLifecycleStage(LifecycleStage.INITIALIZED);
+      }
+
+      @Override
+      protected PnkyPromise<Void> initInternal()
+      {
+        return immediatelyComplete(null);
+      }
+
+      @Override
+      protected PnkyPromise<Void> destroyInternal()
+      {
+        return immediatelyComplete(null);
+      }
+
+      @Override
+      protected boolean isRestartable()
+      {
+        return true;
+      }
+    };
+
+    final TestListener listener = new TestListener();
+    testInstance.getLifecycleListenable().addListener(listener);
+
+    await().until(() -> assertEquals(LifecycleStage.INITIALIZED, listener.state));
+
+    testInstance.destroy().get(50, TimeUnit.MILLISECONDS);
+
+    await().until(() -> assertEquals(LifecycleStage.DESTROYED, listener.state));
+
+    testInstance.init().get(50, TimeUnit.MILLISECONDS);
+
+    await().until(() -> assertEquals(LifecycleStage.INITIALIZED, listener.state));
+  }
+
+  @Test
+  public void testListenerNotifiedWhenInitFails() throws Exception
+  {
+    final AtomicBoolean destroyInvoked = new AtomicBoolean();
+    final ListenableLifecycled testInstance = new AbstractLifecycled(testQueue)
+    {
+      @Override
+      protected PnkyPromise<Void> initInternal()
+      {
+        throw new NumberFormatException();
+      }
+
+      @Override
+      protected PnkyPromise<Void> destroyInternal()
+      {
+        destroyInvoked.set(true);
+        return immediatelyComplete(null);
+      }
+    };
+
+    final TestListener listener = new TestListener();
+    testInstance.getLifecycleListenable().addListener(listener);
+
+    await().until(() -> assertEquals(LifecycleStage.UNINITIALIZED, listener.state));
+
+    try
+    {
+      testInstance.init().get(50, TimeUnit.MILLISECONDS);
+      fail();
+    }
+    catch (final ExecutionException e)
+    {
+      assertThat(e.getCause(), instanceOf(NumberFormatException.class));
+    }
+
+    await().until(() -> assertEquals(LifecycleStage.DESTROYED, listener.state));
+
+    assertEquals(Lists.newArrayList(
+        LifecycleStage.UNINITIALIZED,
+        LifecycleStage.INITIALIZING,
+        LifecycleStage.INITIALIZATION_FAILED,
+        LifecycleStage.DESTROYING,
+        LifecycleStage.DESTROYED), listener.transitions);
+  }
+
+  private static class TestListener implements LifecycleListener
+  {
+    private final List<LifecycleStage> transitions = Lists.newArrayList();
+    private LifecycleStage state = null;
+
+    @Override
+    public void stateChanged(final LifecycleStage newState)
+    {
+      transitions.add(newState);
+      state = newState;
+    }
   }
 }

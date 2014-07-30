@@ -19,12 +19,6 @@ public class DefaultListenableContainer<T> implements ListenableContainer<T>
   private final Map<T, Executor> listeners = Maps.newConcurrentMap();
 
   @Override
-  public void addListener(final T listener)
-  {
-    addListener(listener, MoreExecutors.sameThreadExecutor());
-  }
-
-  @Override
   public void addListenerWithInitialAction(final T listener, final Consumer<? super T> action)
   {
     addListenerWithInitialAction(listener, MoreExecutors.sameThreadExecutor(), action);

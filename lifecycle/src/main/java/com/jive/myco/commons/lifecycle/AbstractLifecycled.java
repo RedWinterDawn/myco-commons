@@ -16,6 +16,9 @@ import com.jive.myco.commons.callbacks.Callback;
 import com.jive.myco.commons.callbacks.PnkyCallback;
 import com.jive.myco.commons.concurrent.Pnky;
 import com.jive.myco.commons.concurrent.PnkyPromise;
+import com.jive.myco.commons.listenable.DefaultListenableContainer;
+import com.jive.myco.commons.listenable.Listenable;
+import com.jive.myco.commons.listenable.ListenableContainer;
 
 /**
  * Provides a common pattern for asynchronously initializing a {@link Lifecycled} service.
@@ -23,8 +26,13 @@ import com.jive.myco.commons.concurrent.PnkyPromise;
  * @author Brandon Pedersen &lt;bpedersen@getjive.com&gt;
  */
 @RequiredArgsConstructor
-public abstract class AbstractLifecycled implements Lifecycled
+public abstract class AbstractLifecycled implements ListenableLifecycled
 {
+  /**
+   * @deprecated this attribute will move to private scope soon, sub-classes should transition to
+   *             using {@link #getLifecycleStage()} rather than referencing this field directly.
+   */
+  @Deprecated
   protected volatile LifecycleStage lifecycleStage = LifecycleStage.UNINITIALIZED;
 
   @NonNull
@@ -33,6 +41,7 @@ public abstract class AbstractLifecycled implements Lifecycled
   // Don't use @SLF4J annotation, we want to know the actual implementing class
   private final Logger log = LoggerFactory.getLogger(getClass());
 
+  private final InternalListenable listenable = new InternalListenable();
 
   @Override
   public final void init(final Callback<Void> callback)
@@ -48,14 +57,14 @@ public abstract class AbstractLifecycled implements Lifecycled
       if (lifecycleStage == LifecycleStage.UNINITIALIZED
           || isRestartable() && lifecycleStage == LifecycleStage.DESTROYED)
       {
-        lifecycleStage = LifecycleStage.INITIALIZING;
+        setLifecycleStage(LifecycleStage.INITIALIZING);
         lifecycleQueue.suspend();
         try
         {
           return initInternal()
               .thenAccept((result) ->
               {
-                lifecycleStage = LifecycleStage.INITIALIZED;
+                setLifecycleStage(LifecycleStage.INITIALIZED);
                 lifecycleQueue.resume();
               })
               .composeFallback(this::initFailure);
@@ -79,14 +88,14 @@ public abstract class AbstractLifecycled implements Lifecycled
 
   private PnkyPromise<Void> initFailure(final Throwable initError)
   {
-    lifecycleStage = LifecycleStage.INITIALIZATION_FAILED;
+    setLifecycleStage(LifecycleStage.INITIALIZATION_FAILED);
 
     PnkyPromise<Void> initFailureFuture;
     try
     {
       initFailureFuture = handleInitFailure();
     }
-    catch (Exception e)
+    catch (final Exception e)
     {
       initFailureFuture = Pnky.immediatelyFailed(e);
     }
@@ -130,7 +139,7 @@ public abstract class AbstractLifecycled implements Lifecycled
           || lifecycleStage == LifecycleStage.INITIALIZATION_FAILED
           || lifecycleStage == LifecycleStage.DESTROYING)
       {
-        lifecycleStage = LifecycleStage.DESTROYING;
+        setLifecycleStage(LifecycleStage.DESTROYING);
         lifecycleQueue.suspend();
         try
         {
@@ -139,7 +148,7 @@ public abstract class AbstractLifecycled implements Lifecycled
               {
                 if (error == null)
                 {
-                  lifecycleStage = LifecycleStage.DESTROYED;
+                  setLifecycleStage(LifecycleStage.DESTROYED);
                 }
                 lifecycleQueue.resume();
               });
@@ -176,7 +185,7 @@ public abstract class AbstractLifecycled implements Lifecycled
    * @param callback
    *          callback to invoke when cleanup is complete
    */
-  protected void handleInitFailure(Callback<Void> callback)
+  protected void handleInitFailure(final Callback<Void> callback)
   {
     callback.onSuccess(null);
   }
@@ -193,7 +202,7 @@ public abstract class AbstractLifecycled implements Lifecycled
    * @param callback
    *          callback to invoke when initialization is complete
    */
-  protected void initInternal(Callback<Void> callback)
+  protected void initInternal(final Callback<Void> callback)
   {
     throw new UnsupportedOperationException(
         "You must implement either 'void initInternal(Callback)' or 'PnkyPromise initInternal()'");
@@ -211,7 +220,7 @@ public abstract class AbstractLifecycled implements Lifecycled
    * @param callback
    *          callback to invoke when initialization is complete
    */
-  protected void destroyInternal(Callback<Void> callback)
+  protected void destroyInternal(final Callback<Void> callback)
   {
     throw new UnsupportedOperationException(
         "You must implement either 'void destroyInternal(Callback)' or 'PnkyPromise destroyInternal()'");
@@ -225,7 +234,7 @@ public abstract class AbstractLifecycled implements Lifecycled
    */
   protected PnkyPromise<Void> handleInitFailure()
   {
-    PnkyCallback<Void> pnky = new PnkyCallback<>();
+    final PnkyCallback<Void> pnky = new PnkyCallback<>();
     handleInitFailure(pnky);
     return pnky;
   }
@@ -243,7 +252,7 @@ public abstract class AbstractLifecycled implements Lifecycled
    */
   protected PnkyPromise<Void> initInternal()
   {
-    PnkyCallback<Void> pnky = new PnkyCallback<>();
+    final PnkyCallback<Void> pnky = new PnkyCallback<>();
     initInternal(pnky);
     return pnky;
   }
@@ -261,7 +270,7 @@ public abstract class AbstractLifecycled implements Lifecycled
    */
   protected PnkyPromise<Void> destroyInternal()
   {
-    PnkyCallback<Void> pnky = new PnkyCallback<>();
+    final PnkyCallback<Void> pnky = new PnkyCallback<>();
     destroyInternal(pnky);
     return pnky;
   }
@@ -288,5 +297,69 @@ public abstract class AbstractLifecycled implements Lifecycled
   protected boolean isRestartable()
   {
     return false;
+  }
+
+  @Override
+  public Listenable<LifecycleListener> getLifecycleListenable()
+  {
+    return listenable;
+  }
+
+  /**
+   * Set the lifecycle stage of this {@code Lifecycled} instance and notify any listeners of the
+   * state change. This should <strong>ONLY</strong> be done on the lifecycle queue or with the
+   * lifecycle queue suspended.
+   *
+   * @param newState
+   *          the new lifecycle state
+   */
+  protected final void setLifecycleStage(final LifecycleStage newState)
+  {
+    lifecycleStage = newState;
+    lifecycleQueue.execute(() -> listenable.stateChanged(newState));
+  }
+
+  /**
+   * Manages the listeners that are watching this {@code ListenableLifecycled} instance and notifies
+   * the listeners when there is a state change.
+   */
+  private final class InternalListenable implements Listenable<LifecycleListener>
+  {
+    private final ListenableContainer<LifecycleListener> listenable =
+        new DefaultListenableContainer<>();
+
+    @Override
+    public void addListener(final LifecycleListener listener, final Executor executor)
+    {
+      lifecycleQueue.execute(() ->
+      {
+        final LifecycleStage currentState = lifecycleStage;
+        listenable.addListenerWithInitialAction(listener, executor,
+            (newListener) -> notifyStateChanged(newListener, currentState));
+      });
+    }
+
+    @Override
+    public void removeListener(final Object listener)
+    {
+      lifecycleQueue.execute(() -> listenable.removeListener(listener));
+    }
+
+    private void notifyStateChanged(final LifecycleListener listener, final LifecycleStage state)
+    {
+      try
+      {
+        listener.stateChanged(state);
+      }
+      catch (final Exception e)
+      {
+        log.error("Lifecycled listener had error while processing state change [{}]", state, e);
+      }
+    }
+
+    private void stateChanged(final LifecycleStage newState)
+    {
+      listenable.forEach((listener) -> notifyStateChanged(listener, newState));
+    }
   }
 }

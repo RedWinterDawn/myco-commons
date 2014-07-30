@@ -2,6 +2,8 @@ package com.jive.myco.commons.listenable;
 
 import java.util.concurrent.Executor;
 
+import com.jive.myco.commons.concurrent.ImmediateExecutor;
+
 /**
  * Provides ability to easily control listeners on a given object. This way you don't have to worry
  * about managing your own listeners when they are really all the same.
@@ -18,7 +20,10 @@ public interface Listenable<T>
    * @param listener
    *          listener to add
    */
-  void addListener(final T listener);
+  default void addListener(final T listener)
+  {
+    addListener(listener, ImmediateExecutor.INSTANCE);
+  }
 
   /**
    * Add the given listener. The listener will be executed via the supplied {@code executor}.
