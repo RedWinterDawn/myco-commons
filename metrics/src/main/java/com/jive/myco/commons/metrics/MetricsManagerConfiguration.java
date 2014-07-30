@@ -175,7 +175,7 @@ public class MetricsManagerConfiguration
      * Flag indicating if counters with unchanged values are transmitted with each report or if they
      * are filtered out of the report until they change again. Defaults to {@code true}.
      */
-    private boolean graphiteReporterFilterUnchangedCounters = false;
+    private boolean graphiteReporterFilterUnchangedCounters = true;
 
     /**
      * The socket factory used to create connections within the Graphite reporter. Defaults to
