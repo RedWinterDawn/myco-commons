@@ -659,6 +659,51 @@ public class AbstractLifecycledTest
     await().until(() -> assertEquals(LifecycleStage.INITIALIZED, listener.state));
   }
 
+  @Test
+  public void testListenerNotifiedWhenInitFails() throws Exception
+  {
+    final AtomicBoolean destroyInvoked = new AtomicBoolean();
+    final ListenableLifecycled testInstance = new AbstractLifecycled(testQueue)
+    {
+      @Override
+      protected PnkyPromise<Void> initInternal()
+      {
+        throw new NumberFormatException();
+      }
+
+      @Override
+      protected PnkyPromise<Void> destroyInternal()
+      {
+        destroyInvoked.set(true);
+        return immediatelyComplete(null);
+      }
+    };
+
+    final TestListener listener = new TestListener();
+    testInstance.getLifecycleListenable().addListener(listener);
+
+    await().until(() -> assertEquals(LifecycleStage.UNINITIALIZED, listener.state));
+
+    try
+    {
+      testInstance.init().get(50, TimeUnit.MILLISECONDS);
+      fail();
+    }
+    catch (final ExecutionException e)
+    {
+      assertThat(e.getCause(), instanceOf(NumberFormatException.class));
+    }
+
+    await().until(() -> assertEquals(LifecycleStage.DESTROYED, listener.state));
+
+    assertEquals(Lists.newArrayList(
+        LifecycleStage.UNINITIALIZED,
+        LifecycleStage.INITIALIZING,
+        LifecycleStage.INITIALIZATION_FAILED,
+        LifecycleStage.DESTROYING,
+        LifecycleStage.DESTROYED), listener.transitions);
+  }
+
   private static class TestListener implements LifecycleListener
   {
     private final List<LifecycleStage> transitions = Lists.newArrayList();

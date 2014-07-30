@@ -3,6 +3,8 @@ package com.jive.myco.commons.listenable;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
+import com.jive.myco.commons.concurrent.ImmediateExecutor;
+
 /**
  * @author Brandon Pedersen &lt;bpedersen@getjive.com&gt;
  */
@@ -30,7 +32,10 @@ public interface ListenableContainer<T> extends Listenable<T>
    *          the listener to add
    */
   @Override
-  void addListener(final T listener);
+  default void addListener(final T listener)
+  {
+    addListener(listener, ImmediateExecutor.INSTANCE);
+  }
 
   /**
    * Adds a new listener. The listener is invoked on the supplied {@code executor} when triggered

@@ -307,7 +307,8 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
 
   /**
    * Set the lifecycle stage of this {@code Lifecycled} instance and notify any listeners of the
-   * state change.
+   * state change. This should <strong>ONLY</strong> be done on the lifecycle queue or with the
+   * lifecycle queue suspended.
    *
    * @param newState
    *          the new lifecycle state
@@ -332,9 +333,9 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
     {
       lifecycleQueue.execute(() ->
       {
-        listenable.addListener(listener, executor);
         final LifecycleStage currentState = lifecycleStage;
-        executor.execute(() -> notifyStateChanged(listener, currentState));
+        listenable.addListenerWithInitialAction(listener, executor,
+            (newListener) -> notifyStateChanged(newListener, currentState));
       });
     }
 
