@@ -20,12 +20,15 @@ Stuff that does things on different projects.
 
 ### 0.0.9
 * Upgrading from 0.0.8
-  * No changes required.
+  * Projects using the Graphite reporter in the Metrics Module must take into account that metric
+    values are not reported for counters with unchanged values.  Graphite graphs may use a function
+    to report the last known value for the counter.
 * Change Log
   * NS - Upgraded to Myco Parent 26
   * NS - Fix exceptional functions to allow throwing exceptions
   * NS - Add ability to listen to lifecycle state changes
   * NS - Add custom singleton executor for executing on the current thread
+  * US4842 - Changed to filter unchanged counters by default.
 
 ### 0.0.8
 * Upgrading from 0.0.7
