@@ -1,27 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
-
   <parent>
     <groupId>com.jive.myco</groupId>
     <artifactId>parent</artifactId>
-    <version>26</version>
+    <version>27</version>
   </parent>
-
   <groupId>com.jive.myco.commons</groupId>
   <artifactId>root</artifactId>
   <version>0.0.10-SNAPSHOT</version>
-
   <packaging>pom</packaging>
-
   <name>Myco :: Commons :: Root</name>
-
-  <scm>
-    <connection>scm:git:ssh://git@github.com/jive/com.jive.myco.commons.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/jive/com.jive.myco.commons.git</developerConnection>
-    <tag>HEAD</tag>
-  </scm>
-
   <modules>
     <module>bom</module>
     <module>callbacks</module>
@@ -36,12 +26,14 @@
     <module>testing</module>
     <module>versions</module>
   </modules>
-
+  <scm>
+    <connection>scm:git:ssh://git@github.com/jive/com.jive.myco.commons.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/jive/com.jive.myco.commons.git</developerConnection>
+  </scm>
   <dependencies>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
     </dependency>
   </dependencies>
-
 </project>
