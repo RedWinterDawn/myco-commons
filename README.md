@@ -18,6 +18,13 @@ Stuff that does things on different projects.
 
 ## <a name="changes"></a>Change Log
 
+### 0.0.10
+* Upgrading from 0.0.9
+  * No changes required.
+* Change Log
+  * NS - Upgraded to Myco Parent 27
+  * NS - Changed some Graphite logging levels to trace
+
 ### 0.0.9
 * Upgrading from 0.0.8
   * Projects using the Graphite reporter in the Metrics Module must take into account that metric
