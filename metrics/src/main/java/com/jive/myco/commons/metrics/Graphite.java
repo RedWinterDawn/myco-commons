@@ -256,7 +256,7 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
       {
         aggregateEvents.add(event);
 
-        log.debug("[{}]: Added event [{}] to batch.", id, event);
+        log.trace("[{}]: Added event [{}] to batch.", id, event);
 
         // If null, this is the first event in a new batch so schedule the timeout task.
         if (batchTimeoutTaskFuture == null)
@@ -276,7 +276,7 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
                   },
                   batchTimeoutTime, TimeUnit.MILLISECONDS);
 
-          log.debug("[{}]: Scheduled batch timeout for new batch.", id);
+          log.trace("[{}]: Scheduled batch timeout for new batch.", id);
         }
       }
       // It is a batch timeout, so clear out the pointer to the scheduled task that is currently
@@ -292,13 +292,13 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
         // If not null, the batch completed before timing out so cancel the task that was scheduled.
         if (batchTimeoutTaskFuture != null)
         {
-          log.debug("[{}]: Batch size reached, cancelling batch timeout and writing batch.", id);
+          log.trace("[{}]: Batch size reached, cancelling batch timeout and writing batch.", id);
           batchTimeoutTaskFuture.cancel(true);
           batchTimeoutTaskFuture = null;
         }
         else
         {
-          log.debug("[{}]: Batch timeout reached, writing batch.", id);
+          log.trace("[{}]: Batch timeout reached, writing batch.", id);
         }
 
         writeBatch();
