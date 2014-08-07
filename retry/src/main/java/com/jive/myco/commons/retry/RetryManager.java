@@ -95,7 +95,7 @@ public class RetryManager
     {
       retryCounter = 0;
       lastDelay = 0;
-      retryStrategy.onRetriesExhausted(new ArrayList<Throwable>(causes));
+      retryStrategy.onRetriesExhausted(new ArrayList<>(causes));
       causes.clear();
     }
   }
