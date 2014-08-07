@@ -3,7 +3,7 @@
   <parent>
     <artifactId>root</artifactId>
     <groupId>com.jive.myco.commons</groupId>
-    <version>0.0.11-SNAPSHOT</version>
+    <version>0.1.0-SNAPSHOT</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
@@ -12,11 +12,6 @@
   <name>Myco :: Commons :: Lifecycle</name>
 
   <dependencies>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>myco-commons-callbacks</artifactId>
-      <version>${project.version}</version>
-    </dependency>
 
     <dependency>
       <groupId>org.fusesource.hawtdispatch</groupId>
