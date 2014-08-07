@@ -12,8 +12,6 @@ import org.fusesource.hawtdispatch.DispatchQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.jive.myco.commons.callbacks.Callback;
-import com.jive.myco.commons.callbacks.PnkyCallback;
 import com.jive.myco.commons.concurrent.Pnky;
 import com.jive.myco.commons.concurrent.PnkyPromise;
 import com.jive.myco.commons.listenable.DefaultListenableContainer;
@@ -44,12 +42,6 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
   private final InternalListenable listenable = new InternalListenable();
 
   @Override
-  public final void init(final Callback<Void> callback)
-  {
-    init().alwaysAccept(callback::onSuccess, callback::onFailure);
-  }
-
-  @Override
   public final PnkyPromise<Void> init()
   {
     return composeAsync(() ->
@@ -69,7 +61,7 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
               })
               .composeFallback(this::initFailure);
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
           return initFailure(e);
         }
@@ -108,7 +100,7 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
             log.error("Error occurred during handling of failed init", error);
           }
 
-          PnkyPromise<Void> destroy = destroy();
+          final PnkyPromise<Void> destroy = destroy();
           lifecycleQueue.resume();
           return destroy;
         })
@@ -122,12 +114,6 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
 
           return Pnky.<Void> immediatelyFailed(initError);
         });
-  }
-
-  @Override
-  public final void destroy(final Callback<Void> callback)
-  {
-    destroy().alwaysAccept(callback::onSuccess, callback::onFailure);
   }
 
   @Override
@@ -153,7 +139,7 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
                 lifecycleQueue.resume();
               });
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
           lifecycleQueue.resume();
           return immediatelyFailed(e);
@@ -182,61 +168,11 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
    * Override this method to perform additional cleanup after a call to {@link #init} has failed.
    * This will be invoked prior to calling {@link #destroy}.
    *
-   * @param callback
-   *          callback to invoke when cleanup is complete
-   */
-  protected void handleInitFailure(final Callback<Void> callback)
-  {
-    callback.onSuccess(null);
-  }
-
-  /**
-   * Initialize this {@link Lifecycled} instance. This will be run on the {@link #lifecycleQueue} so
-   * all you need to do is initialize your instance and its components and protect the lifecycle
-   * queue during initialization.
-   * <p>
-   * The {@code callback} here is used to trigger the setting of the state of the lifecycle stage
-   * and trigger the {@code callback} passed to {@link #init(Callback)}. You do not need to set the
-   * lifecycle stage in this method.
-   *
-   * @param callback
-   *          callback to invoke when initialization is complete
-   */
-  protected void initInternal(final Callback<Void> callback)
-  {
-    throw new UnsupportedOperationException(
-        "You must implement either 'void initInternal(Callback)' or 'PnkyPromise initInternal()'");
-  }
-
-  /**
-   * Destroy this {@link Lifecycled} instance. This will be run on the {@link #lifecycleQueue} so
-   * all you need to do is destroy your instance and its components and protect the lifecycle queue
-   * during the destroy process.
-   * <p>
-   * The {@code callback} here is used to trigger the setting of the state of the lifecycle stage
-   * and trigger the {@code callback} passed to {@link #destroy(Callback)}. You do not need to set
-   * the lifecycle stage in this method.
-   *
-   * @param callback
-   *          callback to invoke when initialization is complete
-   */
-  protected void destroyInternal(final Callback<Void> callback)
-  {
-    throw new UnsupportedOperationException(
-        "You must implement either 'void destroyInternal(Callback)' or 'PnkyPromise destroyInternal()'");
-  }
-
-  /**
-   * Override this method to perform additional cleanup after a call to {@link #init} has failed.
-   * This will be invoked prior to calling {@link #destroy}.
-   *
    * @return completion stage to handle when cleanup is complete
    */
   protected PnkyPromise<Void> handleInitFailure()
   {
-    final PnkyCallback<Void> pnky = new PnkyCallback<>();
-    handleInitFailure(pnky);
-    return pnky;
+    return Pnky.immediatelyComplete(null);
   }
 
   /**
@@ -250,12 +186,7 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
    *
    * @return completion stage to handle when initialization is complete
    */
-  protected PnkyPromise<Void> initInternal()
-  {
-    final PnkyCallback<Void> pnky = new PnkyCallback<>();
-    initInternal(pnky);
-    return pnky;
-  }
+  protected abstract PnkyPromise<Void> initInternal();
 
   /**
    * Destroy this {@link Lifecycled} instance. This will be run on the {@link #lifecycleQueue} so
@@ -268,12 +199,7 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
    *
    * @return completion stage to handle when initialization is complete
    */
-  protected PnkyPromise<Void> destroyInternal()
-  {
-    final PnkyCallback<Void> pnky = new PnkyCallback<>();
-    destroyInternal(pnky);
-    return pnky;
-  }
+  protected abstract PnkyPromise<Void> destroyInternal();
 
   /**
    * Retrieves the {@link Executor} that will be used to fire callbacks to {@link #init} and
@@ -294,7 +220,8 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
    *
    * @return if we can call {@code init} after {@code destroy}
    */
-  protected boolean isRestartable()
+  @Override
+  public boolean isRestartable()
   {
     return false;
   }

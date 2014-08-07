@@ -18,6 +18,13 @@ Stuff that does things on different projects.
 
 ## <a name="changes"></a>Change Log
 
+### 0.1.0
+* Upgrading from 0.0.10
+  * `Lifecycled` no longer supports the methods taking a `Callback`.  Implementations must move to 
+    support the PnkyPromise API.  Use of `AbstractLifecycled` is strongly encouraged. 
+* Change Log
+  * NS - Removed deprecated methods in `Lifecycled`
+
 ### 0.0.10
 * Upgrading from 0.0.9
   * No changes required.

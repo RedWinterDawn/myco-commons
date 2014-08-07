@@ -566,7 +566,7 @@ public class AbstractLifecycledTest
       }
 
       @Override
-      protected boolean isRestartable()
+      public boolean isRestartable()
       {
         return true;
       }
@@ -639,7 +639,7 @@ public class AbstractLifecycledTest
       }
 
       @Override
-      protected boolean isRestartable()
+      public boolean isRestartable()
       {
         return true;
       }

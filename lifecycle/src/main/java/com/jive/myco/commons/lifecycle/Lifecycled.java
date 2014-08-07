@@ -1,99 +1,37 @@
 package com.jive.myco.commons.lifecycle;
 
-import com.jive.myco.commons.callbacks.Callback;
-import com.jive.myco.commons.concurrent.Pnky;
 import com.jive.myco.commons.concurrent.PnkyPromise;
 
 /**
- * Represents a resource that has a lifecycle.
+ * Represents a resource that has a lifecycle. An instance moves through the {@link LifecycleStage}s
+ * in the following manner.
+ * <p>
+ * Successful initialization through destruction: UNINITIALIZED, INITIALIZING, INITIALIZED,
+ * DESTROYING, DESTROYED.
+ *
+ * <p>
+ * Failed initialization through destruction: UNINITIALIZED, INITIALIZING, INITIALIZATION_FAILED,
+ * DESTROYING, DESTROYED.
  *
  * @author David Valeri
  */
 public interface Lifecycled
 {
   /**
-   * Initializes the resource asynchronously, invoking the callback under the following conditions:
-   * <ul>
-   * <li>
-   * {@link Callback#onSuccess(Object)} is invoked when the initialization completes successfully.
-   * If the resource is already successfully initialized, this callback method is invoked
-   * immediately on the same thread that invoked this method.</li>
-   * <li>
-   * {@link Callback#onFailure(Throwable)} is invoked if the initialization fails to complete
-   * successfully. Fail fast type failures may invoke this callback method immediately on the
-   * current thread. If initialization is not possible from the resource's current stage, this
-   * callback method may be invoked immediately on the current thread.</li>
-   * </ul>
-   *
-   * @param callback
-   *          the callback to invoke on success or failure
-   *
-   * @deprecated in favor of the promise approach via {@link #init()}
-   */
-  @Deprecated
-  void init(Callback<Void> callback);
-
-  /**
    * Initializes the resource asynchronously, completing the returned promise under the following
    * conditions:
    * <ul>
    * <li>
-   * The promise is completed successfully when initialization completes successfully or is already
-   * initialized.</li>
+   * The promise completes successfully when initialization completes successfully or if the
+   * instance if already initialized.</li>
    * <li>
-   * The promise is completed exceptionally if the initialization fails to complete successfully or
-   * if initialization is not possible from the resource's current stage.</li>
+   * The promise completeds exceptionally if the initialization fails to complete successfully or if
+   * initialization is not possible from the resource's current stage.</li>
    * </ul>
    *
    * @return a promise that can be watched for success or error
    */
-  default PnkyPromise<Void> init()
-  {
-    Pnky<Void> pnky = Pnky.create();
-
-    init(new Callback<Void>()
-    {
-      @Override
-      public void onSuccess(final Void result)
-      {
-        pnky.resolve(null);
-      }
-
-      @Override
-      public void onFailure(final Throwable cause)
-      {
-        pnky.reject(cause);
-      }
-    });
-
-    return pnky;
-  }
-
-  /**
-   * Destroys the resource asynchronously, invoking the callback under the following conditions:
-   * <ul>
-   * <li>
-   * {@link Callback#onSuccess(Object)} is invoked when the destruction completes successfully. If
-   * the resource is already successfully destroyed, this callback method is invoked immediately on
-   * the same thread that invoked this method.</li>
-   * <li>
-   * {@link Callback#onFailure(Throwable)} is invoked if the destruction fails to complete
-   * successfully. If destruction is not possible from the resource's current stage, this callback
-   * method may be invoked immediately on the current thread.</li>
-   * </ul>
-   * <p>
-   * This method is intended to be reentrant to allow repeated attempts at destruction. Subsequent
-   * attempts to destroy a resource after a failed attempt at destruction should attempt to destroy
-   * any remaining resources managed by this resource.
-   * </p>
-   *
-   * @param callback
-   *          the callback to invoke on success or failure
-   *
-   * @deprecated in favor of the promise approach via {@link #destroy()}
-   */
-  @Deprecated
-  void destroy(Callback<Void> callback);
+  PnkyPromise<Void> init();
 
   /**
    * Destroys the resource asynchronously, completing the returned promise under the following
@@ -114,27 +52,15 @@ public interface Lifecycled
    *
    * @return a promise that can be watched for success or error
    */
-  default PnkyPromise<Void> destroy()
-  {
-    Pnky<Void> pnky = Pnky.create();
-
-    destroy(new Callback<Void>()
-    {
-      @Override
-      public void onSuccess(final Void result)
-      {
-        pnky.resolve(null);
-      }
-
-      @Override
-      public void onFailure(final Throwable cause)
-      {
-        pnky.reject(cause);
-      }
-    });
-
-    return pnky;
-  }
+  PnkyPromise<Void> destroy();
 
   LifecycleStage getLifecycleStage();
+
+  /**
+   * Returns an indicator as to whether or not this instance supports restarting after reaching the
+   * {@link LifecycleStage#DESTROYED}.
+   *
+   * @return {@code true} if the instance can be restarted
+   */
+  boolean isRestartable();
 }
