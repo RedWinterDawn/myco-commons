@@ -12,6 +12,8 @@ import com.jive.myco.commons.concurrent.PnkyPromise;
  * <p>
  * Failed initialization through destruction: UNINITIALIZED, INITIALIZING, INITIALIZATION_FAILED,
  * DESTROYING, DESTROYED.
+ * <p>
+ * Destruction when uninitialized: UNINITIALIZED, DESTROYING, DESTROYED
  *
  * @author David Valeri
  */
@@ -49,11 +51,18 @@ public interface Lifecycled
    * attempts to destroy a resource after a failed attempt at destruction should attempt to destroy
    * any remaining resources managed by this resource.
    * </p>
+   * <p>
+   * This method may be called when the service is uninitialized. This will prevent the instance
+   * from being restarted if not {@link #isRestartable()}.
+   * </p>
    *
    * @return a promise that can be watched for success or error
    */
   PnkyPromise<Void> destroy();
 
+  /**
+   * Get the current lifecycle stage of the instance.
+   */
   LifecycleStage getLifecycleStage();
 
   /**

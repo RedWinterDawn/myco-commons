@@ -122,6 +122,7 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
     return composeAsync(() ->
     {
       if (lifecycleStage == LifecycleStage.INITIALIZED
+          || lifecycleStage == LifecycleStage.UNINITIALIZED
           || lifecycleStage == LifecycleStage.INITIALIZATION_FAILED
           || lifecycleStage == LifecycleStage.DESTROYING)
       {
@@ -145,8 +146,7 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
           return immediatelyFailed(e);
         }
       }
-      else if (lifecycleStage == LifecycleStage.DESTROYED
-          || lifecycleStage == LifecycleStage.UNINITIALIZED)
+      else if (lifecycleStage == LifecycleStage.DESTROYED)
       {
         return immediatelyComplete(null);
       }

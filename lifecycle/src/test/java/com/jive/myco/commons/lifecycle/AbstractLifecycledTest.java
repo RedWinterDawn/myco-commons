@@ -423,7 +423,7 @@ public class AbstractLifecycledTest
     final Lifecycled testInstance = new AbstractLifecycled(testQueue)
     {
       {
-        setLifecycleStage(LifecycleStage.UNINITIALIZED);
+        setLifecycleStage(LifecycleStage.INITIALIZING);
       }
 
       @Override
@@ -449,7 +449,35 @@ public class AbstractLifecycledTest
       assertThat(e.getCause(), instanceOf(IllegalStateException.class));
     }
 
-    assertEquals(LifecycleStage.UNINITIALIZED, testInstance.getLifecycleStage());
+    assertEquals(LifecycleStage.INITIALIZING, testInstance.getLifecycleStage());
+    assertFalse(testQueue.isSuspended());
+  }
+
+  @Test
+  public void testDestroyWhenUninitialized() throws Exception
+  {
+    final Lifecycled testInstance = new AbstractLifecycled(testQueue)
+    {
+      {
+        setLifecycleStage(LifecycleStage.UNINITIALIZED);
+      }
+
+      @Override
+      protected PnkyPromise<Void> initInternal()
+      {
+        return immediatelyFailed(new IllegalStateException());
+      }
+
+      @Override
+      protected PnkyPromise<Void> destroyInternal()
+      {
+        return immediatelyComplete(null);
+      }
+    };
+
+    testInstance.destroy().get(50, TimeUnit.MILLISECONDS);
+
+    assertEquals(LifecycleStage.DESTROYED, testInstance.getLifecycleStage());
     assertFalse(testQueue.isSuspended());
   }
 
