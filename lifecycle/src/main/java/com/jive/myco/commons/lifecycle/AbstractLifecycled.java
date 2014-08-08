@@ -145,7 +145,8 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
           return immediatelyFailed(e);
         }
       }
-      else if (lifecycleStage == LifecycleStage.DESTROYED)
+      else if (lifecycleStage == LifecycleStage.DESTROYED
+          || lifecycleStage == LifecycleStage.UNINITIALIZED)
       {
         return immediatelyComplete(null);
       }
