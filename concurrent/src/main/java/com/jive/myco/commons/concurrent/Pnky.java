@@ -840,6 +840,14 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   }
 
   /**
+   * See {@link #allFailingFast(Iterable)}
+   */
+  public static <V> PnkyPromise<List<V>> allFailingFast(final PnkyPromise<? extends V>... promises)
+  {
+    return allFailingFast(Lists.newArrayList(promises));
+  }
+
+  /**
    * Creates a new {@link PnkyPromise future} that completes successfully with the results of the
    * supplied futures that completed successfully, if and only if all of the supplied futures
    * complete successfully. The returned future completes exceptionally with a
@@ -912,6 +920,14 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   }
 
   /**
+   * See {@link #all(Iterable)}
+   */
+  public static <V> PnkyPromise<List<V>> all(final PnkyPromise<? extends V>... promises)
+  {
+    return all(Lists.newArrayList(promises));
+  }
+
+  /**
    * Creates a new {@link PnkyPromise future} that completes successfully with the results of the
    * supplied futures that completed successfully if one or more of the supplied futures completes
    * successfully. The returned future completes exceptionally if all of the provided futures
@@ -946,6 +962,11 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
     });
 
     return pnky;
+  }
+
+  public static <V> PnkyPromise<List<V>> any(PnkyPromise<? extends V>... promises)
+  {
+    return any(Lists.newArrayList(promises));
   }
 
   /**
@@ -985,6 +1006,14 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
     }
 
     return pnky;
+  }
+
+  /**
+   * See {@link #first(Iterable)}
+   */
+  public static <V> PnkyPromise<V> first(final PnkyPromise<? extends V>... promises)
+  {
+    return first(Lists.newArrayList(promises));
   }
 
   /**
