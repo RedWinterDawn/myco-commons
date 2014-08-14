@@ -9,6 +9,7 @@ Stuff that does things on different projects.
 * [**HawtDispatch**](./hawtdispatch/README.md)
 * [**IO**](./io)
 * [**Lifecycle**](./lifecycle)
+* [**Lifecycle Guava**](./lifecycle-guava)
 * [**Listenable**](./listenable)
 * [**Metrics**](./metrics/README.md)
 * [**Retry**](./retry/README.md)
@@ -17,6 +18,12 @@ Stuff that does things on different projects.
 * [**Change Log**](#changes)
 
 ## <a name="changes"></a>Change Log
+
+### 0.1.1
+* Upgrading from 0.1.0
+  * No changes required
+* Change Log
+  * US5129 - Added wrappers to convert `Lifecycled` instances to/from a Guava `Service`
 
 ### 0.1.0
 * Upgrading from 0.0.10

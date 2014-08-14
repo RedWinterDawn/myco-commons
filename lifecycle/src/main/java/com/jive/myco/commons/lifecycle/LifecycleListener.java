@@ -10,8 +10,8 @@ public interface LifecycleListener
   /**
    * Notification that the {@link ListenableLifecycled} instance has changed to the following state.
    *
-   * @param newState
-   *          the new lifecycle state
+   * @param newStage
+   *          the new lifecycle stage
    */
-  void stateChanged(LifecycleStage newState);
+  void stateChanged(final LifecycleStage newStage);
 }
