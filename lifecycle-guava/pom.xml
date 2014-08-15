@@ -27,12 +27,6 @@
 
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>myco-commons-callbacks</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>${project.groupId}</groupId>
       <artifactId>myco-commons-hawtdispatch</artifactId>
       <version>${project.version}</version>
     </dependency>

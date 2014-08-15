@@ -9,15 +9,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.fusesource.hawtdispatch.DispatchQueue;
 
 import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.AsyncFunction;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.Service.Listener;
 import com.google.common.util.concurrent.Service.State;
-import com.jive.myco.commons.callbacks.ChainedFuture;
-import com.jive.myco.commons.callbacks.PnkyCallback;
 import com.jive.myco.commons.concurrent.ImmediateExecutor;
+import com.jive.myco.commons.concurrent.Pnky;
 import com.jive.myco.commons.concurrent.PnkyPromise;
+import com.jive.myco.commons.function.ExceptionalFunction;
 import com.jive.myco.commons.hawtdispatch.DispatchQueueBuilder;
 import com.jive.myco.commons.lifecycle.LifecycleListener;
 import com.jive.myco.commons.lifecycle.LifecycleStage;
@@ -110,28 +108,18 @@ public class GuavaServiceToLifecycledWrapper implements ListenableLifecycled
   @Override
   public PnkyPromise<Void> init()
   {
-    final PnkyCallback<Void> pnkyCallback = new PnkyCallback<>();
-
-    ChainedFuture.of(service.start())
-        .transform(
-            (AsyncFunction<State, Void>) (foo) -> ChainedFuture.of(Futures.immediateFuture(null)))
-        .addCallback(pnkyCallback);
-
-    return pnkyCallback;
+    return Pnky
+        .from(service.start())
+        .thenTransform(ExceptionalFunction.toNull());
   }
 
   @SuppressWarnings("deprecation")
   @Override
   public PnkyPromise<Void> destroy()
   {
-    final PnkyCallback<Void> pnkyCallback = new PnkyCallback<>();
-
-    ChainedFuture.of(service.stop())
-        .transform(
-            (AsyncFunction<State, Void>) (foo) -> ChainedFuture.of(Futures.immediateFuture(null)))
-        .addCallback(pnkyCallback);
-
-    return pnkyCallback;
+    return Pnky
+        .from(service.stop())
+        .thenTransform(ExceptionalFunction.toNull());
   }
 
   @Override
