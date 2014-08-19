@@ -46,6 +46,12 @@
         <artifactId>myco-commons-lifecycle</artifactId>
         <version>${project.version}</version>
       </dependency>
+      
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>myco-commons-lifecycle-guava</artifactId>
+        <version>${project.version}</version>
+      </dependency>
 
       <dependency>
         <groupId>${project.groupId}</groupId>

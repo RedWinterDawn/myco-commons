@@ -27,7 +27,7 @@ public interface Lifecycled
    * The promise completes successfully when initialization completes successfully or if the
    * instance if already initialized.</li>
    * <li>
-   * The promise completeds exceptionally if the initialization fails to complete successfully or if
+   * The promise completes exceptionally if the initialization fails to complete successfully or if
    * initialization is not possible from the resource's current stage.</li>
    * </ul>
    *
