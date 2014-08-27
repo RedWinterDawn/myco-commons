@@ -304,7 +304,7 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
         writeBatch();
         aggregateEvents.clear();
 
-        log.debug("[{}]: Wrote batch.", id);
+        log.trace("[{}]: Wrote batch.", id);
       }
     }
   }
@@ -316,6 +316,8 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
       // Just a little insurance.
       if (!aggregateEvents.isEmpty())
       {
+        int failureCount = 0;
+        Throwable lastRootCause = null;
         boolean written = false;
 
         while (!Thread.interrupted() && !written && run)
@@ -340,7 +342,22 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
             catch (final IOException e)
             {
               failures++;
-              log.error("[{}]: Error encoding log event to socket.", id, e);
+
+              final Throwable rootCause = getRootCause(e);
+              failureCount++;
+
+              // New exception, not the same as the last exception we saw, or this failure is a
+              // multiple of ten since the last success
+              if (lastRootCause == null
+                  || !rootCause.getClass().equals(lastRootCause.getClass())
+                  || failureCount % 10 == 0)
+              {
+                log.error("[{}]: Error encoding metrics to socket on attempt [{}].",
+                    id, failureCount, e);
+              }
+
+              lastRootCause = rootCause;
+
               closeSocket(currentSocket);
             }
           }
@@ -552,6 +569,9 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
    */
   private synchronized Socket getOrInitSocket()
   {
+    int failureCount = 0;
+    Throwable lastRootCause = null;
+
     if (socket != null && !socket.isClosed())
     {
       return socket;
@@ -610,9 +630,22 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
         {
           if (run)
           {
-            log.info(
-                "[{}]: Connection failure to: [{}:{}].", id, address.getAddress(),
-                address.getPort(), e);
+            final Throwable rootCause = getRootCause(e);
+
+            failureCount++;
+
+            // New exception, not the same as the last exception we saw, or this failure is a
+            // multiple of ten since the last success
+            if (lastRootCause == null
+                || !rootCause.getClass().equals(lastRootCause.getClass())
+                || failureCount % 10 == 0)
+            {
+              log.error(
+                  "[{}]: Connection failure to [{}:{}] on attempt [{}].",
+                  id, address.getAddress(), address.getPort(), failureCount, e);
+            }
+
+            lastRootCause = rootCause;
 
             closeSocket(socket);
             try
@@ -652,6 +685,18 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
       }
 
       socket = null;
+    }
+  }
+
+  private Throwable getRootCause(final Throwable t)
+  {
+    if (t.getCause() == null)
+    {
+      return t;
+    }
+    else
+    {
+      return getRootCause(t.getCause());
     }
   }
 

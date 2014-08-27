@@ -19,6 +19,12 @@ Stuff that does things on different projects.
 
 ## <a name="changes"></a>Change Log
 
+### 0.1.2
+* Upgrading from 0.1.1
+  * No changes required
+* Change Log
+  * NS - Updated metrics logging to be less frequent during Graphite reporting issues
+
 ### 0.1.1
 * Upgrading from 0.1.0
   * No changes required

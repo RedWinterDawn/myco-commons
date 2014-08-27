@@ -198,11 +198,20 @@ public class GraphiteTest
     doAnswer(
         (invocation) ->
         {
-          // Throw an exception the first time.
-          if (writeByteArrayCounter.getAndIncrement() == 0)
+          // Throw an exception the first 100 times.
+          if (writeByteArrayCounter.getAndIncrement() < 100)
           {
             baos.reset();
-            throw new IOException("test exception");
+
+            if (writeByteArrayCounter.get() % 5 == 0)
+            {
+              throw new IOException("test exception", new NumberFormatException());
+            }
+            else
+            {
+              throw new IOException("test exception");
+            }
+
           }
           else
           {
@@ -218,6 +227,131 @@ public class GraphiteTest
       readLatch.await();
       return -1;
     });
+
+    doAnswer(
+        (invocation) ->
+        {
+          readLatch.countDown();
+          return null;
+        }).when(socket).close();
+
+    final Graphite graphite = Graphite.builder()
+        .id("test")
+        .address(inetSocketAddress)
+        .socketFactory(socketFactory)
+        .pickle(true)
+        .build();
+
+    try
+    {
+      graphite.init();
+
+      graphite.send("blah", "1.0", 12345L);
+      graphite.send("foo", "2.0", 123456L);
+      graphite.send("bar", "3.0", 1234567L);
+
+      await().until(() ->
+      {
+        try
+        {
+          verify(outputStream, times(1)).flush();
+        }
+        catch (final Exception e)
+        {
+          throw new RuntimeException(e);
+        }
+      });
+
+      verify(socket, atLeast(1)).connect(inetSocketAddress, 2);
+
+      final byte[] bytes = baos.toByteArray();
+
+      final PyList payload =
+          (PyList) cPickle.load(new PyFile(new ByteArrayInputStream(bytes, 4, bytes.length - 4)));
+
+      assertEquals(3, payload.size());
+
+      final PyTuple metric = (PyTuple) payload.get(0);
+      final PyTuple metric2 = (PyTuple) payload.get(1);
+      final PyTuple metric3 = (PyTuple) payload.get(2);
+
+      assertEquals("blah", metric.get(0));
+      assertEquals(BigInteger.valueOf(12345L), ((PyTuple) metric.get(1)).get(0));
+      assertEquals("1.0", ((PyTuple) metric.get(1)).get(1));
+
+      assertEquals("foo", metric2.get(0));
+      assertEquals(BigInteger.valueOf(123456L), ((PyTuple) metric2.get(1)).get(0));
+      assertEquals("2.0", ((PyTuple) metric2.get(1)).get(1));
+
+      assertEquals("bar", metric3.get(0));
+      assertEquals(BigInteger.valueOf(1234567L), ((PyTuple) metric3.get(1)).get(0));
+      assertEquals("3.0", ((PyTuple) metric3.get(1)).get(1));
+    }
+    finally
+    {
+      if (graphite != null)
+      {
+        graphite.destroy();
+      }
+    }
+  }
+
+  @Test
+  public void testConnectRetry() throws Exception
+  {
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+    when(socketFactory.createSocket()).thenReturn(socket);
+
+    when(socket.getInputStream()).thenReturn(inputStream);
+    when(socket.getOutputStream()).thenReturn(outputStream);
+
+    doAnswer(
+        (invocation) ->
+        {
+          baos.write((Integer) invocation.getArguments()[0]);
+          return null;
+        })
+        .when(outputStream).write(anyByte());
+
+    final AtomicInteger writeByteArrayCounter = new AtomicInteger();
+
+    doAnswer(
+        (invocation) ->
+        {
+          baos.write((byte[]) invocation.getArguments()[0]);
+          return null;
+        })
+        .when(outputStream).write(any(byte[].class));
+
+    final CountDownLatch readLatch = new CountDownLatch(1);
+    when(inputStream.read()).thenAnswer((invocation) ->
+    {
+      readLatch.await();
+      return -1;
+    });
+
+    doAnswer(
+        (invocation) ->
+        {
+          // Throw an exception the first 2 times.
+        if (writeByteArrayCounter.getAndIncrement() < 1)
+        {
+          baos.reset();
+
+          if (writeByteArrayCounter.get() % 5 == 0)
+          {
+            throw new IOException("test exception", new NumberFormatException());
+          }
+          else
+          {
+            throw new IOException("test exception");
+          }
+        }
+
+          return null;
+        })
+        .when(socket).connect(inetSocketAddress, 2);
 
     doAnswer(
         (invocation) ->
