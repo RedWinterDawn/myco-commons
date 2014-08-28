@@ -9,7 +9,7 @@
 
   <groupId>com.jive.myco.commons</groupId>
   <artifactId>root</artifactId>
-  <version>0.1.2-SNAPSHOT</version>
+  <version>0.1.2</version>
 
   <packaging>pom</packaging>
   <name>Myco :: Commons :: Root</name>
@@ -31,7 +31,7 @@
   <scm>
     <connection>scm:git:ssh://git@github.com/jive/com.jive.myco.commons.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/jive/com.jive.myco.commons.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>0.1.2</tag>
   </scm>
   <dependencies>
     <dependency>
