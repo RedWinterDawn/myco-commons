@@ -842,6 +842,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   /**
    * See {@link #allFailingFast(Iterable)}
    */
+  @SafeVarargs
   public static <V> PnkyPromise<List<V>> allFailingFast(final PnkyPromise<? extends V>... promises)
   {
     return allFailingFast(Lists.newArrayList(promises));
@@ -922,6 +923,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   /**
    * See {@link #all(Iterable)}
    */
+  @SafeVarargs
   public static <V> PnkyPromise<List<V>> all(final PnkyPromise<? extends V>... promises)
   {
     return all(Lists.newArrayList(promises));
@@ -964,7 +966,8 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
     return pnky;
   }
 
-  public static <V> PnkyPromise<List<V>> any(PnkyPromise<? extends V>... promises)
+  @SafeVarargs
+  public static <V> PnkyPromise<List<V>> any(final PnkyPromise<? extends V>... promises)
   {
     return any(Lists.newArrayList(promises));
   }
@@ -1011,6 +1014,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   /**
    * See {@link #first(Iterable)}
    */
+  @SafeVarargs
   public static <V> PnkyPromise<V> first(final PnkyPromise<? extends V>... promises)
   {
     return first(Lists.newArrayList(promises));
