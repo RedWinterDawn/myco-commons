@@ -10,7 +10,7 @@ import org.junit.Test;
  *
  * @author David Valeri
  */
-@Ignore("Ignored as this is intended for maunal debugging and validation against Graphite.")
+@Ignore("Ignored as this is intended for manual debugging and validation against Graphite.")
 public class GraphiteIT
 {
   @Test

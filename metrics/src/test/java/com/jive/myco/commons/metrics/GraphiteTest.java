@@ -198,7 +198,6 @@ public class GraphiteTest
     doAnswer(
         (invocation) ->
         {
-          // Throw an exception the first 100 times.
           if (writeByteArrayCounter.getAndIncrement() < 100)
           {
             baos.reset();
@@ -240,6 +239,7 @@ public class GraphiteTest
         .address(inetSocketAddress)
         .socketFactory(socketFactory)
         .pickle(true)
+        .reconnectionDelay(10L)
         .build();
 
     try
@@ -335,19 +335,19 @@ public class GraphiteTest
         (invocation) ->
         {
           // Throw an exception the first 2 times.
-        if (writeByteArrayCounter.getAndIncrement() < 1)
-        {
-          baos.reset();
+          if (writeByteArrayCounter.getAndIncrement() < 1)
+          {
+            baos.reset();
 
-          if (writeByteArrayCounter.get() % 5 == 0)
-          {
-            throw new IOException("test exception", new NumberFormatException());
+            if (writeByteArrayCounter.get() % 5 == 0)
+            {
+              throw new IOException("test exception", new NumberFormatException());
+            }
+            else
+            {
+              throw new IOException("test exception");
+            }
           }
-          else
-          {
-            throw new IOException("test exception");
-          }
-        }
 
           return null;
         })

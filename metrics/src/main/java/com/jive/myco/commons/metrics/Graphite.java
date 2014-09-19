@@ -26,6 +26,10 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.slf4j.Logger;
 
+import com.jive.myco.commons.retry.RetryManager;
+import com.jive.myco.commons.retry.RetryPolicy;
+import com.jive.myco.commons.retry.RetryStrategy;
+
 /**
  * A custom Graphite client instance for Metrics.
  * <p>
@@ -82,9 +86,13 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
   private ScheduledExecutorService executorService;
 
   private Socket socket;
+  private final Object socketMonitor = new Object();
   private volatile int failures;
   private volatile boolean run;
   private volatile ScheduledFuture<?> batchTimeoutTaskFuture;
+
+  private final RetryManager connectionRetryManager;
+  private final ConnectionRetryStrategy connectionRetryStrategy;
 
   @Builder
   public Graphite(@NonNull final String id, final InetSocketAddress address,
@@ -126,6 +134,17 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
         .build();
 
     this.aggregateEvents = new ArrayList<>(this.batchSize);
+
+    this.connectionRetryStrategy = new ConnectionRetryStrategy();
+    this.connectionRetryManager = RetryManager.builder()
+        .retryPolicy(RetryPolicy.builder()
+            .maximumRetries(-1)
+            .maximumRetryDelay(this.reconnectionDelay)
+            .initialRetryDelay(100)
+            .backoffMultiplier(3)
+            .build())
+        .retryStrategy(this.connectionRetryStrategy)
+        .build();
   }
 
   /**
@@ -140,7 +159,7 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
       {
         appender.init();
 
-        executorService = new ScheduledThreadPoolExecutor(2,
+        executorService = new ScheduledThreadPoolExecutor(3,
             // NOT using Guava builder here because we would like to keep as many dependencies out
             // of this class as possible.
             new ThreadFactory()
@@ -173,6 +192,8 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
             });
 
         run = true;
+
+        connectionRetryStrategy.scheduleRetry(0);
       }
     }
   }
@@ -322,7 +343,7 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
 
         while (!Thread.interrupted() && !written && run)
         {
-          final Socket currentSocket = getOrInitSocket();
+          final Socket currentSocket = getSocket();
 
           if (currentSocket != null)
           {
@@ -337,6 +358,9 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
                 writeTextBatch(currentSocket, aggregateEvents);
               }
               written = true;
+              // Successfully validated socket connection, we can now assert that the connection
+              // was successfully initialized
+              connectionRetryManager.onSuccess();
               failures = 0;
             }
             catch (final IOException e)
@@ -561,107 +585,103 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
   }
 
   /**
-   * Creates or retrieves the previously created socket. Attempts to establish the socket are made
-   * repeatedly until this instance establishes a connection or the instance is stopped.
+   * Waits for the socket to be initialized and returns once the socket is connected and ready
+   * (unless we are shutting down).
    *
    * @return the socket to use or {@code null} if the appender was stopped without a socket
    *         available
    */
-  private synchronized Socket getOrInitSocket()
+  private Socket getSocket()
   {
-    int failureCount = 0;
-    Throwable lastRootCause = null;
-
-    if (socket != null && !socket.isClosed())
+    while (run && (socket == null || socket.isClosed()))
     {
-      return socket;
-    }
-    else
-    {
-      while (socket == null && run)
+      try
       {
-        try
+        synchronized (socketMonitor)
         {
-          socket = socketFactory.createSocket();
-          socket.connect(address, 2);
-
-          // Setting this such that the watcher's read operation never times out until the socket
-          // is actually dead / closed.
-          socket.setSoTimeout(0);
-          socket.setKeepAlive(true);
-
-          // Fire the watcher task off to run in the background
-          final Socket watchedSocket = socket;
-          executorService.submit(new Runnable()
+          if (run && (socket == null || socket.isClosed()))
           {
-            @Override
-            public void run()
-            {
-              try
-              {
-                while (watchedSocket.getInputStream().read() != -1)
-                {
-                  // No-Op
-                }
-
-                if (run)
-                {
-                  log.info("[{}]: Watcher detected socket close.", id);
-                  closeSocket(watchedSocket);
-                }
-              }
-              catch (final IOException e)
-              {
-                if (run)
-                {
-                  log.info("[{}]: Watcher detected socket close.", id, e);
-                  closeSocket(watchedSocket);
-                }
-              }
-            }
-          });
-
-          if (!run)
-          {
-            closeSocket(socket);
-          }
-        }
-        catch (final Exception e)
-        {
-          if (run)
-          {
-            final Throwable rootCause = getRootCause(e);
-
-            failureCount++;
-
-            // New exception, not the same as the last exception we saw, or this failure is a
-            // multiple of ten since the last success
-            if (lastRootCause == null
-                || !rootCause.getClass().equals(lastRootCause.getClass())
-                || failureCount % 10 == 0)
-            {
-              log.error(
-                  "[{}]: Connection failure to [{}:{}] on attempt [{}].",
-                  id, address.getAddress(), address.getPort(), failureCount, e);
-            }
-
-            lastRootCause = rootCause;
-
-            closeSocket(socket);
-            try
-            {
-              Thread.sleep(reconnectionDelay);
-            }
-            catch (final InterruptedException e2)
-            {
-              log.info("[{}]: Interrupted while connecting.", id, e2);
-              Thread.interrupted();
-            }
+            log.debug("waiting");
+            socketMonitor.wait();
           }
         }
       }
+      catch (final InterruptedException e)
+      {
+        log.info("[{}]: Interrupted while connecting.", id, e);
+        Thread.interrupted();
+      }
+    }
 
-      return socket;
+    return socket;
+  }
+
+  private synchronized void tryInitSocket()
+  {
+    if (socket != null && !socket.isClosed())
+    {
+      // already connected
+      return;
+    }
+
+    try
+    {
+      socket = socketFactory.createSocket();
+      socket.connect(address, 2);
+
+      // Setting this such that the watcher's read operation never times out until the socket
+      // is actually dead / closed.
+      socket.setSoTimeout(0);
+      socket.setKeepAlive(true);
+
+      // Fire the watcher task off to run in the background
+      final Socket watchedSocket = socket;
+      executorService.submit(() ->
+      {
+        try
+        {
+          while (watchedSocket.getInputStream().read() != -1)
+          {
+            // No-Op
+          }
+
+          if (run)
+          {
+            final String message = String.format("[%s]: Watcher detected socket close", id);
+            connectionRetryManager.onFailure(new ConnectionClosedException(message));
+            closeSocket(watchedSocket);
+          }
+        }
+        catch (final IOException e)
+        {
+          if (run)
+          {
+            final String message =
+                String.format("[%s]: Watcher detected socket close on IOException", id);
+            connectionRetryManager.onFailure(new ConnectionClosedException(message, e));
+            closeSocket(watchedSocket);
+          }
+        }
+      });
+
+      if (!run)
+      {
+        closeSocket(watchedSocket);
+      }
+
+      synchronized (socketMonitor)
+      {
+        socketMonitor.notifyAll();
+      }
+    }
+    catch (final Exception e)
+    {
+      if (run)
+      {
+        final String message = String.format("[%s]: Connection failure to [%s:%s]",
+            id, address.getAddress(), address.getPort());
+        connectionRetryManager.onFailure(new ConnectionClosedException(message, e));
+      }
     }
   }
 
@@ -765,4 +785,98 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
       return log;
     }
   }
+
+  private class ConnectionRetryStrategy implements RetryStrategy
+  {
+    private Throwable lastRootCause = null;
+
+    @Override
+    public void scheduleRetry(final long delay)
+    {
+      log.info("Schedule connect retry [{}]", delay);
+      executorService.schedule(Graphite.this::tryInitSocket, delay, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    public void onFailure(final int retryCount, final Throwable cause)
+    {
+      if (run)
+      {
+        final Throwable rootCause = getRootCause(cause);
+
+        // New exception, not the same as the last exception we saw, or this failure is a
+        // multiple of ten since the last success
+        if (lastRootCause == null
+            || !rootCause.getClass().equals(lastRootCause.getClass())
+            || retryCount % 10 == 0)
+        {
+          log.error(
+              "[{}]: Error occurred while connecting to graphite on attempt [{}].",
+              id, retryCount, cause);
+        }
+
+        lastRootCause = rootCause;
+
+        closeSocket(socket);
+      }
+    }
+
+    @Override
+    public void onRetriesExhausted(final List<Throwable> causes)
+    {
+      log.error("Retries exhausted on reconnect???? " +
+          "There is no max retry so this should not happen");
+    }
+  }
+
+  private static class ConnectionClosedException extends Exception
+  {
+    private static final long serialVersionUID = 3424648054343088489L;
+
+    public ConnectionClosedException()
+    {
+      super();
+    }
+
+    public ConnectionClosedException(final String message)
+    {
+      super(message);
+    }
+
+    public ConnectionClosedException(final String message, final Throwable cause)
+    {
+      super(message, cause);
+    }
+
+    public ConnectionClosedException(final Throwable cause)
+    {
+      super(cause);
+    }
+  }
+
+  private static class ConnectionErrorException extends Exception
+  {
+    private static final long serialVersionUID = -1991764546589398466L;
+
+    public ConnectionErrorException()
+    {
+      super();
+    }
+
+    public ConnectionErrorException(final String message)
+    {
+      super(message);
+    }
+
+    public ConnectionErrorException(final String message, final Throwable cause)
+    {
+      super(message, cause);
+    }
+
+    public ConnectionErrorException(final Throwable cause)
+    {
+      super(cause);
+    }
+  }
+
 }
