@@ -7,6 +7,7 @@ import java.util.List;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
+import lombok.ToString;
 import lombok.experimental.Builder;
 
 /**
@@ -20,8 +21,6 @@ import lombok.experimental.Builder;
  */
 public class RetryManager
 {
-  private final List<Throwable> causes = new LinkedList<>();
-
   @Getter
   @Setter
   @NonNull
@@ -32,11 +31,7 @@ public class RetryManager
   @NonNull
   private RetryStrategy retryStrategy;
 
-  @Getter
-  private volatile int retryCounter = 0;
-
-  @Getter
-  private volatile long lastDelay = 0;
+  private volatile RetryState retryState;
 
   @Builder
   private RetryManager(@NonNull final RetryPolicy retryPolicy,
@@ -44,6 +39,7 @@ public class RetryManager
   {
     this.retryPolicy = retryPolicy;
     this.retryStrategy = retryStrategy;
+    this.retryState = new RetryState();
   }
 
   /**
@@ -53,9 +49,7 @@ public class RetryManager
    */
   public void onSuccess()
   {
-    retryCounter = 0;
-    lastDelay = 0;
-    causes.clear();
+    retryState = new RetryState();
   }
 
   /**
@@ -76,32 +70,55 @@ public class RetryManager
    */
   public void onFailure(final Throwable cause)
   {
+    final RetryState currentState = retryState;
+
     if (retryPolicy.getMaximumRetries() >= 0)
     {
-      causes.add(cause);
-      if (causes.size() > 10)
+      currentState.causes.add(cause);
+      if (currentState.causes.size() > 10)
       {
-        causes.remove(0);
+        currentState.causes.remove(0);
       }
     }
 
     if (willRetry())
     {
-      lastDelay = retryPolicy.calculateDelay(lastDelay);
-      retryStrategy.onFailure(retryCounter++, cause);
-      retryStrategy.scheduleRetry(lastDelay);
+      currentState.lastDelay = retryPolicy.calculateDelay(currentState.lastDelay);
+      retryStrategy.onFailure(currentState.retryCounter++, cause);
+      retryStrategy.scheduleRetry(currentState.lastDelay);
     }
     else
     {
-      retryCounter = 0;
-      lastDelay = 0;
-      retryStrategy.onRetriesExhausted(new ArrayList<>(causes));
-      causes.clear();
+      currentState.retryCounter = 0;
+      currentState.lastDelay = 0;
+      retryStrategy.onRetriesExhausted(new ArrayList<>(currentState.causes));
+      currentState.causes.clear();
     }
   }
 
   public boolean willRetry()
   {
-    return retryCounter < retryPolicy.getMaximumRetries() || retryPolicy.getMaximumRetries() < 0;
+    return retryState.retryCounter < retryPolicy.getMaximumRetries()
+        || retryPolicy.getMaximumRetries() < 0;
+  }
+
+  public int getRetryCounter()
+  {
+    return retryState.retryCounter;
+  }
+
+  public long getLastDelay()
+  {
+    return retryState.lastDelay;
+  }
+
+  @ToString
+  private static class RetryState
+  {
+    private volatile int retryCounter = 0;
+
+    private volatile long lastDelay = 0;
+
+    private final List<Throwable> causes = new LinkedList<>();
   }
 }
