@@ -3,7 +3,7 @@
   <parent>
     <groupId>com.jive.myco.commons</groupId>
     <artifactId>root</artifactId>
-    <version>0.1.3</version>
+    <version>0.1.4-SNAPSHOT</version>
   </parent>
 
   <artifactId>myco-commons-hawtdispatch</artifactId>
