@@ -41,7 +41,11 @@ import com.jive.myco.commons.retry.RetryStrategy;
 @Slf4j
 public class Graphite extends com.codahale.metrics.graphite.Graphite
 {
-  private static final long DEFAULT_RECONNECT_DELAY = 5000;
+  private static final String DEFAULT_RECONNECT_DELAY_SYS_PROP_KEY = "metrics.reconnect.delay";
+  // This is a low level tool and this configuration would be a nightmare to expose where needed
+  // So allow configuration of the default value via a system property if this is causing any issues
+  private static final long DEFAULT_RECONNECT_DELAY =
+      Long.getLong(DEFAULT_RECONNECT_DELAY_SYS_PROP_KEY, 5000);
   private static final int DEFAULT_QUEUE_SIZE = 2000;
   private static final int DEFAULT_BATCH_SIZE = 50;
   private static final long DEFAULT_BATCH_TIMEOUT_TIME = 500;
