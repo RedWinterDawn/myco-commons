@@ -365,6 +365,7 @@ public class GraphiteTest
         .address(inetSocketAddress)
         .socketFactory(socketFactory)
         .pickle(true)
+        .reconnectionDelay(100L)
         .build();
 
     try

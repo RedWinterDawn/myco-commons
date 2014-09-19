@@ -605,7 +605,6 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
         {
           if (run && (socket == null || socket.isClosed()))
           {
-            log.debug("waiting");
             socketMonitor.wait();
           }
         }
@@ -797,7 +796,7 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
     @Override
     public void scheduleRetry(final long delay)
     {
-      log.info("Schedule connect retry [{}]", delay);
+      log.trace("Schedule connect retry [{}]", delay);
       executorService.schedule(Graphite.this::tryInitSocket, delay, TimeUnit.MILLISECONDS);
     }
 
