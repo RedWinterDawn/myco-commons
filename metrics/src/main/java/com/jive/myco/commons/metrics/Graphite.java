@@ -836,11 +836,6 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
   {
     private static final long serialVersionUID = 3424648054343088489L;
 
-    public ConnectionClosedException()
-    {
-      super();
-    }
-
     public ConnectionClosedException(final String message)
     {
       super(message);
@@ -850,36 +845,5 @@ public class Graphite extends com.codahale.metrics.graphite.Graphite
     {
       super(message, cause);
     }
-
-    public ConnectionClosedException(final Throwable cause)
-    {
-      super(cause);
-    }
   }
-
-  private static class ConnectionErrorException extends Exception
-  {
-    private static final long serialVersionUID = -1991764546589398466L;
-
-    public ConnectionErrorException()
-    {
-      super();
-    }
-
-    public ConnectionErrorException(final String message)
-    {
-      super(message);
-    }
-
-    public ConnectionErrorException(final String message, final Throwable cause)
-    {
-      super(message, cause);
-    }
-
-    public ConnectionErrorException(final Throwable cause)
-    {
-      super(cause);
-    }
-  }
-
 }
