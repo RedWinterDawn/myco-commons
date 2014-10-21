@@ -122,7 +122,7 @@ public abstract class AsyncAppender<E>
                     ? System.getSecurityManager().getThreadGroup() : Thread.currentThread()
                         .getThreadGroup();
 
-                private final String nameTemplate = "async-appender-" + id + "-worker-%d";
+                private final String nameTemplate = "metrics-async-appender-" + id + "-worker-%d";
 
                 @Override
                 public Thread newThread(final Runnable r)
