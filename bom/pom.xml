@@ -3,7 +3,7 @@
   <parent>
     <artifactId>root</artifactId>
     <groupId>com.jive.myco.commons</groupId>
-    <version>0.1.4-SNAPSHOT</version>
+    <version>0.2.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
@@ -46,7 +46,7 @@
         <artifactId>myco-commons-lifecycle</artifactId>
         <version>${project.version}</version>
       </dependency>
-      
+
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>myco-commons-lifecycle-guava</artifactId>
@@ -96,6 +96,12 @@
         <version>${project.version}</version>
         <type>test-jar</type>
         <scope>test</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>myco-commons-networking</artifactId>
+        <version>${project.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
