@@ -7,7 +7,8 @@ import java.util.function.Predicate;
 
 /**
  * Common {@link Predicate filters} that can be used to filter out certain network addresses.
- * Multiple filters may be chained together using
+ * Multiple filters may be chained together using {@link Predicate#and(Predicate)} or
+ * {@link Predicate#or(Predicate)}.
  *
  * @author Brandon Pedersen &lt;bpedersen@getjive.com&gt;
  */
