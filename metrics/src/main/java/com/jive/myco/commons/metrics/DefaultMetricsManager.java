@@ -416,7 +416,7 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
     {
       registry.remove(name);
       metrics.remove(metric);
-      throw new IllegalStateException("Manager destroyed");
+      throw new IllegalStateException("Manager not initialized.");
     }
   }
 

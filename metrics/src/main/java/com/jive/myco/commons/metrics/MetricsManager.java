@@ -1,14 +1,14 @@
 package com.jive.myco.commons.metrics;
 
 import com.codahale.metrics.Metric;
-import com.jive.myco.commons.lifecycle.Lifecycled;
+import com.jive.myco.commons.lifecycle.ListenableLifecycled;
 
 /**
  * A manager for the Metrics library.
- * 
+ *
  * @author David Valeri
  */
-public interface MetricsManager extends Lifecycled
+public interface MetricsManager extends ListenableLifecycled
 {
   /**
    * Removes a metric from the registry.
