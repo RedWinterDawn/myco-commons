@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>com.jive.myco</groupId>
     <artifactId>parent</artifactId>
-    <version>31</version>
+    <version>32</version>
   </parent>
   <groupId>com.jive.myco.commons</groupId>
   <artifactId>root</artifactId>
@@ -30,7 +31,6 @@
   <scm>
     <connection>scm:git:ssh://git@github.com/jive/com.jive.myco.commons.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/jive/com.jive.myco.commons.git</developerConnection>
-    <tag>HEAD</tag>
   </scm>
   <dependencies>
     <dependency>
