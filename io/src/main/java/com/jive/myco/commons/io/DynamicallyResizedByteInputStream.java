@@ -9,13 +9,13 @@ import java.util.List;
  * This {@code InputStream} is built on top of backing byte arrays that were filled by a paired
  * {@link DynamicallyResizedByteOutputStream}. Acquire instances of this class through an instance
  * of {@link DynamicallyResizedByteOutputStream}.
- * 
+ *
  * As with typical stream implementations, this stream and its paired output stream are not thread
  * safe.
- * 
+ *
  * @author Zach Morin
- * @author David Valer
- * 
+ * @author David Valeri
+ *
  * @see DynamicallyResizedByteOutputStream
  */
 public class DynamicallyResizedByteInputStream extends InputStream
@@ -32,7 +32,7 @@ public class DynamicallyResizedByteInputStream extends InputStream
 
   /**
    * The current buffer in use.
-   * 
+   *
    * @See {@link #bufferQueueIndex}
    * @See {@link #bufferIndex}
    */
@@ -40,7 +40,7 @@ public class DynamicallyResizedByteInputStream extends InputStream
 
   /**
    * Index of the buffer in the data queue with which we are currently working.
-   * 
+   *
    * @See {@link #buffer}
    */
   private int bufferQueueIndex;

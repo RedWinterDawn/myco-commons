@@ -17,6 +17,7 @@ import com.jive.myco.commons.callbacks.Callback;
  *
  * @author Brandon Pedersen <bpedersen@getjive.com>
  */
+@Deprecated
 @NoArgsConstructor(access = PRIVATE)
 public final class Callbacks
 {

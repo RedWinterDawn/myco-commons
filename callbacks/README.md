@@ -1,5 +1,7 @@
 # Callbacks
 
+**DEPRECATED**: Use Myco Commons Concurrent instead for a more capable Promise style API.
+
 This module provides the mechanisms for projects to pass in and make use of callbacks. This is used
 when an operation is asynchronous and a result is provided at a later time.
 

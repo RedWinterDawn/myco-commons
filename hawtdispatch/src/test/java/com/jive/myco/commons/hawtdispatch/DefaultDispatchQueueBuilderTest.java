@@ -19,11 +19,12 @@ import org.mockito.runners.MockitoJUnitRunner;
 @RunWith(MockitoJUnitRunner.class)
 public class DefaultDispatchQueueBuilderTest
 {
-
   @Mock
   private Dispatcher dispatcher;
+
   @Mock
   private DispatchQueue queue;
+
   @Mock
   private DispatchQueue globalQueue;
 
@@ -40,7 +41,7 @@ public class DefaultDispatchQueueBuilderTest
   @Test
   public void testSegment()
   {
-    DispatchQueueBuilder newBuilder = builder.segment("second").segment("third");
+    final DispatchQueueBuilder newBuilder = builder.segment("second").segment("third");
     assertEquals("top:second:third", newBuilder.getName());
     newBuilder.build();
     verify(dispatcher).createQueue("top:second:third");

@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 /**
  * @author Brandon Pedersen &lt;bpedersen@getjive.com&gt;
  */
+@Deprecated
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class Util
 {

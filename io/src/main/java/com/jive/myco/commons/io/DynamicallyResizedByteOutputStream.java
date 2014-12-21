@@ -17,37 +17,37 @@ import com.google.common.collect.Lists;
  * These additional byte arrays solve the problem of having to double the size of the initial byte
  * array and memory copying as in {@link ByteArrayOutputStream} when you only need a fraction of the
  * space.
- * 
+ *
  * This class also provides a reference to an {@code InputStream} that is built on top of the same
  * backing arrays so that you don't have to go around copying bytes like some kind of un-optimized
  * barbarian.
- * 
+ *
  * As with typical stream implementations, this stream and its paired output stream are not thread
  * safe.
- * 
+ *
  * Typical usage pattern is as follows:
- * 
+ *
  * <pre>
- * 
+ *
  * DynamicallyResizedByteOutputStream outputStream =
  *     new DynamicallyResizedByteOutputStream(1024 * 4, 1024);
- * 
+ *
  * outputStream.write(...);
- * 
+ *
  * // Recycle for reading
  * InputStream inputStream = outputStream.getInputStream();
- * 
+ *
  * inputStream.read(...);
- * 
+ *
  * // Recycle for writing
  * outputStream = inputStream.getOutputStream();
- * 
+ *
  * ...
  * </pre>
- * 
+ *
  * @author Zach Morin
- * @author David Valer
- * 
+ * @author David Valeri
+ *
  */
 public class DynamicallyResizedByteOutputStream extends OutputStream
 {
@@ -64,7 +64,7 @@ public class DynamicallyResizedByteOutputStream extends OutputStream
 
   /**
    * The current buffer in use.
-   * 
+   *
    * @See {@link #bufferQueueIndex}
    * @See {@link #bufferIndex}
    */
@@ -99,7 +99,7 @@ public class DynamicallyResizedByteOutputStream extends OutputStream
     bufferQueue = Lists.newArrayList(new byte[initialSize]);
     reset();
   }
-  
+
   DynamicallyResizedByteOutputStream(final int incrementSize, final List<byte[]> bufferQueue)
   {
     this.incrementSize = incrementSize;
@@ -164,7 +164,7 @@ public class DynamicallyResizedByteOutputStream extends OutputStream
    * Resets the internal pointers and readies the stream for writing. Call this method if you wish
    * to reset the output stream to an empty state and start filling it again without calling
    * {@link #toInputStream()}.
-   * 
+   *
    * @throws IllegalStateException
    *           if the stream is closed or {@link #toInputStream()} has been called.
    */
