@@ -3,11 +3,12 @@
 Stuff that does things on different projects.
 
 * [**BOM**](./bom/README.md)
-* [**Callbacks**](./callbacks/README.md)
+* [**Callbacks - DEPRECATED**](./callbacks/README.md)
 * [**Concurrent**](./concurrent/README.md)
 * [**Function**](./function/README.md)
 * [**HawtDispatch**](./hawtdispatch/README.md)
 * [**IO**](./io)
+* [**Lang**](./lang)
 * [**Lifecycle**](./lifecycle)
 * [**Lifecycle Guava**](./lifecycle-guava)
 * [**Listenable**](./listenable)
@@ -18,6 +19,16 @@ Stuff that does things on different projects.
 * [**Change Log**](#changes)
 
 ## <a name="changes"></a>Change Log
+
+### 0.2.4
+* Upgrading from 0.2.3
+  * No changes required
+* Change Log
+  * NS - Deprecated callbacks module
+  * US7425 - Added Lang module
+
+### ???
+* Some crazy stuff happened here...
 
 ### 0.1.2
 * Upgrading from 0.1.1

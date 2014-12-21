@@ -18,6 +18,7 @@
     <module>function</module>
     <module>hawtdispatch</module>
     <module>io</module>
+    <module>lang</module>
     <module>lifecycle</module>
     <module>lifecycle-guava</module>
     <module>listenable</module>
