@@ -11,6 +11,7 @@ import com.google.common.util.concurrent.ListenableFuture;
  *
  * @author Brandon Pedersen <bpedersen@getjive.com>
  */
+@Deprecated
 @NoArgsConstructor(access = PRIVATE)
 public final class CallbackWrappers
 {

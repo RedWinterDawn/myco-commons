@@ -8,6 +8,7 @@ package com.jive.myco.commons.callbacks;
  *
  * @author David Valeri
  */
+@Deprecated
 public class NoOpCallback<T> implements Callback<T>
 {
   private static final NoOpCallback<?> INSTANCE = new NoOpCallback<>();

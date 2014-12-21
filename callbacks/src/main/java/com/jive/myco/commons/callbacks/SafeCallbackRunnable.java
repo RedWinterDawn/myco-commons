@@ -19,6 +19,7 @@ import com.google.common.util.concurrent.MoreExecutors;
  * @param <T>
  *          the input type of the callback
  */
+@Deprecated
 @RequiredArgsConstructor
 @ToString
 @Slf4j

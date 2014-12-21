@@ -9,6 +9,7 @@ import com.jive.myco.commons.concurrent.PnkyPromise;
  *
  * @author Brandon Pedersen &lt;bpedersen@getjive.com&gt;
  */
+@Deprecated
 public final class PnkyCallback<V> extends Pnky<V> implements Callback<V>
 {
 

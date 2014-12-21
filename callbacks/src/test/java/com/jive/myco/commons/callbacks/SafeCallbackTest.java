@@ -11,6 +11,7 @@ import org.junit.Test;
  *
  * @author David Valeri
  */
+@SuppressWarnings("deprecation")
 public class SafeCallbackTest
 {
   @Test

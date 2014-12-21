@@ -8,6 +8,7 @@ package com.jive.myco.commons.callbacks;
  *
  * @author David Valeri
  */
+@Deprecated
 public interface Callback<T>
 {
   void onSuccess(final T result);

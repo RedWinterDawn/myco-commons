@@ -43,6 +43,7 @@ import com.google.common.util.concurrent.ListenableFuture;
  *
  * @author Brandon Pedersen &lt;bpedersen@getjive.com&gt;
  */
+@Deprecated
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 public class ChainedFuture<V> extends AbstractFuture<V>
 {

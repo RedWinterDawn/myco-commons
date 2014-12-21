@@ -15,6 +15,7 @@ import com.google.common.util.concurrent.ListenableFuture;
  *
  * @author David Valeri
  */
+@Deprecated
 public class CallbackFuture<T> extends ChainedFuture<T> implements Callback<T>
 {
   @Override
