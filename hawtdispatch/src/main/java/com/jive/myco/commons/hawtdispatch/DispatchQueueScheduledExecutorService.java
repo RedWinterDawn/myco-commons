@@ -74,21 +74,30 @@ public class DispatchQueueScheduledExecutorService extends DispatchQueueExecutor
   public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period,
       TimeUnit unit)
   {
-    return this.schedule(() ->
+    Runnable runner = new Runnable()
     {
-      this.schedule(command, period, TimeUnit.MILLISECONDS);
-      command.run();
-    }, initialDelay, unit);
+      @Override
+      public void run()
+      {
+        DispatchQueueScheduledExecutorService.this.schedule(this, period, unit);
+        command.run();
+      }
+    };
+    return this.schedule(runner, initialDelay, unit);
   }
 
   @Override
   public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay,
       TimeUnit unit)
   {
-    return this.schedule(() ->
+    return this.schedule(new Runnable()
     {
-      command.run();
-      this.schedule(command, delay, unit);
+      @Override
+      public void run()
+      {
+        command.run();
+        DispatchQueueScheduledExecutorService.this.schedule(this, delay, unit);
+      }
     }, initialDelay, unit);
   }
 }
