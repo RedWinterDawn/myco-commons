@@ -147,6 +147,13 @@ import com.jive.myco.commons.function.ExceptionalFunction;
  *
  * @author Brandon Pedersen &lt;bpedersen@getjive.com&gt;
  */
+ /*
+      |                                   |  Always invoke  | On success only | On failure only |
+      |-----------------------------------|-----------------|-----------------|-----------------|
+      | Propagate result                  | alwaysAccept    | thenAccept      | onFailure       |
+      | Transform/recover                 | alwaysTransform | thenTransform   | withFallback    |
+      | Transform/recover with new future | alwaysCompose   | thenCompose     | composeFallback |
+ */
 //@formatter:on
 public interface PnkyPromise<V> extends ListenableFuture<V>
 {
