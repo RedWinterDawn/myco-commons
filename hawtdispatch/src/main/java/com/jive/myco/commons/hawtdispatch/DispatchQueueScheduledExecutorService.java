@@ -45,30 +45,23 @@ public class DispatchQueueScheduledExecutorService extends DispatchQueueExecutor
     final ScheduledSettableFuture<V> p = ScheduledSettableFuture.create(delay, unit);
     dispatchQueue.executeAfter(delay, unit, () ->
     {
-      try
+      if (p.isCancelled())
       {
-        if (p.isCancelled())
-        {
-          p.setException(new CancellationException());
-          return;
-        }
+        p.setException(new CancellationException());
+        return;
+      }
 
-        this.execute(() ->
-        {
-          try
-          {
-            p.set(callable.call());
-          }
-          catch (final Exception e)
-          {
-            p.setException(e);
-          }
-        });
-      }
-      catch (final CancellationException e)
+      this.execute(() ->
       {
-        log.debug("Future has been cancelled");
-      }
+        try
+        {
+          p.set(callable.call());
+        }
+        catch (final Exception e)
+        {
+          p.setException(e);
+        }
+      });
     });
     return p;
   }
