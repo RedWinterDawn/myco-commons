@@ -38,7 +38,8 @@ public class DispatchQueueScheduledExecutorService extends DispatchQueueExecutor
   }
 
   @Override
-  public <V> ScheduledFuture<V> schedule(final Callable<V> callable, final long delay, final TimeUnit unit)
+  public <V> ScheduledFuture<V> schedule(final Callable<V> callable, final long delay,
+      final TimeUnit unit)
   {
     final ScheduledSettableFuture<V> p = ScheduledSettableFuture.create(delay, unit);
     dispatchQueue.executeAfter(delay, unit, () ->
@@ -72,8 +73,8 @@ public class DispatchQueueScheduledExecutorService extends DispatchQueueExecutor
   }
 
   @Override
-  public ScheduledFuture<?> scheduleAtFixedRate(final Runnable command, final long initialDelay, final long period,
-      final TimeUnit unit)
+  public ScheduledFuture<?> scheduleAtFixedRate(final Runnable command, final long initialDelay,
+      final long period, final TimeUnit unit)
   {
     final Runnable runner = new Runnable()
     {
