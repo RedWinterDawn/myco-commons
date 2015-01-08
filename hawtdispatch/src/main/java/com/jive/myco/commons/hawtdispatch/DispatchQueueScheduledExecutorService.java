@@ -33,6 +33,7 @@ public class DispatchQueueScheduledExecutorService extends DispatchQueueExecutor
     return this.schedule(() ->
     {
       command.run();
+      return null;
     }, delay, unit);
   }
 
