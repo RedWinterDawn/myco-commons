@@ -22,13 +22,13 @@ public class DispatchQueueScheduledExecutorService extends DispatchQueueExecutor
     ScheduledExecutorService
 {
 
-  public DispatchQueueScheduledExecutorService(DispatchQueue dispatchQueue)
+  public DispatchQueueScheduledExecutorService(final DispatchQueue dispatchQueue)
   {
     super(dispatchQueue);
   }
 
   @Override
-  public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit)
+  public ScheduledFuture<?> schedule(final Runnable command, final long delay, final TimeUnit unit)
   {
     return this.schedule(() ->
     {
@@ -38,7 +38,7 @@ public class DispatchQueueScheduledExecutorService extends DispatchQueueExecutor
   }
 
   @Override
-  public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit)
+  public <V> ScheduledFuture<V> schedule(final Callable<V> callable, final long delay, final TimeUnit unit)
   {
     final ScheduledSettableFuture<V> p = ScheduledSettableFuture.create(delay, unit);
     dispatchQueue.executeAfter(delay, unit, () ->
@@ -57,13 +57,13 @@ public class DispatchQueueScheduledExecutorService extends DispatchQueueExecutor
           {
             p.set(callable.call());
           }
-          catch (Exception e)
+          catch (final Exception e)
           {
             p.setException(e);
           }
         });
       }
-      catch (CancellationException e)
+      catch (final CancellationException e)
       {
         log.debug("Future has been cancelled");
       }
@@ -72,10 +72,10 @@ public class DispatchQueueScheduledExecutorService extends DispatchQueueExecutor
   }
 
   @Override
-  public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period,
-      TimeUnit unit)
+  public ScheduledFuture<?> scheduleAtFixedRate(final Runnable command, final long initialDelay, final long period,
+      final TimeUnit unit)
   {
-    Runnable runner = new Runnable()
+    final Runnable runner = new Runnable()
     {
       @Override
       public void run()
@@ -88,8 +88,8 @@ public class DispatchQueueScheduledExecutorService extends DispatchQueueExecutor
   }
 
   @Override
-  public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay,
-      TimeUnit unit)
+  public ScheduledFuture<?> scheduleWithFixedDelay(final Runnable command, final long initialDelay, final long delay,
+      final TimeUnit unit)
   {
     return this.schedule(new Runnable()
     {
