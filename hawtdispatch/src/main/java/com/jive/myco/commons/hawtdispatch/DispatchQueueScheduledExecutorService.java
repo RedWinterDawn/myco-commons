@@ -3,13 +3,15 @@
  */
 package com.jive.myco.commons.hawtdispatch;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.fusesource.hawtdispatch.DispatchQueue;
@@ -107,24 +109,39 @@ public class DispatchQueueScheduledExecutorService extends DispatchQueueExecutor
    * @author dharris
    *
    */
-  @AllArgsConstructor
+  @RequiredArgsConstructor
   private class CancellableRunnable implements Runnable
   {
 
     private final ScheduledSettableFuture<?> future;
     private final Runnable delegate;
     private final long delayInSeconds;
-    private final boolean rescheduleBeforeExecution;
+    private final boolean fixedDelay;
+    /**
+     * Initial execution time. Used to calculate expected execution times.
+     */
+    private Instant initial;
+    /**
+     * Number of executions performed. Used to calculate expected execution times.
+     */
+    private long execution = 0;
 
     @Override
     public void run()
     {
+      if (initial == null)
+      {
+        initial = Instant.now();
+      }
+      
       if (!future.isCancelled() && !future.isDone())
       {
-        if (rescheduleBeforeExecution)
+        Instant nextExecution = null;
+        if (!fixedDelay)
         {
-          schedule(this, delayInSeconds, TimeUnit.SECONDS);
+          nextExecution = initial.plusSeconds(delayInSeconds * ++execution);
         }
+        
         try
         {
           delegate.run();
@@ -133,9 +150,21 @@ public class DispatchQueueScheduledExecutorService extends DispatchQueueExecutor
         {
           future.setException(e);
         }
-        if (!rescheduleBeforeExecution)
+        if (fixedDelay)
         {
           schedule(this, delayInSeconds, TimeUnit.SECONDS);
+        }
+        else
+        {
+          final long seconds = Duration.between(Instant.now(), nextExecution).getSeconds();
+          if (seconds <= 0)
+          {
+            execute(this);
+          }
+          else
+          {
+            schedule(this, seconds, TimeUnit.SECONDS);
+          }
         }
       }
     }
