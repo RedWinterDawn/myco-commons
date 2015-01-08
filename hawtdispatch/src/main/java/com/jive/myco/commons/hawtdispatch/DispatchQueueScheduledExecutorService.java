@@ -9,6 +9,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.fusesource.hawtdispatch.DispatchQueue;
@@ -76,30 +77,75 @@ public class DispatchQueueScheduledExecutorService extends DispatchQueueExecutor
   public ScheduledFuture<?> scheduleAtFixedRate(final Runnable command, final long initialDelay,
       final long period, final TimeUnit unit)
   {
-    final Runnable runner = new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        DispatchQueueScheduledExecutorService.this.schedule(this, period, unit);
-        command.run();
-      }
-    };
-    return this.schedule(runner, initialDelay, unit);
+    // Set the delay to forever, since the command will be run repeatedly until cancelled.
+    final ScheduledSettableFuture<?> future =
+        ScheduledSettableFuture.create(Long.MAX_VALUE, TimeUnit.SECONDS);
+    this.schedule(
+        new CancellableRunnable(
+            future,
+            command,
+            TimeUnit.SECONDS.convert(period, unit),
+            false),
+        initialDelay, unit);
+    return future;
   }
 
   @Override
-  public ScheduledFuture<?> scheduleWithFixedDelay(final Runnable command, final long initialDelay, final long delay,
-      final TimeUnit unit)
+  public ScheduledFuture<?> scheduleWithFixedDelay(final Runnable command, final long initialDelay,
+      final long delay, final TimeUnit unit)
   {
-    return this.schedule(new Runnable()
+    // Set the delay to forever, since the command will be run repeatedly until cancelled.
+    final ScheduledSettableFuture<?> future =
+        ScheduledSettableFuture.create(Long.MAX_VALUE, TimeUnit.SECONDS);
+    this.schedule(
+        new CancellableRunnable(
+            future,
+            command,
+            TimeUnit.SECONDS.convert(delay, unit),
+            true),
+        initialDelay, unit);
+    return future;
+  }
+
+  /**
+   * 
+   * A runnable that reschedules itself if the contained future has not been cancelled, completed
+   * 
+   * @author dharris
+   *
+   */
+  @AllArgsConstructor
+  private class CancellableRunnable implements Runnable
+  {
+
+    private final ScheduledSettableFuture<?> future;
+    private final Runnable delegate;
+    private final long delayInSeconds;
+    private final boolean rescheduleBeforeExecution;
+
+    @Override
+    public void run()
     {
-      @Override
-      public void run()
+      if (!future.isCancelled() && !future.isDone())
       {
-        command.run();
-        DispatchQueueScheduledExecutorService.this.schedule(this, delay, unit);
+        if (rescheduleBeforeExecution)
+        {
+          schedule(this, delayInSeconds, TimeUnit.SECONDS);
+        }
+        try
+        {
+          delegate.run();
+        }
+        catch (final Exception e)
+        {
+          future.setException(e);
+        }
+        if (!rescheduleBeforeExecution)
+        {
+          schedule(this, delayInSeconds, TimeUnit.SECONDS);
+        }
       }
-    }, initialDelay, unit);
+    }
+
   }
 }
