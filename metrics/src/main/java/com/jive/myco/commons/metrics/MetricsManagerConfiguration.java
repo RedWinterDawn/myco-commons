@@ -75,6 +75,12 @@ public class MetricsManagerConfiguration
   private final boolean graphiteReporterFilterUnchangedCounters;
 
   /**
+   * Flag indicating if gauges with unchanged values are transmitted with each report or if they are
+   * filtered out of the report until they change again. Defaults to {@code false}.
+   */
+  private final boolean graphiteReporterFilterUnchangedGauges;
+
+  /**
    * The socket factory used to create connections within the Graphite reporter. Defaults to
    * {@link SocketFactory#getDefault()}.
    */
@@ -98,6 +104,7 @@ public class MetricsManagerConfiguration
       final InetSocketAddress graphiteReporterAddress,
       final int graphiteReporterQueueSize,
       final boolean graphiteReporterFilterUnchangedCounters,
+      final boolean graphiteReporterFilterUnchangedGauges,
       final SocketFactory graphiteReporterSocketFactory,
       final boolean graphiteReporterPickle)
   {
@@ -118,6 +125,7 @@ public class MetricsManagerConfiguration
     this.graphiteReporterAddress = graphiteReporterAddress;
     this.graphiteReporterQueueSize = graphiteReporterQueueSize;
     this.graphiteReporterFilterUnchangedCounters = graphiteReporterFilterUnchangedCounters;
+    this.graphiteReporterFilterUnchangedGauges = graphiteReporterFilterUnchangedGauges;
     this.graphiteReporterSocketFactory = graphiteReporterSocketFactory;
     this.graphiteReporterPickle = graphiteReporterPickle;
   }

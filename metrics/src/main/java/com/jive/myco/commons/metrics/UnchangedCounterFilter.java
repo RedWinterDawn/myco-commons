@@ -17,7 +17,10 @@ import com.codahale.metrics.Timer;
  * the last time the metric was encountered.
  *
  * @author David Valeri
+ *
+ * @deprecated use {@link UnchangedMetricFilter} instead.
  */
+@Deprecated
 public class UnchangedCounterFilter implements MetricFilter, MetricRegistryListener
 {
 
@@ -32,7 +35,7 @@ public class UnchangedCounterFilter implements MetricFilter, MetricRegistryListe
       final Long lastValue = counterLastCountCache.get(name);
 
       // Never seen it before or new value since last time it was encountered
-      if (lastValue == null || lastValue != newValue)
+      if (lastValue == null || !lastValue.equals(newValue))
       {
         counterLastCountCache.put(name, newValue);
         return true;
@@ -69,7 +72,7 @@ public class UnchangedCounterFilter implements MetricFilter, MetricRegistryListe
   }
 
   /**
-   * Remove the metric from the counter last value cache.
+   * Remove the metric from the last value cache.
    *
    * @param name
    *          the name of the removed metric
