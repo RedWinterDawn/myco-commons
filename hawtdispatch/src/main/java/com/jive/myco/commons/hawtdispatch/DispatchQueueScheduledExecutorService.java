@@ -141,7 +141,7 @@ public class DispatchQueueScheduledExecutorService extends DispatchQueueExecutor
         {
           nextExecution = initial.plusSeconds(delayInSeconds * ++execution);
         }
-        
+
         try
         {
           delegate.run();
@@ -150,8 +150,10 @@ public class DispatchQueueScheduledExecutorService extends DispatchQueueExecutor
         {
           future.setException(e);
         }
+
         if (fixedDelay)
         {
+          this.future.setExecutionTime(Instant.now().plusSeconds(delayInSeconds));
           schedule(this, delayInSeconds, TimeUnit.SECONDS);
         }
         else
@@ -159,10 +161,12 @@ public class DispatchQueueScheduledExecutorService extends DispatchQueueExecutor
           final long seconds = Duration.between(Instant.now(), nextExecution).getSeconds();
           if (seconds <= 0)
           {
+            this.future.setExecutionTime(Instant.now());
             execute(this);
           }
           else
           {
+            this.future.setExecutionTime(nextExecution);
             schedule(this, seconds, TimeUnit.SECONDS);
           }
         }

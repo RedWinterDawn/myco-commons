@@ -6,12 +6,16 @@ import java.util.concurrent.Delayed;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import lombok.AccessLevel;
+import lombok.Setter;
+
 import com.google.common.util.concurrent.AbstractFuture;
 
 class ScheduledSettableFuture<V> extends AbstractFuture<V> implements ScheduledFuture<V>
 {
 
-  private final Instant executionTime;
+  @Setter(AccessLevel.PACKAGE)
+  private Instant executionTime;
 
   public ScheduledSettableFuture(long delay, TimeUnit unit)
   {
