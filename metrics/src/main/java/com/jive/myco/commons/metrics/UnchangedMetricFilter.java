@@ -3,6 +3,7 @@ package com.jive.myco.commons.metrics;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 import com.codahale.metrics.Counter;
@@ -23,7 +24,9 @@ import com.codahale.metrics.Timer;
 @RequiredArgsConstructor
 public class UnchangedMetricFilter implements MetricFilter, MetricRegistryListener
 {
-  private final Map<String, Object> lastValueCache = new ConcurrentHashMap<>();
+  private static final long ONE_MINUTE = 60000L;
+
+  private final Map<String, ValueHolder> lastValueCache = new ConcurrentHashMap<>();
 
   /**
    * Flag indicating if counters with unchanged values are transmitted with each report or if they
@@ -43,16 +46,16 @@ public class UnchangedMetricFilter implements MetricFilter, MetricRegistryListen
     if (graphiteReporterFilterUnchangedGauges && metric instanceof Gauge)
     {
       final Object newValue = ((Gauge<?>) metric).getValue();
-      final Object lastValue = lastValueCache.get(name);
+      final ValueHolder lastValueHolder = lastValueCache.get(name);
 
-      return matches(name, newValue, lastValue);
+      return matches(name, newValue, lastValueHolder);
     }
     else if (graphiteReporterFilterUnchangedCounters && metric instanceof Counter)
     {
       final Long newValue = ((Counter) metric).getCount();
-      final Object lastValue = lastValueCache.get(name);
+      final ValueHolder lastValueHolder = lastValueCache.get(name);
 
-      return matches(name, newValue, lastValue);
+      return matches(name, newValue, lastValueHolder);
     }
     // Not applicable, not our concern.
     else
@@ -61,12 +64,18 @@ public class UnchangedMetricFilter implements MetricFilter, MetricRegistryListen
     }
   }
 
-  private boolean matches(final String name, final Object newValue, final Object lastValue)
+  private boolean matches(final String name, final Object newValue, final ValueHolder lastValueHolder)
   {
-    // Never seen it before or new value since last time it was encountered
-    if (lastValue == null || !lastValue.equals(newValue))
+    final long currentTimeMillis = System.currentTimeMillis();
+
+    // Never seen it before or new value since last time it was encountered or it has
+    // been over a minute since we reported it.
+    if (lastValueHolder == null || lastValueHolder.getLastValue() == null
+        || !lastValueHolder.getLastValue().equals(newValue)
+        || lastValueHolder.getLastReported() - currentTimeMillis > ONE_MINUTE)
     {
-      lastValueCache.put(name, newValue);
+
+      lastValueCache.put(name, new ValueHolder(newValue, currentTimeMillis));
       return true;
     }
     // Same value as the last encounter, skip it.
@@ -147,5 +156,13 @@ public class UnchangedMetricFilter implements MetricFilter, MetricRegistryListen
   public void onTimerRemoved(final String name)
   {
     // No-op
+  }
+
+  @RequiredArgsConstructor
+  @Getter
+  private static final class ValueHolder
+  {
+    private final Object lastValue;
+    private final long lastReported;
   }
 }
