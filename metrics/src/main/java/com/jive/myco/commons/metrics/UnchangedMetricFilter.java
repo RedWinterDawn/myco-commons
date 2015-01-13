@@ -72,7 +72,7 @@ public class UnchangedMetricFilter implements MetricFilter, MetricRegistryListen
     // been over a minute since we reported it.
     if (lastValueHolder == null || lastValueHolder.getLastValue() == null
         || !lastValueHolder.getLastValue().equals(newValue)
-        || lastValueHolder.getLastReported() - currentTimeMillis > ONE_MINUTE)
+        || currentTimeMillis - lastValueHolder.getLastReported() > ONE_MINUTE)
     {
 
       lastValueCache.put(name, new ValueHolder(newValue, currentTimeMillis));
