@@ -70,7 +70,7 @@ public class MetricsManagerConfiguration
 
   /**
    * Flag indicating if counters with unchanged values are transmitted with each report or if they
-   * are filtered out of the report until they change again. Defaults to {@code false}.
+   * are filtered out of the report until they change again. Defaults to {@code true}.
    */
   private final boolean graphiteReporterFilterUnchangedCounters;
 
@@ -184,6 +184,12 @@ public class MetricsManagerConfiguration
      * are filtered out of the report until they change again. Defaults to {@code true}.
      */
     private boolean graphiteReporterFilterUnchangedCounters = true;
+
+    /**
+     * Flag indicating if gauges with unchanged values are transmitted with each report or if they
+     * are filtered out of the report until they change again. Defaults to {@code false}.
+     */
+    private boolean graphiteReporterFilterUnchangedGauges = false;
 
     /**
      * The socket factory used to create connections within the Graphite reporter. Defaults to
