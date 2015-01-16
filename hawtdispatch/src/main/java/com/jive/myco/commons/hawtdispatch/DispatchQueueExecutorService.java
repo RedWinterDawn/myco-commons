@@ -32,7 +32,7 @@ import com.google.common.collect.Lists;
 public class DispatchQueueExecutorService extends AbstractExecutorService implements
     ExecutorService
 {
-  private final DispatchQueue dispatchQueue;
+  protected final DispatchQueue dispatchQueue;
 
   @Override
   public void shutdown()
