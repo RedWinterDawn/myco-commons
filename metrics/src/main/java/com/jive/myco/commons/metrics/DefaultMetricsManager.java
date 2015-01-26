@@ -164,9 +164,12 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
       // this time since we just created it.
       graphite.init();
 
-      if (metricsManagerConfiguration.isGraphiteReporterFilterUnchangedCounters())
+      if (metricsManagerConfiguration.isGraphiteReporterFilterUnchangedCounters()
+          || metricsManagerConfiguration.isGraphiteReporterFilterUnchangedGauges())
       {
-        graphiteMetricFilter = new UnchangedCounterFilter();
+        graphiteMetricFilter = new UnchangedMetricFilter(
+            metricsManagerConfiguration.isGraphiteReporterFilterUnchangedCounters(),
+            metricsManagerConfiguration.isGraphiteReporterFilterUnchangedGauges());
         registry.addListener((MetricRegistryListener) graphiteMetricFilter);
       }
       else
