@@ -3,9 +3,9 @@ package com.jive.myco.commons.lifecycle;
 import static com.jive.myco.commons.concurrent.Pnky.*;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 
 import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
@@ -23,9 +23,11 @@ import com.jive.myco.commons.listenable.ListenableContainer;
  *
  * @author Brandon Pedersen &lt;bpedersen@getjive.com&gt;
  */
-@RequiredArgsConstructor
+
 public abstract class AbstractLifecycled implements ListenableLifecycled
 {
+  private static final AtomicInteger COUNTER = new AtomicInteger();
+
   /**
    * @deprecated this attribute will move to private scope soon, sub-classes should transition to
    *             using {@link #getLifecycleStage()} rather than referencing this field directly.
@@ -33,7 +35,6 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
   @Deprecated
   protected volatile LifecycleStage lifecycleStage = LifecycleStage.UNINITIALIZED;
 
-  @NonNull
   protected final DispatchQueue lifecycleQueue;
 
   // Don't use @SLF4J annotation, we want to know the actual implementing class
@@ -41,11 +42,34 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
 
   private final InternalListenable listenable = new InternalListenable();
 
+  private final String id;
+
+  public AbstractLifecycled(final DispatchQueue lifecycleQueue)
+  {
+    this(null, lifecycleQueue);
+  }
+
+  public AbstractLifecycled(final String id, @NonNull final DispatchQueue lifecycleQueue)
+  {
+    if (id == null)
+    {
+      this.id = getClass().getSimpleName() + "-" + COUNTER.getAndIncrement();
+    }
+    else
+    {
+      this.id = id;
+    }
+
+    this.lifecycleQueue = lifecycleQueue;
+  }
+
   @Override
   public final PnkyPromise<Void> init()
   {
     return composeAsync(() ->
     {
+      log.debug("[{}]: Initializing.", id);
+
       if (lifecycleStage == LifecycleStage.UNINITIALIZED
           || isRestartable() && lifecycleStage == LifecycleStage.DESTROYED)
       {
@@ -58,6 +82,7 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
               {
                 setLifecycleStage(LifecycleStage.INITIALIZED);
                 lifecycleQueue.resume();
+                log.info("[{}]: Initialized.", id);
               })
               .composeFallback(this::initFailure);
         }
@@ -68,19 +93,37 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
       }
       else if (lifecycleStage == LifecycleStage.INITIALIZED)
       {
+        log.debug("[{}]: Already initialized.", id);
         return Pnky.immediatelyComplete(null);
       }
       else
       {
-        return Pnky.immediatelyFailed(new IllegalStateException(String.format(
-            "Cannot initialize in [%s] state", lifecycleStage)));
+        final String message = String.format(
+            "[%s]: Cannot initialize in [%s] state",
+            id, lifecycleStage);
+
+        log.error(message);
+        return Pnky.immediatelyFailed(new IllegalStateException(message));
       }
     }, lifecycleQueue);
+  }
+
+  @Override
+  public String toString()
+  {
+    final StringBuilder builder = new StringBuilder();
+    builder.append(getClass().getSimpleName());
+    builder.append(" [id=");
+    builder.append(id);
+    builder.append("]");
+    return builder.toString();
   }
 
   private PnkyPromise<Void> initFailure(final Throwable initError)
   {
     setLifecycleStage(LifecycleStage.INITIALIZATION_FAILED);
+
+    log.error("[{}]: Initialization failure.  Handling cleanup...", id);
 
     PnkyPromise<Void> initFailureFuture;
     try
@@ -97,7 +140,11 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
         {
           if (error != null)
           {
-            log.error("Error occurred during handling of failed init", error);
+            log.error(
+                "[{}]: Error occurred during handling of failed init.  Continuing "
+                    + "with destruction...",
+                id,
+                error);
           }
 
           final PnkyPromise<Void> destroy = destroy();
@@ -109,10 +156,11 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
           if (destroyError != null)
           {
             log.error(
-                "Error occurred during cleanup after failed initialization", destroyError);
+                "[{}]: Error occurred during destroy after failed initialization",
+                id, destroyError);
           }
 
-          return Pnky.<Void> immediatelyFailed(initError);
+          return Pnky.immediatelyFailed(initError);
         });
   }
 
@@ -121,6 +169,8 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
   {
     return composeAsync(() ->
     {
+      log.debug("[{}]: Destroying.", id);
+
       if (lifecycleStage == LifecycleStage.INITIALIZED
           || lifecycleStage == LifecycleStage.UNINITIALIZED
           || lifecycleStage == LifecycleStage.INITIALIZATION_FAILED
@@ -136,24 +186,35 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
                 if (error == null)
                 {
                   setLifecycleStage(LifecycleStage.DESTROYED);
+                  log.info("[{}]: Destroyed.", id);
                 }
+                  else
+                  {
+                    log.error("[{}]: Destroyed failed.", id);
+                  }
+
                 lifecycleQueue.resume();
               });
         }
         catch (final Exception e)
         {
           lifecycleQueue.resume();
-          return immediatelyFailed(e);
+          return Pnky.immediatelyFailed(e);
         }
       }
       else if (lifecycleStage == LifecycleStage.DESTROYED)
       {
+        log.debug("[{}]: Already destroyed.", id);
         return immediatelyComplete(null);
       }
       else
       {
-        return immediatelyFailed(new IllegalStateException(
-            String.format("Cannot destroy in state [%s]", lifecycleStage)));
+        final String message = String.format(
+            "[%s]: Cannot destroy in [%s] state",
+            id, lifecycleStage);
+
+        log.error(message);
+        return Pnky.immediatelyFailed(new IllegalStateException(message));
       }
     }, lifecycleQueue);
   }
@@ -281,7 +342,9 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
       }
       catch (final Exception e)
       {
-        log.error("Lifecycled listener had error while processing state change [{}]", state, e);
+        log.error(
+            "[{}]: Lifecycled listener had error while processing state change [{}]",
+            id, state, e);
       }
     }
 
