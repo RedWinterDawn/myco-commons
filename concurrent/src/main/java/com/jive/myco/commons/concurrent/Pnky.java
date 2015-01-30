@@ -785,6 +785,22 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   }
 
   /**
+   * Creates a new {@link PnkyPromise future} that is successfully completed with a {@code null}
+   * value.
+   *
+   * @param <V>
+   *          the type of future
+   *
+   * @return a new successfully completed {@link PnkyPromise future}
+   */
+  public static <V> PnkyPromise<V> immediatelyComplete()
+  {
+    final Pnky<V> pnky = create();
+    pnky.resolve(null);
+    return pnky;
+  }
+
+  /**
    * Creates a new {@link PnkyPromise future} that is exceptionally completed with the supplied
    * error.
    *
