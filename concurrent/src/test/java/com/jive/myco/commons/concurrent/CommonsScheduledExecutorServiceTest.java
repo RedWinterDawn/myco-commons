@@ -122,7 +122,7 @@ public class CommonsScheduledExecutorServiceTest
   @Test
   public void testSchedule1() throws Exception
   {
-    final ScheduledFuture<?> schedule = executorService.schedule(() ->
+    final ScheduledFuture<Void> schedule = executorService.schedule((Callable<Void>)() ->
     {
       throw new IOException();    // Checked exception
     }
