@@ -82,7 +82,7 @@ public class CommonsScheduledExecutorServiceTest
   @Test
   public void testSubmitWithoutResult() throws Exception
   {
-    final Future<Object> future = executorService.submit(() ->
+    final Future<Object> future = executorService.submit((Callable<Object>)() ->
     {
       throw new RuntimeException();
     });
