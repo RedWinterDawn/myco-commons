@@ -286,6 +286,18 @@ public class DependencyLifecycleListener implements LifecycleListener, PnkyPromi
   }
 
   @Override
+  public PnkyPromise<Void> alwaysRun(final Runnable operation)
+  {
+    return delegate.alwaysRun(operation);
+  }
+
+  @Override
+  public PnkyPromise<Void> alwaysRun(final Runnable operation, final Executor executor)
+  {
+    return delegate.alwaysRun(operation, executor);
+  }
+
+  @Override
   public PnkyPromise<Void> thenAccept(final ExceptionalConsumer<? super Void> onSuccess)
   {
     return delegate.thenAccept(onSuccess);
@@ -323,6 +335,18 @@ public class DependencyLifecycleListener implements LifecycleListener, PnkyPromi
       final ExceptionalFunction<? super Void, PnkyPromise<O>> onSuccess, final Executor executor)
   {
     return delegate.thenCompose(onSuccess, executor);
+  }
+
+  @Override
+  public PnkyPromise<Void> thenRun(final Runnable onSuccess)
+  {
+    return delegate.thenRun(onSuccess);
+  }
+
+  @Override
+  public PnkyPromise<Void> thenRun(final Runnable runnable, final Executor executor)
+  {
+    return delegate.thenRun(runnable, executor);
   }
 
   @Override

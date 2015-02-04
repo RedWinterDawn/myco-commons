@@ -405,19 +405,20 @@ public class PnkyTest
   public void testWrapListenableFutureSuccess() throws Exception
   {
     @Cleanup("shutdownNow")
+    final
     ListeningExecutorService executorService =
         MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
 
     final AtomicBoolean started = new AtomicBoolean();
     final CountDownLatch latch = new CountDownLatch(1);
 
-    ListenableFuture<Boolean> future = executorService.submit(() ->
+    final ListenableFuture<Boolean> future = executorService.submit(() ->
     {
       started.set(true);
       return latch.await(5, TimeUnit.SECONDS);
     });
 
-    PnkyPromise<Boolean> pnky = Pnky.from(future);
+    final PnkyPromise<Boolean> pnky = Pnky.from(future);
 
     assertFalse(pnky.isDone());
 
@@ -433,13 +434,14 @@ public class PnkyTest
   public void testWrapListenableFutureFailure() throws Exception
   {
     @Cleanup("shutdownNow")
+    final
     ListeningExecutorService executorService =
         MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
 
     final AtomicBoolean started = new AtomicBoolean();
     final CountDownLatch latch = new CountDownLatch(1);
 
-    ListenableFuture<Boolean> future = executorService.submit((Callable<Boolean>) () ->
+    final ListenableFuture<Boolean> future = executorService.submit((Callable<Boolean>) () ->
     {
       started.set(true);
       if (latch.await(5, TimeUnit.SECONDS))
@@ -452,7 +454,7 @@ public class PnkyTest
       }
     });
 
-    PnkyPromise<Boolean> pnky = Pnky.from(future);
+    final PnkyPromise<Boolean> pnky = Pnky.from(future);
 
     assertFalse(pnky.isDone());
 
@@ -467,10 +469,174 @@ public class PnkyTest
       pnky.get(5, TimeUnit.SECONDS);
       fail();
     }
-    catch (ExecutionException e)
+    catch (final ExecutionException e)
     {
       assertThat(e.getCause(), instanceOf(NumberFormatException.class));
     }
   }
 
+  @Test
+  public void testAlwaysRunSuccess() throws Exception
+  {
+    final AtomicInteger badThings = new AtomicInteger();
+    final AtomicBoolean invoked = new AtomicBoolean();
+    final AtomicBoolean invokedDownstream = new AtomicBoolean();
+
+    Pnky.supplyAsync(() -> 1, MoreExecutors.sameThreadExecutor())
+        .alwaysRun(() -> invoked.set(true))
+        .onFailure((error) -> badThings.incrementAndGet())
+        .thenAccept((result) ->
+        {
+          assertEquals(1, (int) result);
+          invokedDownstream.set(true);
+        });
+
+    assertTrue(invoked.get());
+    assertTrue(invokedDownstream.get());
+    assertEquals(0, badThings.get());
+  }
+
+  @Test
+  public void testAlwaysRunFailure() throws Exception
+  {
+    final AtomicInteger badThings = new AtomicInteger();
+    final AtomicBoolean invoked = new AtomicBoolean();
+    final AtomicBoolean invokedDownstream = new AtomicBoolean();
+
+    Pnky
+        .composeAsync(
+            () -> Pnky.immediatelyFailed(new RuntimeException("Initial exception")),
+            MoreExecutors.sameThreadExecutor())
+        .alwaysRun(() -> invoked.set(true))
+        .thenAccept((result) -> badThings.incrementAndGet())
+        .onFailure((error) ->
+        {
+          invokedDownstream.set(true);
+          assertEquals("Initial exception", error.getMessage());
+        });
+
+    assertTrue(invoked.get());
+    assertTrue(invokedDownstream.get());
+    assertEquals(0, badThings.get());
+  }
+
+  @Test
+  public void testAlwaysRunFailureReplacesSuccess() throws Exception
+  {
+    final AtomicInteger badThings = new AtomicInteger();
+    final AtomicBoolean invoked = new AtomicBoolean();
+    final AtomicBoolean invokedDownstream = new AtomicBoolean();
+
+    Pnky.supplyAsync(() -> 1, MoreExecutors.sameThreadExecutor())
+        .alwaysRun(() ->
+        {
+          invoked.set(true);
+          throw new RuntimeException("exception");
+        })
+        .onFailure((error) ->
+        {
+          invokedDownstream.set(true);
+          assertEquals("exception", error.getMessage());
+        })
+        .thenAccept((result) -> badThings.incrementAndGet());
+
+    assertTrue(invoked.get());
+    assertTrue(invokedDownstream.get());
+    assertEquals(0, badThings.get());
+  }
+
+  @Test
+  public void testAlwaysRunFailureReplacesFailure() throws Exception
+  {
+    final AtomicInteger badThings = new AtomicInteger();
+    final AtomicBoolean invoked = new AtomicBoolean();
+    final AtomicBoolean invokedDownstream = new AtomicBoolean();
+
+    Pnky
+        .composeAsync(
+            () -> Pnky.immediatelyFailed(new RuntimeException("Initial exception")),
+            MoreExecutors.sameThreadExecutor())
+        .alwaysRun(() ->
+        {
+          invoked.set(true);
+          throw new RuntimeException("Second exception");
+        })
+        .thenAccept((result) -> badThings.incrementAndGet())
+        .onFailure((error) ->
+        {
+          invokedDownstream.set(true);
+          assertEquals("Second exception", error.getMessage());
+        });
+
+    assertTrue(invoked.get());
+    assertTrue(invokedDownstream.get());
+    assertEquals(0, badThings.get());
+  }
+
+  @Test
+  public void testThenRunSuccess() throws Exception
+  {
+    final AtomicInteger badThings = new AtomicInteger();
+    final AtomicBoolean invoked = new AtomicBoolean();
+    final AtomicBoolean invokedDownstream = new AtomicBoolean();
+
+    Pnky.supplyAsync(() -> 1, MoreExecutors.sameThreadExecutor())
+        .thenRun(() -> invoked.set(true))
+        .onFailure((error) -> badThings.incrementAndGet())
+        .thenAccept((result) ->
+        {
+          assertEquals(1, (int) result);
+          invokedDownstream.set(true);
+        });
+
+    assertTrue(invoked.get());
+    assertTrue(invokedDownstream.get());
+    assertEquals(0, badThings.get());
+  }
+
+  @Test
+  public void testThenRunFailure() throws Exception
+  {
+    final AtomicInteger badThings = new AtomicInteger();
+    final AtomicBoolean invokedDownstream = new AtomicBoolean();
+
+    Pnky
+        .composeAsync(
+            () -> Pnky.immediatelyFailed(new RuntimeException("Initial exception")),
+            MoreExecutors.sameThreadExecutor())
+        .thenRun(() -> badThings.incrementAndGet())
+        .onFailure((error) ->
+        {
+          invokedDownstream.set(true);
+          assertEquals("Initial exception", error.getMessage());
+        });
+
+    assertTrue(invokedDownstream.get());
+    assertEquals(0, badThings.get());
+  }
+
+  @Test
+  public void testThenRunFailureReplacesSuccess() throws Exception
+  {
+    final AtomicInteger badThings = new AtomicInteger();
+    final AtomicBoolean invoked = new AtomicBoolean();
+    final AtomicBoolean invokedDownstream = new AtomicBoolean();
+
+    Pnky.supplyAsync(() -> 1, MoreExecutors.sameThreadExecutor())
+        .thenRun(() ->
+        {
+          invoked.set(true);
+          throw new RuntimeException("exception");
+        })
+        .onFailure((error) ->
+        {
+          invokedDownstream.set(true);
+          assertEquals("exception", error.getMessage());
+        })
+        .thenAccept((result) -> badThings.incrementAndGet());
+
+    assertTrue(invoked.get());
+    assertTrue(invokedDownstream.get());
+    assertEquals(0, badThings.get());
+  }
 }
