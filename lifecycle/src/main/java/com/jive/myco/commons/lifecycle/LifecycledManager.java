@@ -12,8 +12,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.fusesource.hawtdispatch.DispatchQueue;
 
 import com.google.common.collect.Lists;
+import com.jive.myco.commons.concurrent.CombinedException;
 import com.jive.myco.commons.concurrent.Pnky;
 import com.jive.myco.commons.concurrent.PnkyPromise;
+import com.jive.myco.commons.function.ExceptionalFunction;
 
 /**
  * A manager for controlling the startup and shutdown of a number of lifecycled things.
@@ -103,21 +105,38 @@ public class LifecycledManager extends AbstractLifecycled
 
     PnkyPromise<Void> future = Pnky.immediatelyComplete(null);
 
+    final List<Throwable> errors = new ArrayList<>(managedLifecycleds.size());
+
     for (final Lifecycled lifecycled : Lists.reverse(managedLifecycleds))
     {
       future = future.alwaysCompose((voyd, cause) ->
       {
         if (cause != null)
         {
-          log.error("[{}]: Failed to destroy managed resource, continuing anyway.", id, cause);
+          log.error("[{}]: Failed to destroy a managed resource, continuing anyway.", id);
+
+          // NOTE: This is safe because it is single file, regardless of which thread the
+          // future completes on.
+          errors.add(cause);
         }
 
-        // Just keep going, it is the best we can do
+        // Just keep going, it is the best we can do.
         return lifecycled.destroy();
       });
     }
 
-    return future;
+    return future.
+        thenCompose((voyd) ->
+        {
+          if (!errors.isEmpty())
+          {
+            return Pnky.immediatelyFailed(new CombinedException(errors));
+          }
+          else
+          {
+            return Pnky.immediatelyComplete();
+          }
+        });
   }
 
   private PnkyPromise<Void> initConcurrent()
@@ -131,7 +150,7 @@ public class LifecycledManager extends AbstractLifecycled
     final PnkyPromise<List<Void>> initFuture = Pnky.all(initFutures);
 
     return initFuture
-        .thenTransform((results) -> null);
+        .thenTransform(ExceptionalFunction.toNull());
   }
 
   private PnkyPromise<Void> initConsecutive()

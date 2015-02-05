@@ -405,8 +405,7 @@ public class PnkyTest
   public void testWrapListenableFutureSuccess() throws Exception
   {
     @Cleanup("shutdownNow")
-    final
-    ListeningExecutorService executorService =
+    final ListeningExecutorService executorService =
         MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
 
     final AtomicBoolean started = new AtomicBoolean();

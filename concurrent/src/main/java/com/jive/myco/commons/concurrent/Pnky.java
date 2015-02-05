@@ -449,7 +449,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
           pnky.reject(e);
         }
       }
-    });
+    }, executor);
 
     return pnky;
   }
@@ -611,7 +611,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
       {
         pnky.reject(t);
       };
-    });
+    }, executor);
 
     return pnky;
   }

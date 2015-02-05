@@ -188,10 +188,10 @@ public abstract class AbstractLifecycled implements ListenableLifecycled
                   setLifecycleStage(LifecycleStage.DESTROYED);
                   log.info("[{}]: Destroyed.", id);
                 }
-                  else
-                  {
-                    log.error("[{}]: Destroy failed.", id);
-                  }
+                else
+                {
+                  log.error("[{}]: Destroy failed.", id);
+                }
 
                 lifecycleQueue.resume();
               });
