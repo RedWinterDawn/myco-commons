@@ -21,8 +21,11 @@ import com.jive.myco.commons.function.ExceptionalFunction;
  * A manager for controlling the startup and shutdown of a number of lifecycled things.
  * Initialization may be performed using any of the supported {@link InitMode}s while destruction
  * always occurs in the reverse iteration order of the supplied {@link ListenableLifecycled}s.
- * Initialization is an all or nothing process while destruction completes regardless of the
- * successful destruction of each constituent {@link ListenableLifecycled}. Errors caused by
+ * Initialization is an all or nothing process while destruction of each lifecycled is guaranteed to
+ * be attempted during destruction. Destruction completes successfully if all lifecycleds complete
+ * their destruction successfully. Destruction completes exceptionally if any of the lifecycleds
+ * completes destruction exceptionally. A {@link CombinedException} is produced completes regardless
+ * of the successful destruction of each constituent {@link ListenableLifecycled}. Errors caused by
  * constituents during destruction are logged before being discarded.
  *
  * @author David Valeri
@@ -111,26 +114,38 @@ public class LifecycledManager extends AbstractLifecycled
     {
       future = future.alwaysCompose((voyd, cause) ->
       {
-        if (cause != null)
-        {
-          log.error("[{}]: Failed to destroy a managed resource, continuing anyway.", id);
-
-          // NOTE: This is safe because it is single file, regardless of which thread the
-          // future completes on.
-          errors.add(cause);
-        }
-
         // Just keep going, it is the best we can do.
-        return lifecycled.destroy();
+        return lifecycled.destroy()
+            .thenRun(() ->
+            {
+              // NOTE: This is safe because it is single file, regardless of which thread the
+              // future completes on.
+              errors.add(null);
+            })
+            .onFailure((t) ->
+            {
+              log.error("[{}]: Failed to destroy a managed resource, continuing anyway.", id);
+              // NOTE: This is safe because it is single file, regardless of which thread the
+              // future completes on.
+              errors.add(t);
+            });
       });
     }
 
-    return future.
-        thenCompose((voyd) ->
+    return future
+        .alwaysCompose((voyd, t) ->
         {
-          if (!errors.isEmpty())
+          // NOTE: t from the last destroy call is already in the list so no need to add it here.
+
+          if (errors.stream()
+              .filter((e) -> e != null)
+              .findAny()
+              .isPresent())
           {
-            return Pnky.immediatelyFailed(new CombinedException(errors));
+            return Pnky.immediatelyFailed(new CombinedException(
+                String.format(
+                    "[{}]: Component failure during shutdown.", id),
+                errors));
           }
           else
           {
