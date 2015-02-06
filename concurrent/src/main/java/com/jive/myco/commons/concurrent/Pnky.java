@@ -60,6 +60,16 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   }
 
   /**
+   * Completes the promise successfully with a {@code null} value.
+   *
+   * @return true if this call completed the promise
+   */
+  public boolean resolve()
+  {
+    return super.set(null);
+  }
+
+  /**
    * Completes the promise exceptionally with {@code error}.
    *
    * @param error
@@ -402,6 +412,49 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   }
 
   @Override
+  public PnkyPromise<V> alwaysRun(final Runnable runnable)
+  {
+    return alwaysRun(runnable, ImmediateExecutor.getInstance());
+  }
+
+  @Override
+  public PnkyPromise<V> alwaysRun(final Runnable runnable, final Executor executor)
+  {
+    final Pnky<V> pnky = create();
+
+    Futures.addCallback(this, new FutureCallback<V>()
+    {
+      @Override
+      public void onSuccess(final V result)
+      {
+        run();
+        pnky.resolve(result);
+      }
+
+      @Override
+      public void onFailure(final Throwable t)
+      {
+        run();
+        pnky.reject(t);
+      };
+
+      private void run()
+      {
+        try
+        {
+          runnable.run();
+        }
+        catch (final Exception e)
+        {
+          pnky.reject(e);
+        }
+      }
+    }, executor);
+
+    return pnky;
+  }
+
+  @Override
   public PnkyPromise<V> thenAccept(final ExceptionalConsumer<? super V> onSuccess)
   {
     return thenAccept(onSuccess, MoreExecutors.sameThreadExecutor());
@@ -521,6 +574,43 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
       {
         pnky.reject(t);
       }
+    }, executor);
+
+    return pnky;
+  }
+
+  @Override
+  public PnkyPromise<V> thenRun(final Runnable runnable)
+  {
+    return thenRun(runnable, ImmediateExecutor.getInstance());
+  }
+
+  @Override
+  public PnkyPromise<V> thenRun(final Runnable runnable, final Executor executor)
+  {
+    final Pnky<V> pnky = create();
+
+    Futures.addCallback(this, new FutureCallback<V>()
+    {
+      @Override
+      public void onSuccess(final V result)
+      {
+        try
+        {
+          runnable.run();
+          pnky.resolve(result);
+        }
+        catch (final Exception e)
+        {
+          pnky.reject(e);
+        }
+      }
+
+      @Override
+      public void onFailure(final Throwable t)
+      {
+        pnky.reject(t);
+      };
     }, executor);
 
     return pnky;
@@ -781,6 +871,22 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   {
     final Pnky<V> pnky = create();
     pnky.resolve(value);
+    return pnky;
+  }
+
+  /**
+   * Creates a new {@link PnkyPromise future} that is successfully completed with a {@code null}
+   * value.
+   *
+   * @param <V>
+   *          the type of future
+   *
+   * @return a new successfully completed {@link PnkyPromise future}
+   */
+  public static <V> PnkyPromise<V> immediatelyComplete()
+  {
+    final Pnky<V> pnky = create();
+    pnky.resolve(null);
     return pnky;
   }
 

@@ -391,6 +391,36 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    * the same completion state as this future, except when the operation throws an exception. In
    * this case, the returned future completes exceptionally with the thrown exception.
    *
+   * @param operation
+   *          the operation to execute
+   *
+   * @return a new {@link PnkyPromise future}
+   */
+  PnkyPromise<V> alwaysRun(final Runnable operation);
+
+  /**
+   * Creates a new {@link PnkyPromise future} that performs an operation when this future completes
+   * successfully, executing the operation on the supplied executor. The returned future completes,
+   * after executing the operation in the case of a successful completion of this future, with the
+   * same completion state as this future, except when the operation throws an exception. In this
+   * case, the returned future completes exceptionally with the thrown exception.
+   *
+   * @param operation
+   *          the operation to execute
+   * @param executor
+   *          the executor used to execute the supplied operation and complete the returned future
+   *
+   * @return a new {@link PnkyPromise future}
+   */
+  PnkyPromise<V> alwaysRun(final Runnable operation, final Executor executor);
+
+  /**
+   * Creates a new {@link PnkyPromise future} that performs an operation when this future completes
+   * successfully, executing the operation on the thread that completes this future. The returned
+   * future completes, after executing the operation in the case of a successful completion, with
+   * the same completion state as this future, except when the operation throws an exception. In
+   * this case, the returned future completes exceptionally with the thrown exception.
+   *
    * @param onSuccess
    *          operation to supply with the result of this future when this future completes
    *          successfully
@@ -496,6 +526,36 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    */
   <O> PnkyPromise<O> thenCompose(final ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess,
       final Executor executor);
+
+  /**
+   * Creates a new {@link PnkyPromise future} that performs an operation when this future completes
+   * successfully, executing the operation on the thread that completes this future. The returned
+   * future completes, after executing the operation in the case of a successful completion, with
+   * the same completion state as this future, except when the operation throws an exception. In
+   * this case, the returned future completes exceptionally with the thrown exception.
+   *
+   * @param onSuccess
+   *          operation to execute when this future completes successfully
+   *
+   * @return a new {@link PnkyPromise future}
+   */
+  PnkyPromise<V> thenRun(final Runnable onSuccess);
+
+  /**
+   * Creates a new {@link PnkyPromise future} that performs an operation when this future completes
+   * successfully, executing the operation on the supplied executor. The returned future completes,
+   * after executing the operation in the case of a successful completion of this future, with the
+   * same completion state as this future, except when the operation throws an exception. In this
+   * case, the returned future completes exceptionally with the thrown exception.
+   *
+   * @param onSuccess
+   *          operation to execute when this future completes successfully
+   * @param executor
+   *          the executor used to execute the supplied operation and complete the returned future
+   *
+   * @return a new {@link PnkyPromise future}
+   */
+  PnkyPromise<V> thenRun(final Runnable runnable, final Executor executor);
 
   /**
    * Creates a new {@link PnkyPromise future} that performs an operation when this future completes

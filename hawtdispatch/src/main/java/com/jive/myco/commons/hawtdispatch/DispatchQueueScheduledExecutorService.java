@@ -12,7 +12,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 import org.fusesource.hawtdispatch.DispatchQueue;
 
@@ -20,7 +19,6 @@ import org.fusesource.hawtdispatch.DispatchQueue;
  * @author Army Dave
  *
  */
-@Slf4j
 public class DispatchQueueScheduledExecutorService extends DispatchQueueExecutorService implements
     ScheduledExecutorService
 {

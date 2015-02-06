@@ -20,6 +20,20 @@ Stuff that does things on different projects.
 
 ## <a name="changes"></a>Change Log
 
+### 0.2.6
+* Upgrading from 0.2.5
+  * No changes required
+* Change Log
+  * US7443 - Changed unchanged metric reporting filter to support counters and gauges
+  * US7821 - Added additional methods to Pnky / PnkyPromise 
+
+### 0.2.5
+* Upgrading from 0.2.4
+  * No changes required
+* Change Log
+  * NS - Added a ScheduledExecutorService implementation backed by HawtDispatch
+  * US7443 - Changed unchanged metric reporting to report once a minute regardless of change
+
 ### 0.2.4
 * Upgrading from 0.2.3
   * No changes required

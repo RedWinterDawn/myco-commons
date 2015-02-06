@@ -33,7 +33,7 @@ import com.jive.myco.commons.listenable.ListenableContainer;
 @Slf4j
 public class GuavaServiceToLifecycledWrapper implements ListenableLifecycled
 {
-  private static final AtomicInteger counter = new AtomicInteger();
+  private static final AtomicInteger COUNTER = new AtomicInteger();
 
   private final Service service;
   private final DispatchQueue dispatchQueue;
@@ -46,7 +46,7 @@ public class GuavaServiceToLifecycledWrapper implements ListenableLifecycled
     this.service = service;
     this.dispatchQueue =
         dispatchQueueBuilder.segment("LifecycledGuavaService",
-            String.valueOf(counter.getAndIncrement())).build();
+            String.valueOf(COUNTER.getAndIncrement())).build();
 
     service.addListener(
         new Listener()

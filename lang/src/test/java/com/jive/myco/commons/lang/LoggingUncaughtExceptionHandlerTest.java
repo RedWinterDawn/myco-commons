@@ -90,7 +90,7 @@ public class LoggingUncaughtExceptionHandlerTest
   }
 
   @Test
-  public void testDefaultUncaughtExceptionHandlerOnThreadThread() throws Exception
+  public void testDefaultUncaughtExceptionHandlerOnThread() throws Exception
   {
     Thread.setDefaultUncaughtExceptionHandler(new LoggingUncaughtExceptionHandler());
 
