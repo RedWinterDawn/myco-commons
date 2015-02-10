@@ -24,9 +24,9 @@ import com.jive.myco.commons.function.ExceptionalFunction;
  * Initialization is an all or nothing process while destruction of each lifecycled is guaranteed to
  * be attempted during destruction. Destruction completes successfully if all lifecycleds complete
  * their destruction successfully. Destruction completes exceptionally if any of the lifecycleds
- * completes destruction exceptionally. A {@link CombinedException} is produced completes regardless
- * of the successful destruction of each constituent {@link ListenableLifecycled}. Errors caused by
- * constituents during destruction are logged before being discarded.
+ * completes destruction exceptionally; however, all lifecycleds are guaranteed to have their 
+ * {@code destroy} function invoked. A {@link CombinedException} is produced when one or more 
+ * consituent lifecycleds fails destruction.
  *
  * @author David Valeri
  */
