@@ -1,5 +1,6 @@
 package com.jive.myco.commons.concurrent;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
@@ -9,6 +10,7 @@ import com.jive.myco.commons.function.ExceptionalBiConsumer;
 import com.jive.myco.commons.function.ExceptionalBiFunction;
 import com.jive.myco.commons.function.ExceptionalConsumer;
 import com.jive.myco.commons.function.ExceptionalFunction;
+import com.jive.myco.commons.function.ExceptionalRunnable;
 
 //@formatter:off
 /**
@@ -396,7 +398,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *
    * @return a new {@link PnkyPromise future}
    */
-  PnkyPromise<V> alwaysRun(final Runnable operation);
+  PnkyPromise<V> alwaysRun(final ExceptionalRunnable operation);
 
   /**
    * Creates a new {@link PnkyPromise future} that performs an operation when this future completes
@@ -412,7 +414,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *
    * @return a new {@link PnkyPromise future}
    */
-  PnkyPromise<V> alwaysRun(final Runnable operation, final Executor executor);
+  PnkyPromise<V> alwaysRun(final ExceptionalRunnable operation, final Executor executor);
 
   /**
    * Creates a new {@link PnkyPromise future} that performs an operation when this future completes
@@ -539,7 +541,7 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    *
    * @return a new {@link PnkyPromise future}
    */
-  PnkyPromise<V> thenRun(final Runnable onSuccess);
+  PnkyPromise<V> thenRun(final ExceptionalRunnable onSuccess);
 
   /**
    * Creates a new {@link PnkyPromise future} that performs an operation when this future completes
@@ -548,14 +550,14 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
    * same completion state as this future, except when the operation throws an exception. In this
    * case, the returned future completes exceptionally with the thrown exception.
    *
-   * @param onSuccess
+   * @param runnable
    *          operation to execute when this future completes successfully
    * @param executor
    *          the executor used to execute the supplied operation and complete the returned future
    *
    * @return a new {@link PnkyPromise future}
    */
-  PnkyPromise<V> thenRun(final Runnable runnable, final Executor executor);
+  PnkyPromise<V> thenRun(final ExceptionalRunnable runnable, final Executor executor);
 
   /**
    * Creates a new {@link PnkyPromise future} that performs an operation when this future completes
@@ -673,4 +675,31 @@ public interface PnkyPromise<V> extends ListenableFuture<V>
   PnkyPromise<V> composeFallback(
       final ExceptionalFunction<Throwable, PnkyPromise<V>> onFailure,
       final Executor executor);
+
+  /**
+   * Attempts to cancel execution of this task. The {@link PnkyPromise future} may only be cancelled
+   * if the execution of the task has not yet started. Subsequent {@link PnkyPromise futures} will
+   * fail with a {@link CancellationException} that is triggered from this cancellation.
+   *
+   * This method works the same as calling {@link #cancel(boolean) cancel(false)}.
+   *
+   * @return {@code false} if the task could not be cancelled, typically because it has already
+   *         completed normally; {@code true} otherwise
+   */
+  boolean cancel();
+
+  /**
+   * Attempts to cancel execution of this task. The {@link PnkyPromise future} may only be cancelled
+   * if the execution of the task has not yet started. Subsequent {@link PnkyPromise futures} will
+   * fail with a {@link CancellationException} that is triggered from this cancellation.
+   *
+   * @param mayInterruptIfRunning
+   *          {@code true} this argument has no effect on the action taken by this method as the
+   *          action has no ability to be interrupted
+   *
+   * @return {@code false} if the task could not be cancelled, typically because it has already
+   *         completed normally; {@code true} otherwise
+   */
+  @Override
+  boolean cancel(boolean mayInterruptIfRunning);
 }
