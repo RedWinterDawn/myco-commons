@@ -7,6 +7,7 @@ import static org.junit.Assert.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -45,7 +46,7 @@ public class PnkyTest
   }
 
   @After
-  public void teadown()
+  public void teardown()
   {
     executor.shutdownNow();
   }
@@ -58,7 +59,7 @@ public class PnkyTest
     // Only on this test just to verify same thread behavior
     final AtomicBoolean invoked = new AtomicBoolean();
 
-    Pnky.supplyAsync(() -> 1, MoreExecutors.sameThreadExecutor())
+    Pnky.supplyAsync(() -> 1, ImmediateExecutor.getInstance())
         .alwaysAccept((result, error) ->
         {
           assertEquals(1, (int) result);
@@ -81,7 +82,7 @@ public class PnkyTest
         .supplyAsync(() ->
         {
           throw new NumberFormatException();
-        }, MoreExecutors.sameThreadExecutor())
+        }, ImmediateExecutor.getInstance())
         .thenAccept((result) -> badThings.incrementAndGet())
         .alwaysAccept((result, error) ->
         {
@@ -96,7 +97,7 @@ public class PnkyTest
   @Test
   public void testAlwaysTransformSuccess() throws Exception
   {
-    Pnky.supplyAsync(() -> 1, MoreExecutors.sameThreadExecutor())
+    Pnky.supplyAsync(() -> 1, ImmediateExecutor.getInstance())
         .alwaysTransform((result, error) ->
         {
           assertEquals(1, (int) result);
@@ -119,7 +120,7 @@ public class PnkyTest
         .supplyAsync(() ->
         {
           throw new NumberFormatException();
-        }, MoreExecutors.sameThreadExecutor())
+        }, ImmediateExecutor.getInstance())
         .alwaysTransform((result, error) ->
         {
           throw new IllegalStateException();
@@ -144,7 +145,7 @@ public class PnkyTest
   @Test
   public void testAlwaysComposeOnSuccess() throws Exception
   {
-    Pnky.supplyAsync(() -> 1, MoreExecutors.sameThreadExecutor())
+    Pnky.supplyAsync(() -> 1, ImmediateExecutor.getInstance())
         .alwaysCompose((result, error) ->
         {
           assertEquals(1, (int) result);
@@ -167,7 +168,7 @@ public class PnkyTest
         .supplyAsync(() ->
         {
           throw new NumberFormatException();
-        }, MoreExecutors.sameThreadExecutor())
+        }, ImmediateExecutor.getInstance())
         .alwaysCompose((result, error) ->
         {
           throw new IllegalStateException();
@@ -205,7 +206,7 @@ public class PnkyTest
         .supplyAsync(() ->
         {
           throw new NumberFormatException();
-        }, MoreExecutors.sameThreadExecutor())
+        }, ImmediateExecutor.getInstance())
         .thenAccept((result) -> badThings.incrementAndGet())
         .onFailure((error) -> assertThat(error, instanceOf(NumberFormatException.class)))
         .withFallback((error) -> 1)
@@ -481,7 +482,7 @@ public class PnkyTest
     final AtomicBoolean invoked = new AtomicBoolean();
     final AtomicBoolean invokedDownstream = new AtomicBoolean();
 
-    Pnky.supplyAsync(() -> 1, MoreExecutors.sameThreadExecutor())
+    Pnky.supplyAsync(() -> 1, ImmediateExecutor.getInstance())
         .alwaysRun(() -> invoked.set(true))
         .onFailure((error) -> badThings.incrementAndGet())
         .thenAccept((result) ->
@@ -505,7 +506,7 @@ public class PnkyTest
     Pnky
         .composeAsync(
             () -> Pnky.immediatelyFailed(new RuntimeException("Initial exception")),
-            MoreExecutors.sameThreadExecutor())
+            ImmediateExecutor.getInstance())
         .alwaysRun(() -> invoked.set(true))
         .thenAccept((result) -> badThings.incrementAndGet())
         .onFailure((error) ->
@@ -526,7 +527,7 @@ public class PnkyTest
     final AtomicBoolean invoked = new AtomicBoolean();
     final AtomicBoolean invokedDownstream = new AtomicBoolean();
 
-    Pnky.supplyAsync(() -> 1, MoreExecutors.sameThreadExecutor())
+    Pnky.supplyAsync(() -> 1, ImmediateExecutor.getInstance())
         .alwaysRun(() ->
         {
           invoked.set(true);
@@ -554,7 +555,7 @@ public class PnkyTest
     Pnky
         .composeAsync(
             () -> Pnky.immediatelyFailed(new RuntimeException("Initial exception")),
-            MoreExecutors.sameThreadExecutor())
+            ImmediateExecutor.getInstance())
         .alwaysRun(() ->
         {
           invoked.set(true);
@@ -579,7 +580,7 @@ public class PnkyTest
     final AtomicBoolean invoked = new AtomicBoolean();
     final AtomicBoolean invokedDownstream = new AtomicBoolean();
 
-    Pnky.supplyAsync(() -> 1, MoreExecutors.sameThreadExecutor())
+    Pnky.supplyAsync(() -> 1, ImmediateExecutor.getInstance())
         .thenRun(() -> invoked.set(true))
         .onFailure((error) -> badThings.incrementAndGet())
         .thenAccept((result) ->
@@ -602,8 +603,8 @@ public class PnkyTest
     Pnky
         .composeAsync(
             () -> Pnky.immediatelyFailed(new RuntimeException("Initial exception")),
-            MoreExecutors.sameThreadExecutor())
-        .thenRun(() -> badThings.incrementAndGet())
+            ImmediateExecutor.getInstance())
+        .thenRun(badThings::incrementAndGet)
         .onFailure((error) ->
         {
           invokedDownstream.set(true);
@@ -621,7 +622,7 @@ public class PnkyTest
     final AtomicBoolean invoked = new AtomicBoolean();
     final AtomicBoolean invokedDownstream = new AtomicBoolean();
 
-    Pnky.supplyAsync(() -> 1, MoreExecutors.sameThreadExecutor())
+    Pnky.supplyAsync(() -> 1, ImmediateExecutor.getInstance())
         .thenRun(() ->
         {
           invoked.set(true);
@@ -637,5 +638,115 @@ public class PnkyTest
     assertTrue(invoked.get());
     assertTrue(invokedDownstream.get());
     assertEquals(0, badThings.get());
+  }
+
+  @Test
+  public void testCancellationException() throws Exception
+  {
+    final AtomicBoolean isCancellationException = new AtomicBoolean();
+
+    final Pnky<Integer> pnky = Pnky.create();
+
+    pnky.alwaysAccept((result, error) ->
+        isCancellationException.set(error instanceof CancellationException));
+
+    pnky.cancel();
+
+    assertTrue(isCancellationException.get());
+  }
+
+  @Test
+  public void testCancelBeforeRunningTask() throws Exception
+  {
+    final AtomicBoolean invokedTask = new AtomicBoolean();
+    final AtomicBoolean invokedDownstream = new AtomicBoolean();
+    final AtomicBoolean isCancellationException = new AtomicBoolean();
+
+    final CountDownLatch countDown = new CountDownLatch(1);
+
+    final PnkyPromise<Integer> originalPromise = Pnky
+        .supplyAsync(() ->
+        {
+          countDown.await();
+          return 1;
+        }, executor);
+
+    final PnkyPromise<Integer> cancelPromise = originalPromise
+        .alwaysAccept((result, error) ->
+        {
+          invokedTask.set(true);
+        });
+
+    final PnkyPromise<Integer> finalResult = cancelPromise.alwaysAccept((result, error) ->
+    {
+      invokedDownstream.set(true);
+      isCancellationException.set(error instanceof CancellationException);
+    });
+
+    assertTrue(cancelPromise.cancel());
+    countDown.countDown();
+
+    try
+    {
+      finalResult.get(5, TimeUnit.SECONDS);
+      fail("Final promise should not be successful");
+    }
+    catch (final ExecutionException e)
+    {
+      assertTrue(e.getCause() instanceof CancellationException);
+    }
+
+    try
+    {
+      cancelPromise.get(5, TimeUnit.SECONDS);
+      fail("Cancel promise should not be successful");
+    }
+    catch (final CancellationException e)
+    {
+      // expected
+    }
+
+    assertEquals(Integer.valueOf(1), originalPromise.get(5, TimeUnit.SECONDS));
+
+    assertFalse(invokedTask.get());
+    assertTrue(invokedDownstream.get());
+    assertTrue(isCancellationException.get());
+  }
+
+  @Test
+  public void testCannotCancelWhileTaskIsRunning() throws Exception
+  {
+    final CountDownLatch countDown = new CountDownLatch(1);
+    final CountDownLatch arrived = new CountDownLatch(1);
+
+    final PnkyPromise<Void> initialPromise = Pnky.runAsync(() ->
+    {
+      arrived.countDown();
+      countDown.await();
+    }, executor);
+
+    assertTrue(arrived.await(5, TimeUnit.SECONDS));
+
+    assertFalse(initialPromise.cancel());
+
+    countDown.countDown();
+
+    assertNull(initialPromise.get());
+  }
+
+  @Test
+  public void testCannotCancelAfterCompleted() throws Exception
+  {
+    final CountDownLatch arrived = new CountDownLatch(1);
+
+    final PnkyPromise<Void> promise = Pnky
+        .runAsync(() -> {}, executor)
+        .thenAccept((r) -> arrived.countDown());
+
+    assertTrue(arrived.await(5, TimeUnit.SECONDS));
+
+    assertFalse(promise.cancel());
+
+    assertNull(promise.get());
   }
 }

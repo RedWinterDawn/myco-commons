@@ -19,7 +19,6 @@ import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.jive.myco.commons.function.ExceptionalBiConsumer;
 import com.jive.myco.commons.function.ExceptionalBiFunction;
 import com.jive.myco.commons.function.ExceptionalConsumer;
@@ -36,15 +35,11 @@ import com.jive.myco.commons.function.ExceptionalSupplier;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
 {
-  /**
-   * Returns a new incomplete instance that may be completed at a later time.
-   *
-   * @return a new instance
-   */
-  public static <V> Pnky<V> create()
-  {
-    return new Pnky<>();
-  }
+  private static final int WAITING = 0;
+  private static final int RUNNING = 1;
+  private static final int CANCELLING = 2;
+
+  private final AtomicInteger state = new AtomicInteger(WAITING);
 
   /**
    * Completes the promise successfully with {@code value}.
@@ -86,7 +81,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   public PnkyPromise<V> alwaysAccept(final ExceptionalConsumer<? super V> onSuccess,
       final ExceptionalConsumer<Throwable> onFailure)
   {
-    return alwaysAccept(onSuccess, onFailure, MoreExecutors.sameThreadExecutor());
+    return alwaysAccept(onSuccess, onFailure, ImmediateExecutor.getInstance());
   }
 
   @Override
@@ -95,37 +90,11 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   {
     final Pnky<V> pnky = create();
 
-    Futures.addCallback(this, new FutureCallback<V>()
-    {
-      @Override
-      public void onSuccess(@Nullable final V result)
-      {
-        try
-        {
-          onSuccess.accept(result);
-          pnky.resolve(result);
-        }
-        catch (final Exception e)
-        {
-          pnky.reject(e);
-        }
-      }
-
-      @Override
-      public void onFailure(@Nonnull final Throwable t)
-      {
-        // TODO: handle cancellation
-        try
-        {
-          onFailure.accept(t);
-          pnky.reject(t);
-        }
-        catch (final Exception e)
-        {
-          pnky.reject(e);
-        }
-      }
-    }, executor);
+    addCallback(
+        pnky,
+        notifyOnSuccess(pnky, onSuccess),
+        notifyOnFailure(pnky, onFailure),
+        executor);
 
     return pnky;
   }
@@ -134,7 +103,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   public <O> PnkyPromise<O> alwaysTransform(final ExceptionalFunction<? super V, O> onSuccess,
       final ExceptionalFunction<Throwable, O> onFailure)
   {
-    return alwaysTransform(onSuccess, onFailure, MoreExecutors.sameThreadExecutor());
+    return alwaysTransform(onSuccess, onFailure, ImmediateExecutor.getInstance());
   }
 
   @Override
@@ -143,37 +112,11 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   {
     final Pnky<O> pnky = create();
 
-    Futures.addCallback(this, new FutureCallback<V>()
-    {
-      @Override
-      public void onSuccess(@Nullable final V result)
-      {
-        try
-        {
-          final O newValue = onSuccess.apply(result);
-          pnky.resolve(newValue);
-        }
-        catch (final Exception e)
-        {
-          pnky.reject(e);
-        }
-      }
-
-      @Override
-      public void onFailure(@Nonnull final Throwable t)
-      {
-        // TODO: handle cancellation
-        try
-        {
-          final O newValue = onFailure.apply(t);
-          pnky.resolve(newValue);
-        }
-        catch (final Exception e)
-        {
-          pnky.reject(e);
-        }
-      }
-    }, executor);
+    addCallback(
+        pnky,
+        transformResult(pnky, onSuccess),
+        transformFailure(pnky, onFailure),
+        executor);
 
     return pnky;
   }
@@ -183,7 +126,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
       final ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess,
       final ExceptionalFunction<Throwable, PnkyPromise<O>> onFailure)
   {
-    return alwaysCompose(onSuccess, onFailure, MoreExecutors.sameThreadExecutor());
+    return alwaysCompose(onSuccess, onFailure, ImmediateExecutor.getInstance());
   }
 
   @Override
@@ -193,56 +136,11 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   {
     final Pnky<O> pnky = create();
 
-    Futures.addCallback(this, new FutureCallback<V>()
-    {
-      @Override
-      public void onSuccess(@Nullable final V result)
-      {
-        try
-        {
-          onSuccess.apply(result).alwaysAccept((newValue, error) ->
-          {
-            if (error != null)
-            {
-              pnky.reject(error);
-            }
-            else
-            {
-              pnky.resolve(newValue);
-            }
-          });
-        }
-        catch (final Exception e)
-        {
-          pnky.reject(e);
-        }
-      }
-
-      @Override
-      public void onFailure(@Nonnull final Throwable t)
-      {
-        // TODO: handle cancellation
-        try
-        {
-          final PnkyPromise<O> newPromise = onFailure.apply(t);
-          newPromise.alwaysAccept((newValue, error) ->
-          {
-            if (error != null)
-            {
-              pnky.reject(error);
-            }
-            else
-            {
-              pnky.resolve(newValue);
-            }
-          });
-        }
-        catch (final Exception e)
-        {
-          pnky.reject(e);
-        }
-      }
-    }, executor);
+    addCallback(
+        pnky,
+        composeResult(pnky, onSuccess),
+        composeFailure(pnky, onFailure),
+        executor);
 
     return pnky;
   }
@@ -250,7 +148,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   @Override
   public PnkyPromise<V> alwaysAccept(final ExceptionalBiConsumer<? super V, Throwable> handler)
   {
-    return alwaysAccept(handler, MoreExecutors.sameThreadExecutor());
+    return alwaysAccept(handler, ImmediateExecutor.getInstance());
   }
 
   @Override
@@ -259,37 +157,11 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   {
     final Pnky<V> pnky = create();
 
-    Futures.addCallback(this, new FutureCallback<V>()
-    {
-      @Override
-      public void onSuccess(@Nullable final V result)
-      {
-        try
-        {
-          handler.accept(result, null);
-          pnky.resolve(result);
-        }
-        catch (final Exception e)
-        {
-          pnky.reject(e);
-        }
-      }
-
-      @Override
-      public void onFailure(@Nonnull final Throwable t)
-      {
-        // TODO: handle cancellation
-        try
-        {
-          handler.accept(null, t);
-          pnky.reject(t);
-        }
-        catch (final Exception e)
-        {
-          pnky.reject(e);
-        }
-      }
-    }, executor);
+    addCallback(
+        pnky,
+        notifyOnSuccess(pnky, (result) -> handler.accept(result, null)),
+        notifyOnFailure(pnky, (error) -> handler.accept(null, error)),
+        executor);
 
     return pnky;
   }
@@ -298,7 +170,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   public <O> PnkyPromise<O> alwaysTransform(
       final ExceptionalBiFunction<? super V, Throwable, O> handler)
   {
-    return alwaysTransform(handler, MoreExecutors.sameThreadExecutor());
+    return alwaysTransform(handler, ImmediateExecutor.getInstance());
   }
 
   @Override
@@ -308,37 +180,11 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   {
     final Pnky<O> pnky = create();
 
-    Futures.addCallback(this, new FutureCallback<V>()
-    {
-      @Override
-      public void onSuccess(@Nullable final V result)
-      {
-        try
-        {
-          final O newValue = handler.apply(result, null);
-          pnky.resolve(newValue);
-        }
-        catch (final Exception e)
-        {
-          pnky.reject(e);
-        }
-      }
-
-      @Override
-      public void onFailure(@Nonnull final Throwable t)
-      {
-        // TODO: handle cancellation
-        try
-        {
-          final O newValue = handler.apply(null, t);
-          pnky.resolve(newValue);
-        }
-        catch (final Exception e)
-        {
-          pnky.reject(e);
-        }
-      }
-    }, executor);
+    addCallback(
+        pnky,
+        transformResult(pnky, (result) -> handler.apply(result, null)),
+        transformFailure(pnky, (error) -> handler.apply(null, error)),
+        executor);
 
     return pnky;
   }
@@ -347,7 +193,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   public <O> PnkyPromise<O> alwaysCompose(
       final ExceptionalBiFunction<? super V, Throwable, PnkyPromise<O>> handler)
   {
-    return alwaysCompose(handler, MoreExecutors.sameThreadExecutor());
+    return alwaysCompose(handler, ImmediateExecutor.getInstance());
   }
 
   @Override
@@ -357,99 +203,31 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   {
     final Pnky<O> pnky = create();
 
-    Futures.addCallback(this, new FutureCallback<V>()
-    {
-      @Override
-      public void onSuccess(@Nullable final V result)
-      {
-        try
-        {
-          handler.apply(result, null).alwaysAccept((newValue, error) ->
-          {
-            if (error != null)
-            {
-              pnky.reject(error);
-            }
-            else
-            {
-              pnky.resolve(newValue);
-            }
-          });
-        }
-        catch (final Exception e)
-        {
-          pnky.reject(e);
-        }
-      }
-
-      @Override
-      public void onFailure(@Nonnull final Throwable t)
-      {
-        // TODO: handle cancellation
-        try
-        {
-          final PnkyPromise<O> newPromise = handler.apply(null, t);
-          newPromise.alwaysAccept((newValue, error) ->
-          {
-            if (error != null)
-            {
-              pnky.reject(error);
-            }
-            else
-            {
-              pnky.resolve(newValue);
-            }
-          });
-        }
-        catch (final Exception e)
-        {
-          pnky.reject(e);
-        }
-      }
-    }, executor);
+    addCallback(
+        pnky,
+        composeResult(pnky, (result) -> handler.apply(result, null)),
+        composeFailure(pnky, (error) -> handler.apply(null, error)),
+        executor);
 
     return pnky;
   }
 
   @Override
-  public PnkyPromise<V> alwaysRun(final Runnable runnable)
+  public PnkyPromise<V> alwaysRun(final ExceptionalRunnable runnable)
   {
     return alwaysRun(runnable, ImmediateExecutor.getInstance());
   }
 
   @Override
-  public PnkyPromise<V> alwaysRun(final Runnable runnable, final Executor executor)
+  public PnkyPromise<V> alwaysRun(final ExceptionalRunnable runnable, final Executor executor)
   {
     final Pnky<V> pnky = create();
 
-    Futures.addCallback(this, new FutureCallback<V>()
-    {
-      @Override
-      public void onSuccess(final V result)
-      {
-        run();
-        pnky.resolve(result);
-      }
-
-      @Override
-      public void onFailure(final Throwable t)
-      {
-        run();
-        pnky.reject(t);
-      };
-
-      private void run()
-      {
-        try
-        {
-          runnable.run();
-        }
-        catch (final Exception e)
-        {
-          pnky.reject(e);
-        }
-      }
-    }, executor);
+    addCallback(
+        pnky,
+        runAndPassThroughResult(pnky, runnable),
+        runAndPassThroughFailure(runnable, pnky),
+        executor);
 
     return pnky;
   }
@@ -457,7 +235,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   @Override
   public PnkyPromise<V> thenAccept(final ExceptionalConsumer<? super V> onSuccess)
   {
-    return thenAccept(onSuccess, MoreExecutors.sameThreadExecutor());
+    return thenAccept(onSuccess, ImmediateExecutor.getInstance());
   }
 
   @Override
@@ -466,28 +244,11 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   {
     final Pnky<V> pnky = create();
 
-    Futures.addCallback(this, new FutureCallback<V>()
-    {
-      @Override
-      public void onSuccess(@Nullable final V result)
-      {
-        try
-        {
-          onSuccess.accept(result);
-          pnky.resolve(result);
-        }
-        catch (final Exception e)
-        {
-          pnky.reject(e);
-        }
-      }
-
-      @Override
-      public void onFailure(@Nonnull final Throwable t)
-      {
-        pnky.reject(t);
-      }
-    }, executor);
+    addCallback(
+        pnky,
+        notifyOnSuccess(pnky, onSuccess),
+        passThroughException(pnky),
+        executor);
 
     return pnky;
   }
@@ -495,7 +256,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   @Override
   public <O> PnkyPromise<O> thenTransform(final ExceptionalFunction<? super V, O> onSuccess)
   {
-    return thenTransform(onSuccess, MoreExecutors.sameThreadExecutor());
+    return thenTransform(onSuccess, ImmediateExecutor.getInstance());
   }
 
   @Override
@@ -504,28 +265,11 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   {
     final Pnky<O> pnky = create();
 
-    Futures.addCallback(this, new FutureCallback<V>()
-    {
-      @Override
-      public void onSuccess(@Nullable final V result)
-      {
-        try
-        {
-          final O newValue = onSuccess.apply(result);
-          pnky.resolve(newValue);
-        }
-        catch (final Exception e)
-        {
-          pnky.reject(e);
-        }
-      }
-
-      @Override
-      public void onFailure(@Nonnull final Throwable t)
-      {
-        pnky.reject(t);
-      }
-    }, executor);
+    addCallback(
+        pnky,
+        transformResult(pnky, onSuccess),
+        passThroughException(pnky),
+        executor);
 
     return pnky;
   }
@@ -534,7 +278,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   public <O> PnkyPromise<O> thenCompose(
       final ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess)
   {
-    return thenCompose(onSuccess, MoreExecutors.sameThreadExecutor());
+    return thenCompose(onSuccess, ImmediateExecutor.getInstance());
   }
 
   @Override
@@ -544,74 +288,31 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   {
     final Pnky<O> pnky = create();
 
-    Futures.addCallback(this, new FutureCallback<V>()
-    {
-      @Override
-      public void onSuccess(@Nullable final V result)
-      {
-        try
-        {
-          onSuccess.apply(result).alwaysAccept((newValue, error) ->
-          {
-            if (error != null)
-            {
-              pnky.reject(error);
-            }
-            else
-            {
-              pnky.resolve(newValue);
-            }
-          });
-        }
-        catch (final Exception e)
-        {
-          pnky.reject(e);
-        }
-      }
-
-      @Override
-      public void onFailure(@Nonnull final Throwable t)
-      {
-        pnky.reject(t);
-      }
-    }, executor);
+    addCallback(
+        pnky,
+        composeResult(pnky, onSuccess),
+        passThroughException(pnky),
+        executor);
 
     return pnky;
   }
 
   @Override
-  public PnkyPromise<V> thenRun(final Runnable runnable)
+  public PnkyPromise<V> thenRun(final ExceptionalRunnable runnable)
   {
     return thenRun(runnable, ImmediateExecutor.getInstance());
   }
 
   @Override
-  public PnkyPromise<V> thenRun(final Runnable runnable, final Executor executor)
+  public PnkyPromise<V> thenRun(final ExceptionalRunnable runnable, final Executor executor)
   {
     final Pnky<V> pnky = create();
 
-    Futures.addCallback(this, new FutureCallback<V>()
-    {
-      @Override
-      public void onSuccess(final V result)
-      {
-        try
-        {
-          runnable.run();
-          pnky.resolve(result);
-        }
-        catch (final Exception e)
-        {
-          pnky.reject(e);
-        }
-      }
-
-      @Override
-      public void onFailure(final Throwable t)
-      {
-        pnky.reject(t);
-      };
-    }, executor);
+    addCallback(
+        pnky,
+        runAndPassThroughResult(pnky, runnable),
+        passThroughException(pnky),
+        executor);
 
     return pnky;
   }
@@ -619,7 +320,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   @Override
   public PnkyPromise<V> onFailure(final ExceptionalConsumer<Throwable> onFailure)
   {
-    return onFailure(onFailure, MoreExecutors.sameThreadExecutor());
+    return onFailure(onFailure, ImmediateExecutor.getInstance());
   }
 
   @Override
@@ -628,28 +329,11 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   {
     final Pnky<V> pnky = create();
 
-    Futures.addCallback(this, new FutureCallback<V>()
-    {
-      @Override
-      public void onSuccess(@Nullable final V result)
-      {
-        pnky.resolve(result);
-      }
-
-      @Override
-      public void onFailure(@Nonnull final Throwable t)
-      {
-        try
-        {
-          onFailure.accept(t);
-          pnky.reject(t);
-        }
-        catch (final Exception e)
-        {
-          pnky.reject(e);
-        }
-      }
-    }, executor);
+    addCallback(
+        pnky,
+        passThroughResult(pnky),
+        notifyOnFailure(pnky, onFailure),
+        executor);
 
     return pnky;
   }
@@ -657,7 +341,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   @Override
   public PnkyPromise<V> withFallback(final ExceptionalFunction<Throwable, V> onFailure)
   {
-    return withFallback(onFailure, MoreExecutors.sameThreadExecutor());
+    return withFallback(onFailure, ImmediateExecutor.getInstance());
   }
 
   @Override
@@ -666,28 +350,11 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   {
     final Pnky<V> pnky = create();
 
-    Futures.addCallback(this, new FutureCallback<V>()
-    {
-      @Override
-      public void onSuccess(@Nullable final V result)
-      {
-        pnky.resolve(result);
-      }
-
-      @Override
-      public void onFailure(@Nonnull final Throwable t)
-      {
-        try
-        {
-          final V newValue = onFailure.apply(t);
-          pnky.resolve(newValue);
-        }
-        catch (final Exception e)
-        {
-          pnky.reject(e);
-        }
-      }
-    }, executor);
+    addCallback(
+        pnky,
+        passThroughResult(pnky),
+        transformFailure(pnky, onFailure),
+        executor);
 
     return pnky;
   }
@@ -696,7 +363,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   public PnkyPromise<V> composeFallback(
       final ExceptionalFunction<Throwable, PnkyPromise<V>> onFailure)
   {
-    return composeFallback(onFailure, MoreExecutors.sameThreadExecutor());
+    return composeFallback(onFailure, ImmediateExecutor.getInstance());
   }
 
   @Override
@@ -705,44 +372,247 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
   {
     final Pnky<V> pnky = create();
 
+    addCallback(
+        pnky,
+        passThroughResult(pnky),
+        composeFailure(pnky, onFailure),
+        executor);
+
+    return pnky;
+  }
+
+  @Override
+  public boolean cancel(final boolean mayInterruptIfRunning)
+  {
+    // Shield any other action from occurring while we are cancelling
+    if (state.compareAndSet(WAITING, CANCELLING))
+    {
+      if (!super.cancel(false))
+      {
+        // This should not ever happen
+        throw new IllegalStateException(
+            "Unable to mark promise as cancelled after changing Pnky state");
+      }
+
+      return true;
+    }
+    return false;
+  }
+
+  @Override
+  public boolean cancel()
+  {
+    return cancel(false);
+  }
+
+  private void addCallback(final Pnky<?> pnky, final ExceptionalConsumer<V> onSuccess,
+      final ExceptionalConsumer<Throwable> onFailure, final Executor executor)
+  {
     Futures.addCallback(this, new FutureCallback<V>()
     {
       @Override
       public void onSuccess(@Nullable final V result)
       {
-        pnky.resolve(result);
+        if (pnky.state.compareAndSet(Pnky.WAITING, Pnky.RUNNING))
+        {
+          try
+          {
+            onSuccess.accept(result);
+          }
+          catch (final Exception e)
+          {
+            pnky.reject(e);
+          }
+        }
       }
 
       @Override
       public void onFailure(@Nonnull final Throwable t)
       {
-        try
+        if (pnky.state.compareAndSet(Pnky.WAITING, Pnky.RUNNING))
         {
-          onFailure.apply(t).alwaysAccept((result, error) ->
+          try
           {
-            if (error != null)
-            {
-              pnky.reject(error);
-            }
-            else
-            {
-              pnky.resolve(result);
-            }
-          });
-        }
-        catch (final Exception e)
-        {
-          pnky.reject(e);
+            onFailure.accept(t);
+          }
+          catch (final Exception e)
+          {
+            pnky.reject(e);
+          }
         }
       }
     }, executor);
+  }
 
-    return pnky;
+  private ExceptionalConsumer<V> passThroughResult(final Pnky<V> pnky)
+  {
+    return new ExceptionalConsumer<V>()
+    {
+      @Override
+      public void accept(final V input) throws Exception
+      {
+        pnky.resolve(input);
+      }
+    };
+  }
+
+  private ExceptionalConsumer<Throwable> passThroughException(final Pnky<?> pnky)
+  {
+    return new ExceptionalConsumer<Throwable>()
+    {
+      @Override
+      public void accept(final Throwable input) throws Exception
+      {
+        pnky.reject(input);
+      }
+    };
+  }
+
+  private <O> ExceptionalConsumer<Throwable> composeFailure(final Pnky<O> pnky,
+      final ExceptionalFunction<Throwable, PnkyPromise<O>> onFailure)
+  {
+    return new ExceptionalConsumer<Throwable>()
+    {
+      @Override
+      public void accept(final Throwable input) throws Exception
+      {
+        onFailure.apply(input)
+            .alwaysAccept((newValue, error) ->
+            {
+              if (error != null)
+              {
+                pnky.reject(error);
+              }
+              else
+              {
+                pnky.resolve(newValue);
+              }
+            });
+      }
+    };
+  }
+
+  private <O> ExceptionalConsumer<Throwable> transformFailure(final Pnky<O> pnky,
+      final ExceptionalFunction<Throwable, O> onFailure)
+  {
+    return new ExceptionalConsumer<Throwable>()
+    {
+      @Override
+      public void accept(final Throwable input) throws Exception
+      {
+        final O newValue = onFailure.apply(input);
+        pnky.resolve(newValue);
+      }
+    };
+  }
+
+  private <O> ExceptionalConsumer<V> composeResult(final Pnky<O> pnky,
+      final ExceptionalFunction<? super V, PnkyPromise<O>> onSuccess)
+  {
+    return new ExceptionalConsumer<V>()
+    {
+      @Override
+      public void accept(final V input) throws Exception
+      {
+        onSuccess.apply(input)
+            .alwaysAccept((newValue, error) ->
+            {
+              if (error != null)
+              {
+                pnky.reject(error);
+              }
+              else
+              {
+                pnky.resolve(newValue);
+              }
+            });
+      }
+    };
+  }
+
+  private <O> ExceptionalConsumer<V> transformResult(final Pnky<O> pnky,
+      final ExceptionalFunction<? super V, O> onSuccess)
+  {
+    return new ExceptionalConsumer<V>()
+    {
+      @Override
+      public void accept(final V input) throws Exception
+      {
+        final O newValue = onSuccess.apply(input);
+        pnky.resolve(newValue);
+      }
+    };
+  }
+
+  private ExceptionalConsumer<V> notifyOnSuccess(final Pnky<V> pnky,
+      final ExceptionalConsumer<? super V> onSuccess)
+  {
+    return new ExceptionalConsumer<V>()
+    {
+      @Override
+      public void accept(final V input) throws Exception
+      {
+        onSuccess.accept(input);
+        pnky.resolve(input);
+      }
+    };
+  }
+
+  private ExceptionalConsumer<Throwable> notifyOnFailure(final Pnky<V> pnky,
+      final ExceptionalConsumer<Throwable> onFailure)
+  {
+    return new ExceptionalConsumer<Throwable>()
+    {
+      @Override
+      public void accept(final Throwable input) throws Exception
+      {
+        onFailure.accept(input);
+        pnky.reject(input);
+      }
+    };
+  }
+
+  private ExceptionalConsumer<V> runAndPassThroughResult(final Pnky<V> pnky,
+      final ExceptionalRunnable runnable)
+  {
+    return new ExceptionalConsumer<V>()
+    {
+      @Override
+      public void accept(final V input) throws Exception
+      {
+        runnable.run();
+        pnky.resolve(input);
+      }
+    };
+  }
+
+  private ExceptionalConsumer<Throwable> runAndPassThroughFailure(
+      final ExceptionalRunnable runnable, final Pnky<V> pnky)
+  {
+    return new ExceptionalConsumer<Throwable>()
+    {
+      @Override
+      public void accept(final Throwable input) throws Exception
+      {
+        runnable.run();
+        pnky.reject(input);
+      }
+    };
   }
 
   // =======================
   // Public utility methods
   // =======================
+
+  /**
+   * Returns a new incomplete instance that may be completed at a later time.
+   *
+   * @return a new instance
+   */
+  public static <V> Pnky<V> create()
+  {
+    return new Pnky<>();
+  }
 
   /**
    * Creates a new {@link PnkyPromise future} that completes when the supplied operation completes,
@@ -764,14 +634,17 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
 
     executor.execute(() ->
     {
-      try
+      if (pnky.state.compareAndSet(WAITING, RUNNING))
       {
-        operation.run();
-        pnky.resolve(null);
-      }
-      catch (final Exception e)
-      {
-        pnky.reject(e);
+        try
+        {
+          operation.run();
+          pnky.resolve(null);
+        }
+        catch (final Exception e)
+        {
+          pnky.reject(e);
+        }
       }
     });
 
@@ -798,14 +671,17 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
 
     executor.execute(() ->
     {
-      try
+      if (pnky.state.compareAndSet(WAITING, RUNNING))
       {
-        final V value = operation.get();
-        pnky.resolve(value);
-      }
-      catch (final Exception e)
-      {
-        pnky.reject(e);
+        try
+        {
+          final V value = operation.get();
+          pnky.resolve(value);
+        }
+        catch (final Exception e)
+        {
+          pnky.reject(e);
+        }
       }
     });
 
@@ -833,23 +709,26 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
 
     executor.execute(() ->
     {
-      try
+      if (pnky.state.compareAndSet(WAITING, RUNNING))
       {
-        operation.get().alwaysAccept((result, error) ->
+        try
         {
-          if (error != null)
+          operation.get().alwaysAccept((result, error) ->
           {
-            pnky.reject(error);
-          }
-          else
-          {
-            pnky.resolve(result);
-          }
-        });
-      }
-      catch (final Exception e)
-      {
-        pnky.reject(e);
+            if (error != null)
+            {
+              pnky.reject(error);
+            }
+            else
+            {
+              pnky.resolve(result);
+            }
+          });
+        }
+        catch (final Exception e)
+        {
+          pnky.reject(e);
+        }
       }
     });
 
@@ -1149,7 +1028,7 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
       }
 
       @Override
-      public void onFailure(final Throwable t)
+      public void onFailure(@Nonnull final Throwable t)
       {
         pnky.reject(t);
       }
