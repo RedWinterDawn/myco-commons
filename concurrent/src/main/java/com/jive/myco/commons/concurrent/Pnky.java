@@ -393,6 +393,8 @@ public class Pnky<V> extends AbstractFuture<V> implements PnkyPromise<V>
         throw new IllegalStateException(
             "Unable to mark promise as cancelled after changing Pnky state");
       }
+
+      return true;
     }
     return false;
   }
