@@ -3,7 +3,7 @@ package com.jive.myco.commons.concurrent;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 
-import lombok.NonNull;
+import javax.annotation.Nonnull;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
@@ -21,7 +21,7 @@ public enum ImmediateExecutor implements Executor
   INSTANCE;
 
   @Override
-  public void execute(@NonNull final Runnable runnable)
+  public void execute(@Nonnull final Runnable runnable)
   {
     runnable.run();
   }
