@@ -17,6 +17,7 @@ import com.jive.myco.commons.function.ExceptionalBiConsumer;
 import com.jive.myco.commons.function.ExceptionalBiFunction;
 import com.jive.myco.commons.function.ExceptionalConsumer;
 import com.jive.myco.commons.function.ExceptionalFunction;
+import com.jive.myco.commons.function.ExceptionalRunnable;
 
 /**
  * A listener for a required upstream dependency, the dependency. Usually used to defer the
@@ -286,13 +287,13 @@ public class DependencyLifecycleListener implements LifecycleListener, PnkyPromi
   }
 
   @Override
-  public PnkyPromise<Void> alwaysRun(final Runnable operation)
+  public PnkyPromise<Void> alwaysRun(final ExceptionalRunnable operation)
   {
     return delegate.alwaysRun(operation);
   }
 
   @Override
-  public PnkyPromise<Void> alwaysRun(final Runnable operation, final Executor executor)
+  public PnkyPromise<Void> alwaysRun(final ExceptionalRunnable operation, final Executor executor)
   {
     return delegate.alwaysRun(operation, executor);
   }
@@ -338,13 +339,13 @@ public class DependencyLifecycleListener implements LifecycleListener, PnkyPromi
   }
 
   @Override
-  public PnkyPromise<Void> thenRun(final Runnable onSuccess)
+  public PnkyPromise<Void> thenRun(final ExceptionalRunnable onSuccess)
   {
     return delegate.thenRun(onSuccess);
   }
 
   @Override
-  public PnkyPromise<Void> thenRun(final Runnable runnable, final Executor executor)
+  public PnkyPromise<Void> thenRun(final ExceptionalRunnable runnable, final Executor executor)
   {
     return delegate.thenRun(runnable, executor);
   }
@@ -387,5 +388,11 @@ public class DependencyLifecycleListener implements LifecycleListener, PnkyPromi
       final ExceptionalFunction<Throwable, PnkyPromise<Void>> onFailure, final Executor executor)
   {
     return delegate.composeFallback(onFailure, executor);
+  }
+
+  @Override
+  public boolean cancel()
+  {
+    return delegate.cancel();
   }
 }
