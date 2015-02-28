@@ -739,9 +739,11 @@ public class PnkyTest
   {
     final CountDownLatch arrived = new CountDownLatch(1);
 
+    // @formatter:off
     final PnkyPromise<Void> promise = Pnky
-        .runAsync(() -> {}, executor)
+        .runAsync(() -> {/**/}, executor)
         .thenAccept((r) -> arrived.countDown());
+    // @formatter:on
 
     assertTrue(arrived.await(5, TimeUnit.SECONDS));
 
