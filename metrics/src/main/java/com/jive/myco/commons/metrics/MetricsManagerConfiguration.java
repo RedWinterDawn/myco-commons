@@ -47,7 +47,7 @@ public class MetricsManagerConfiguration
   private final boolean graphiteReporterEnabled;
 
   /**
-   * The period to output Graphite reports, in milliseconds. Defaults to 1 second.
+   * The period to output Graphite reports, in milliseconds. Defaults to 5 seconds.
    */
   private final long graphiteReporterPeriod;
 
@@ -163,9 +163,9 @@ public class MetricsManagerConfiguration
     private boolean graphiteReporterEnabled = false;
 
     /**
-     * The period to output Graphite reports, in milliseconds. Defaults to 1 second.
+     * The period to output Graphite reports, in milliseconds. Defaults to 5 seconds.
      */
-    private long graphiteReporterPeriod = 1000;
+    private long graphiteReporterPeriod = 5000;
 
     /**
      * The prefix for metric names produced by the Graphite reporter. Defaults to
