@@ -328,6 +328,7 @@ public class DefaultMetricsManagerTest
             .graphiteReporterEnabled(true)
             .graphiteReporterPickle(true)
             .graphiteReporterFilterUnchangedCounters(true)
+            .graphiteReporterPeriod(1000)
             .build());
 
     manager.init().get();
