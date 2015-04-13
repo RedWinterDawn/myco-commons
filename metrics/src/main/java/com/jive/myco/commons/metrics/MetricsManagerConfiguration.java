@@ -6,7 +6,7 @@ import javax.net.SocketFactory;
 
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.experimental.Builder;
+import lombok.Builder;
 
 /**
  * Configuration for {@link MetricsManager}.

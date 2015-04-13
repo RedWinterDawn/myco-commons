@@ -6,7 +6,7 @@ import java.util.List;
 
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.experimental.Builder;
+import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 
 import org.fusesource.hawtdispatch.DispatchQueue;

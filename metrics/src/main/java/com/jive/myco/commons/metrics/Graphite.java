@@ -21,7 +21,7 @@ import javax.net.SocketFactory;
 
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.experimental.Builder;
+import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 
 import org.slf4j.Logger;
