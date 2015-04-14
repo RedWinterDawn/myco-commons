@@ -109,7 +109,6 @@ public class GuavaServiceToLifecycledWrapper implements ListenableLifecycled
     lifecycleStage = LifecycleStage.UNINITIALIZED;
   }
 
-  @SuppressWarnings("deprecation")
   @Override
   public PnkyPromise<Void> init()
   {
@@ -117,7 +116,6 @@ public class GuavaServiceToLifecycledWrapper implements ListenableLifecycled
     return creation;
   }
 
-  @SuppressWarnings("deprecation")
   @Override
   public PnkyPromise<Void> destroy()
   {

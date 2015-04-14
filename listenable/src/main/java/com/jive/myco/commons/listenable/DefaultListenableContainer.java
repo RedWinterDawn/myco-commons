@@ -21,7 +21,7 @@ public class DefaultListenableContainer<T> implements ListenableContainer<T>
   @Override
   public void addListenerWithInitialAction(final T listener, final Consumer<? super T> action)
   {
-    addListenerWithInitialAction(listener, MoreExecutors.sameThreadExecutor(), action);
+    addListenerWithInitialAction(listener, MoreExecutors.directExecutor(), action);
   }
 
   @Override
