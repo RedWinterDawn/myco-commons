@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 import lombok.NonNull;
-import lombok.experimental.Builder;
+import lombok.Builder;
 
 import org.fusesource.hawtdispatch.Dispatch;
 import org.junit.Test;

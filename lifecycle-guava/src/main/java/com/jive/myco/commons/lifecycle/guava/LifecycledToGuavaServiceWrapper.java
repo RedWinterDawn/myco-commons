@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import com.google.common.util.concurrent.AbstractService;
+import com.google.common.util.concurrent.Service;
 import com.jive.myco.commons.lifecycle.LifecycleListener;
 import com.jive.myco.commons.lifecycle.LifecycleStage;
 import com.jive.myco.commons.lifecycle.Lifecycled;

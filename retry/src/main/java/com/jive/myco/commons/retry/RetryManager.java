@@ -8,7 +8,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
 import lombok.ToString;
-import lombok.experimental.Builder;
+import lombok.Builder;
 
 /**
  * A manager for tracking retry attempts, scheduling delayed retries, and notifying a strategy of

@@ -15,7 +15,6 @@ import com.google.common.util.concurrent.Service.State;
 import com.jive.myco.commons.concurrent.ImmediateExecutor;
 import com.jive.myco.commons.concurrent.Pnky;
 import com.jive.myco.commons.concurrent.PnkyPromise;
-import com.jive.myco.commons.function.ExceptionalFunction;
 import com.jive.myco.commons.hawtdispatch.DispatchQueueBuilder;
 import com.jive.myco.commons.lifecycle.LifecycleListener;
 import com.jive.myco.commons.lifecycle.LifecycleStage;
@@ -39,6 +38,8 @@ public class GuavaServiceToLifecycledWrapper implements ListenableLifecycled
   private final DispatchQueue dispatchQueue;
   private final InternalListenable listenable = new InternalListenable();
   private volatile LifecycleStage lifecycleStage;
+  private final Pnky<Void> creation = Pnky.create();
+  private final Pnky<Void> destruction = Pnky.create();
 
   public GuavaServiceToLifecycledWrapper(@NonNull final Service service,
       @NonNull final DispatchQueueBuilder dispatchQueueBuilder)
@@ -63,6 +64,7 @@ public class GuavaServiceToLifecycledWrapper implements ListenableLifecycled
           {
             lifecycleStage = LifecycleStage.INITIALIZED;
             listenable.stateChanged(lifecycleStage);
+            creation.resolve();
           }
 
           @Override
@@ -77,6 +79,7 @@ public class GuavaServiceToLifecycledWrapper implements ListenableLifecycled
           {
             lifecycleStage = LifecycleStage.DESTROYED;
             listenable.stateChanged(lifecycleStage);
+            destruction.resolve();
           }
 
           @Override
@@ -86,6 +89,7 @@ public class GuavaServiceToLifecycledWrapper implements ListenableLifecycled
             {
               lifecycleStage = LifecycleStage.INITIALIZATION_FAILED;
               listenable.stateChanged(lifecycleStage);
+              creation.reject(failure);
             }
 
             if (from != State.STOPPING)
@@ -96,6 +100,7 @@ public class GuavaServiceToLifecycledWrapper implements ListenableLifecycled
 
             lifecycleStage = LifecycleStage.DESTROYED;
             listenable.stateChanged(lifecycleStage);
+            destruction.reject(failure);
           }
 
         }, ImmediateExecutor.INSTANCE);
@@ -104,22 +109,18 @@ public class GuavaServiceToLifecycledWrapper implements ListenableLifecycled
     lifecycleStage = LifecycleStage.UNINITIALIZED;
   }
 
-  @SuppressWarnings("deprecation")
   @Override
   public PnkyPromise<Void> init()
   {
-    return Pnky
-        .from(service.start())
-        .thenTransform(ExceptionalFunction.toNull());
+    service.startAsync();
+    return creation;
   }
 
-  @SuppressWarnings("deprecation")
   @Override
   public PnkyPromise<Void> destroy()
   {
-    return Pnky
-        .from(service.stop())
-        .thenTransform(ExceptionalFunction.toNull());
+    service.stopAsync();
+    return destruction;
   }
 
   @Override

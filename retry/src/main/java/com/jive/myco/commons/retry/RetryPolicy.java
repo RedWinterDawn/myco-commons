@@ -1,7 +1,7 @@
 package com.jive.myco.commons.retry;
 
 import lombok.Getter;
-import lombok.experimental.Builder;
+import lombok.Builder;
 
 import com.google.common.base.Preconditions;
 
