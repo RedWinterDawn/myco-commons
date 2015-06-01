@@ -58,7 +58,7 @@ public class DefaultMetricsManagerTest
       // Expected
     }
 
-    manager.init().get(250, TimeUnit.MILLISECONDS);
+    manager.init().get(500, TimeUnit.MILLISECONDS);
 
     assertEquals(LifecycleStage.INITIALIZED, manager.getLifecycleStage());
 

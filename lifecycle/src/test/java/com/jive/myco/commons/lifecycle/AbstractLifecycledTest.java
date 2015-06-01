@@ -267,7 +267,7 @@ public class AbstractLifecycledTest
 
     try
     {
-      testInstance.init().get(200, TimeUnit.MILLISECONDS);
+      testInstance.init().get(1000, TimeUnit.MILLISECONDS);
       fail();
     }
     catch (final ExecutionException e)
