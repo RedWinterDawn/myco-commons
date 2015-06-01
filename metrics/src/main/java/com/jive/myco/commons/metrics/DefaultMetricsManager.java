@@ -327,21 +327,6 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
     return histogram;
   }
 
-  protected <T extends Metric> T register(final T metric, final String prefix,
-      final String segment, final String... additionalSegments)
-  {
-    final String name = getMetricName(prefix, segment, additionalSegments);
-
-    registry.remove(name);
-    registry.register(name, metric);
-
-    metrics.add(metric);
-
-    checkState(name, metric);
-
-    return metric;
-  }
-
   protected RatioGauge addRatio(@NonNull final Callable<Ratio> function, final String prefix,
       final String segment, final String... additionalSegments)
   {
@@ -490,13 +475,6 @@ public final class DefaultMetricsManager extends AbstractLifecycled implements M
     public Counter getCounter(final String segment, final String... additionalSegments)
     {
       return DefaultMetricsManager.this.getCounter(prefix, segment, additionalSegments);
-    }
-
-    @Override
-    public <T extends Metric> T add(final T metric, final String segment,
-        final String... additionalSegments)
-    {
-      return DefaultMetricsManager.this.register(metric, prefix, segment, additionalSegments);
     }
 
     @Override
