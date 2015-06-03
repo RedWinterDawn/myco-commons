@@ -156,7 +156,10 @@ public class DefaultMetricsManagerTest
           }
         }, "gauge2");
 
+    final Gauge<Integer> baseGauge3 = baseContext.add(() -> 1, "gauge3");
+
     assertNotSame(baseGauge, baseGauge2);
+    assertNotSame(baseGauge2, baseGauge3);
 
     // Test get or create in one context
     assertSame(baseMeter, baseContext.getMeter("meter"));
@@ -189,6 +192,8 @@ public class DefaultMetricsManagerTest
           }
         },
         "gauge"));
+
+    assertNotSame(baseGauge3, baseContext.<Gauge<Integer>> add(() -> 1, "gauge3"));
 
     // Test duplicate name in different contexts
 
@@ -227,6 +232,9 @@ public class DefaultMetricsManagerTest
         }, "gauge");
     assertNotSame(baseGauge, subGauge);
 
+    final Gauge<Integer> subGauge3 = subContext.add(() -> 1, "gauge3");
+    assertNotSame(baseGauge3, subGauge3);
+
     // Test duplicate name in different contexts with same prefix
     assertEquals(subContext2.getBaseName(), subContext2Alternate.getBaseName());
     assertSame(subContext2.getMeter("blah"), subContext2Alternate.getMeter("blah"));
@@ -244,7 +252,7 @@ public class DefaultMetricsManagerTest
   }
 
   @Test
-  public void testRatio() throws Exception
+  public void testAddRatioAndAddGauge() throws Exception
   {
     final MetricsManager manager =
         createMetricsManager(MetricsManagerConfiguration.builder().build());
